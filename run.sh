@@ -144,8 +144,11 @@ SCRIPT
         konsole)
             "$terminal" --title="Backend Server" -e bash "$temp_script" &
             ;;
-        alacritty|kitty)
+        alacritty)
             "$terminal" --title="Backend Server" -e bash "$temp_script" &
+            ;;
+        kitty)
+            "$terminal" --title="Backend Server" bash "$temp_script" &
             ;;
         termite)
             "$terminal" --name="Backend Server" -e bash "$temp_script" &
@@ -208,8 +211,11 @@ SCRIPT
         konsole)
             "$terminal" --title="Frontend Server" -e bash "$temp_script" &
             ;;
-        alacritty|kitty)
+        alacritty)
             "$terminal" --title="Frontend Server" -e bash "$temp_script" &
+            ;;
+        kitty)
+            "$terminal" --title="Frontend Server" bash "$temp_script" &
             ;;
         termite)
             "$terminal" --name="Frontend Server" -e bash "$temp_script" &
