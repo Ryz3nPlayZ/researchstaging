@@ -167,7 +167,15 @@ main() {
     # Start Redis if not running
     if ! redis-cli ping >/dev/null 2>&1; then
         echo -e "${YELLOW}Starting Redis...${NC}"
-        redis-server --daemonize yes
+        # Try systemd first
+        if command_exists systemctl; then
+            sudo systemctl start redis 2>/dev/null || \
+            sudo systemctl start redis.service 2>/dev/null || \
+            sudo systemctl start redis-server 2>/dev/null || \
+            redis-server --daemonize yes
+        else
+            redis-server --daemonize yes
+        fi
         sleep 2
     fi
 
