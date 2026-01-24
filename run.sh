@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # AI-Native Research Execution System - Run Script
-# This script starts both backend and frontend servers
+# This script starts both backend and frontend servers in separate terminals
 
 set -e
 
@@ -16,25 +16,57 @@ PROJECT_ROOT="/home/zemul/Programming/research"
 BACKEND_DIR="$PROJECT_ROOT/backend"
 FRONTEND_DIR="$PROJECT_ROOT/frontend"
 
+# Array to store child process PIDs
+PIDS=()
+
+# Function to detect available terminal emulator
+detect_terminal() {
+    # List of terminal emulators to try (in order of preference)
+    TERMINALS=(
+        "gnome-terminal"
+        "konsole"
+        "xfce4-terminal"
+        "mate-terminal"
+        "lxterminal"
+        "alacritty"
+        "kitty"
+        "termite"
+        "rxvt"
+        "xterm"
+    )
+
+    for term in "${TERMINALS[@]}"; do
+        if command_exists "$term"; then
+            echo "$term"
+            return
+        fi
+    done
+
+    echo ""
+}
+
+# Function to check if command exists
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
 # Function to cleanup on exit
 cleanup() {
     echo ""
     echo -e "${YELLOW}Shutting down servers...${NC}"
 
-    # Kill backend
-    if [[ -n "$BACKEND_PID" ]]; then
-        kill $BACKEND_PID 2>/dev/null || true
-        echo "Backend stopped"
-    fi
+    # Kill all tracked PIDs
+    for pid in "${PIDS[@]}"; do
+        if kill -0 "$pid" 2>/dev/null; then
+            kill "$pid" 2>/dev/null || true
+            echo "Stopped process (PID: $pid)"
+        fi
+    done
 
-    # Kill frontend
-    if [[ -n "$FRONTEND_PID" ]]; then
-        kill $FRONTEND_PID 2>/dev/null || true
-        echo "Frontend stopped"
-    fi
-
-    # Kill all background processes
-    jobs -p | xargs -r kill 2>/dev/null || true
+    # Also kill by process name to be thorough
+    pkill -f "python.*server.py" 2>/dev/null || true
+    pkill -f "yarn.*start" 2>/dev/null || true
+    pkill -f "react-scripts.*start" 2>/dev/null || true
 
     echo -e "${GREEN}All servers stopped${NC}"
     exit 0
@@ -66,54 +98,133 @@ check_env() {
     fi
 }
 
-# Function to start backend
+# Function to start backend in new terminal
 start_backend() {
-    echo -e "${BLUE}Starting backend server...${NC}"
+    echo -e "${BLUE}Starting backend server in new terminal...${NC}"
+
     cd "$BACKEND_DIR"
 
-    # Activate virtual environment
-    source venv/bin/activate
+    # Create a temporary script for the terminal to run
+    local temp_script=$(mktemp)
+    cat > "$temp_script" <<SCRIPT
+#!/bin/bash
+cd "$BACKEND_DIR"
+source venv/bin/activate
+echo "=========================================="
+echo "Backend Server"
+echo "=========================================="
+echo "Press Ctrl+C to stop this server"
+echo "=========================================="
+echo ""
+python server.py
+echo ""
+echo "Backend server stopped. Press Enter to close this terminal."
+read
+SCRIPT
 
-    # Start backend in background
-    python server.py > "$PROJECT_ROOT/backend.log" 2>&1 &
-    BACKEND_PID=$!
+    chmod +x "$temp_script"
 
-    # Wait for backend to start
-    echo "Waiting for backend to start..."
-    sleep 5
+    # Detect terminal and launch
+    local terminal=$(detect_terminal)
 
-    # Check if backend is running
-    if ps -p $BACKEND_PID > /dev/null; then
-        echo -e "${GREEN}Backend started successfully (PID: $BACKEND_PID)${NC}"
-        echo "Backend logs: $PROJECT_ROOT/backend.log"
-    else
-        echo -e "${RED}Backend failed to start! Check backend.log${NC}"
-        cat "$PROJECT_ROOT/backend.log"
-        exit 1
+    if [[ -z "$terminal" ]]; then
+        echo -e "${RED}No supported terminal emulator found!${NC}"
+        echo "Falling back to background mode with log file..."
+        python server.py > "$PROJECT_ROOT/backend.log" 2>&1 &
+        PIDS+=($!)
+        echo -e "${GREEN}Backend started in background (PID: ${PIDS[-1]})${NC}"
+        echo "Logs: $PROJECT_ROOT/backend.log"
+        return
     fi
+
+    case "$terminal" in
+        gnome-terminal|mate-terminal|xfce4-terminal|lxterminal)
+            "$terminal" --title="Backend Server" -- bash -c "bash '$temp_script'; exec bash" &
+            ;;
+        konsole)
+            "$terminal" --title="Backend Server" --noclose -e bash "$temp_script" &
+            ;;
+        alacritty|kitty)
+            "$terminal" --title="Backend Server" -e bash "$temp_script" &
+            ;;
+        termite)
+            "$terminal" --name="Backend Server" -e bash "$temp_script" &
+            ;;
+        rxvt|xterm)
+            "$terminal" -title "Backend Server" -e bash "$temp_script" &
+            ;;
+        *)
+            "$terminal" -e bash "$temp_script" &
+            ;;
+    esac
+
+    PIDS+=($!)
+    sleep 2
+    echo -e "${GREEN}Backend terminal opened${NC}"
 }
 
-# Function to start frontend
+# Function to start frontend in new terminal
 start_frontend() {
-    echo -e "${BLUE}Starting frontend server...${NC}"
+    echo -e "${BLUE}Starting frontend server in new terminal...${NC}"
+
     cd "$FRONTEND_DIR"
 
-    # Start frontend in background
-    yarn start > "$PROJECT_ROOT/frontend.log" 2>&1 &
-    FRONTEND_PID=$!
+    # Create a temporary script for the terminal to run
+    local temp_script=$(mktemp)
+    cat > "$temp_script" <<SCRIPT
+#!/bin/bash
+cd "$FRONTEND_DIR"
+echo "=========================================="
+echo "Frontend Server"
+echo "=========================================="
+echo "Press Ctrl+C to stop this server"
+echo "=========================================="
+echo ""
+yarn start
+echo ""
+echo "Frontend server stopped. Press Enter to close this terminal."
+read
+SCRIPT
 
-    # Wait for frontend to start
-    echo "Waiting for frontend to start..."
-    sleep 10
+    chmod +x "$temp_script"
 
-    # Check if frontend is running
-    if ps -p $FRONTEND_PID > /dev/null; then
-        echo -e "${GREEN}Frontend started successfully (PID: $FRONTEND_PID)${NC}"
-        echo "Frontend logs: $PROJECT_ROOT/frontend.log"
-    else
-        echo -e "${YELLOW}Frontend may still be starting...${NC}"
-        echo "Check frontend.log for details"
+    # Detect terminal and launch
+    local terminal=$(detect_terminal)
+
+    if [[ -z "$terminal" ]]; then
+        echo -e "${RED}No supported terminal emulator found!${NC}"
+        echo "Falling back to background mode with log file..."
+        yarn start > "$PROJECT_ROOT/frontend.log" 2>&1 &
+        PIDS+=($!)
+        echo -e "${GREEN}Frontend started in background (PID: ${PIDS[-1]})${NC}"
+        echo "Logs: $PROJECT_ROOT/frontend.log"
+        return
     fi
+
+    case "$terminal" in
+        gnome-terminal|mate-terminal|xfce4-terminal|lxterminal)
+            "$terminal" --title="Frontend Server" -- bash -c "bash '$temp_script'; exec bash" &
+            ;;
+        konsole)
+            "$terminal" --title="Frontend Server" --noclose -e bash "$temp_script" &
+            ;;
+        alacritty|kitty)
+            "$terminal" --title="Frontend Server" -e bash "$temp_script" &
+            ;;
+        termite)
+            "$terminal" --name="Frontend Server" -e bash "$temp_script" &
+            ;;
+        rxvt|xterm)
+            "$terminal" -title "Frontend Server" -e bash "$temp_script" &
+            ;;
+        *)
+            "$terminal" -e bash "$temp_script" &
+            ;;
+    esac
+
+    PIDS+=($!)
+    sleep 2
+    echo -e "${GREEN}Frontend terminal opened${NC}"
 }
 
 # Function to show status
@@ -125,31 +236,17 @@ show_status() {
     echo ""
     echo "Backend:"
     echo "  - URL: http://localhost:8000"
-    echo "  - PID: $BACKEND_PID"
-    echo "  - Logs: $PROJECT_ROOT/backend.log"
+    echo "  - Terminal: 'Backend Server'"
     echo ""
     echo "Frontend:"
     echo "  - URL: http://localhost:3000"
-    echo "  - PID: $FRONTEND_PID"
-    echo "  - Logs: $PROJECT_ROOT/frontend.log"
+    echo "  - Terminal: 'Frontend Server'"
     echo ""
-    echo "Press Ctrl+C to stop all servers"
+    echo "Two terminal windows should have opened with live logs."
+    echo "Close the terminals or press Ctrl+C here to stop all servers."
     echo ""
     echo "======================================"
     echo ""
-}
-
-# Function to watch logs
-watch_logs() {
-    echo -e "${BLUE}Monitoring logs (Ctrl+C to stop)...${NC}"
-    echo ""
-
-    # Show both logs
-    tail -f "$PROJECT_ROOT/backend.log" "$PROJECT_ROOT/frontend.log" 2>/dev/null &
-    WATCH_PID=$!
-
-    # Wait for interrupt
-    wait $WATCH_PID 2>/dev/null || true
 }
 
 # Main function
@@ -164,6 +261,16 @@ main() {
     # Check environment
     check_env
 
+    # Detect and display terminal
+    local terminal=$(detect_terminal)
+    if [[ -n "$terminal" ]]; then
+        echo -e "${GREEN}Detected terminal: $terminal${NC}"
+    else
+        echo -e "${YELLOW}Warning: No supported terminal found${NC}"
+        echo "Servers will run in background with log files instead."
+    fi
+    echo ""
+
     # Start Redis if not running
     if ! redis-cli ping >/dev/null 2>&1; then
         echo -e "${YELLOW}Starting Redis...${NC}"
@@ -177,17 +284,30 @@ main() {
             redis-server --daemonize yes
         fi
         sleep 2
+        echo -e "${GREEN}Redis started${NC}"
     fi
+    echo ""
 
-    # Start servers
+    # Start servers in separate terminals
     start_backend
+    sleep 1
     start_frontend
+
+    # Give servers time to start
+    echo -e "${YELLOW}Waiting for servers to initialize...${NC}"
+    sleep 5
 
     # Show status
     show_status
 
-    # Watch logs
-    watch_logs
+    # Keep this script running to track PIDs for cleanup
+    echo "Press Ctrl+C to stop all servers..."
+    echo ""
+
+    # Wait indefinitely (until Ctrl+C)
+    while true; do
+        sleep 1
+    done
 }
 
 # Run main function
