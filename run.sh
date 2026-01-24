@@ -142,7 +142,7 @@ SCRIPT
             "$terminal" --title="Backend Server" -- bash -c "bash '$temp_script'; exec bash" &
             ;;
         konsole)
-            "$terminal" --title="Backend Server" --noclose -e bash "$temp_script" &
+            "$terminal" --title="Backend Server" -e bash "$temp_script" &
             ;;
         alacritty|kitty)
             "$terminal" --title="Backend Server" -e bash "$temp_script" &
@@ -206,7 +206,7 @@ SCRIPT
             "$terminal" --title="Frontend Server" -- bash -c "bash '$temp_script'; exec bash" &
             ;;
         konsole)
-            "$terminal" --title="Frontend Server" --noclose -e bash "$temp_script" &
+            "$terminal" --title="Frontend Server" -e bash "$temp_script" &
             ;;
         alacritty|kitty)
             "$terminal" --title="Frontend Server" -e bash "$temp_script" &
