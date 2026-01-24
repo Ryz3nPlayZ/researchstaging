@@ -1,0 +1,178 @@
+import { useCallback, useEffect, useMemo } from 'react';
+import ReactFlow, {
+  Background,
+  Controls,
+  MiniMap,
+  useNodesState,
+  useEdgesState,
+} from 'reactflow';
+import 'reactflow/dist/style.css';
+import { Badge } from '../ui/badge';
+import { Clock, Loader2, CheckCircle, XCircle, Bot, Route, Search, FileText, Quote, Brain, Edit } from 'lucide-react';
+
+// Custom Task Node Component
+const TaskNode = ({ data }) => {
+  const getStatusConfig = (status) => {
+    switch (status) {
+      case 'running':
+        return { icon: Loader2, color: 'border-blue-500 bg-blue-500/10', iconClass: 'text-blue-500 animate-spin' };
+      case 'completed':
+        return { icon: CheckCircle, color: 'border-green-500 bg-green-500/10', iconClass: 'text-green-500' };
+      case 'failed':
+        return { icon: XCircle, color: 'border-red-500 bg-red-500/10', iconClass: 'text-red-500' };
+      default:
+        return { icon: Clock, color: 'border-yellow-500/50 bg-yellow-500/5', iconClass: 'text-yellow-500' };
+    }
+  };
+
+  const getTypeIcon = (type) => {
+    switch (type) {
+      case 'literature_search': return Search;
+      case 'pdf_acquisition': return FileText;
+      case 'reference_extraction': return Quote;
+      case 'summarization': return Brain;
+      case 'synthesis': return Brain;
+      case 'drafting': return Edit;
+      default: return FileText;
+    }
+  };
+
+  const statusConfig = getStatusConfig(data?.status);
+  const StatusIcon = statusConfig.icon;
+  const TypeIcon = getTypeIcon(data?.type);
+
+  return (
+    <div className={`px-4 py-3 rounded-lg border-2 ${statusConfig.color} bg-card min-w-[180px] shadow-sm`}>
+      <div className="flex items-center gap-2 mb-1">
+        <TypeIcon className="h-4 w-4 text-muted-foreground" />
+        <span className="text-sm font-medium truncate">{data?.label || 'Task'}</span>
+      </div>
+      <div className="flex items-center gap-1.5">
+        <StatusIcon className={`h-3.5 w-3.5 ${statusConfig.iconClass}`} />
+        <span className="text-xs text-muted-foreground capitalize">{data?.status || 'pending'}</span>
+      </div>
+    </div>
+  );
+};
+
+// Custom Agent Node Component
+const AgentNode = ({ data }) => {
+  const getStatusConfig = (status) => {
+    switch (status) {
+      case 'running':
+        return { color: 'border-blue-500 bg-blue-500/10 shadow-blue-500/20 shadow-lg', pulse: true };
+      case 'completed':
+        return { color: 'border-green-500/50 bg-green-500/5', pulse: false };
+      default:
+        return { color: 'border-border bg-card', pulse: false };
+    }
+  };
+
+  const getTypeConfig = (type) => {
+    switch (type) {
+      case 'router':
+        return { icon: Route, color: 'bg-purple-500/10 text-purple-500' };
+      case 'evaluator':
+        return { icon: CheckCircle, color: 'bg-orange-500/10 text-orange-500' };
+      default:
+        return { icon: Bot, color: 'bg-blue-500/10 text-blue-500' };
+    }
+  };
+
+  const statusConfig = getStatusConfig(data?.status);
+  const typeConfig = getTypeConfig(data?.type);
+  const TypeIcon = typeConfig.icon;
+
+  return (
+    <div className={`px-4 py-3 rounded-xl border-2 ${statusConfig.color} min-w-[160px] transition-all duration-300 ${statusConfig.pulse ? 'animate-pulse' : ''}`}>
+      <div className="flex items-center gap-2 mb-2">
+        <div className={`w-8 h-8 rounded-lg ${typeConfig.color} flex items-center justify-center`}>
+          <TypeIcon className="h-4 w-4" />
+        </div>
+        <span className="text-sm font-medium">{data?.label || 'Agent'}</span>
+      </div>
+      <p className="text-xs text-muted-foreground line-clamp-2">{data?.description || ''}</p>
+      {data?.status && data.status !== 'idle' && (
+        <Badge 
+          variant="outline" 
+          className={`mt-2 text-[10px] ${data.status === 'running' ? 'bg-blue-500/10 text-blue-500' : 'bg-green-500/10 text-green-500'}`}
+        >
+          {data.status}
+        </Badge>
+      )}
+    </div>
+  );
+};
+
+const nodeTypes = {
+  taskNode: TaskNode,
+  agentNode: AgentNode,
+};
+
+export const TaskGraph = ({ nodes: initialNodes, edges: initialEdges, type = 'task' }) => {
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  // Update nodes and edges when props change
+  useEffect(() => {
+    if (initialNodes && initialNodes.length > 0) {
+      setNodes(initialNodes);
+    }
+  }, [initialNodes, setNodes]);
+
+  useEffect(() => {
+    if (initialEdges && initialEdges.length > 0) {
+      setEdges(initialEdges);
+    }
+  }, [initialEdges, setEdges]);
+
+  const proOptions = useMemo(() => ({ hideAttribution: true }), []);
+
+  if (!nodes || nodes.length === 0) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-muted/30 rounded-lg border border-border">
+        <p className="text-sm text-muted-foreground">No graph data available</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full h-full bg-background rounded-lg border border-border overflow-hidden" style={{ minHeight: '400px' }}>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        nodeTypes={nodeTypes}
+        proOptions={proOptions}
+        fitView
+        fitViewOptions={{ padding: 0.3 }}
+        defaultEdgeOptions={{
+          type: 'smoothstep',
+          style: { stroke: '#64748b', strokeWidth: 2 },
+          animated: false,
+        }}
+      >
+        <Background color="#e2e8f0" gap={20} size={1} />
+        <Controls 
+          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg"
+          showInteractive={false}
+        />
+        <MiniMap 
+          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg"
+          nodeColor={(node) => {
+            if (node.data?.status === 'running') return '#3b82f6';
+            if (node.data?.status === 'completed') return '#22c55e';
+            if (node.data?.status === 'failed') return '#ef4444';
+            return '#94a3b8';
+          }}
+          maskColor="rgba(255, 255, 255, 0.8)"
+        />
+      </ReactFlow>
+    </div>
+  );
+};
+
+export const AgentGraph = ({ nodes: initialNodes, edges: initialEdges }) => {
+  return <TaskGraph nodes={initialNodes} edges={initialEdges} type="agent" />;
+};

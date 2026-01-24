@@ -33,8 +33,8 @@ if [[ "$OS" == "linux" ]] && [[ $EUID -eq 0 ]]; then
 fi
 
 PROJECT_ROOT="/home/zemul/Programming/research"
-BACKEND_DIR="$PROJECT_ROOT/research/backend"
-FRONTEND_DIR="$PROJECT_ROOT/research/frontend"
+BACKEND_DIR="$PROJECT_ROOT/backend"
+FRONTEND_DIR="$PROJECT_ROOT/frontend"
 
 # Function to check if command exists
 command_exists() {

@@ -13,8 +13,8 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 PROJECT_ROOT="/home/zemul/Programming/research"
-BACKEND_DIR="$PROJECT_ROOT/research/backend"
-FRONTEND_DIR="$PROJECT_ROOT/research/frontend"
+BACKEND_DIR="$PROJECT_ROOT/backend"
+FRONTEND_DIR="$PROJECT_ROOT/frontend"
 
 # Function to cleanup on exit
 cleanup() {

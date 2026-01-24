@@ -108,7 +108,7 @@ redis-cli ping  # Should return "PONG"
 ## 3. Backend Setup
 
 ```bash
-cd /home/zemul/Programming/research/research/backend
+cd /home/zemul/Programming/research/backend
 
 # Create virtual environment
 python3.14 -m venv venv
@@ -125,7 +125,7 @@ pip install -r requirements.txt
 Create a `.env` file in the `research/backend/` directory:
 
 ```bash
-cd /home/zemul/Programming/research/research/backend
+cd /home/zemul/Programming/research/backend
 nano .env  # or use your preferred editor
 ```
 
@@ -157,7 +157,7 @@ You need an API key for the Emergent Integrations LLM service:
 ## 4. Frontend Setup
 
 ```bash
-cd /home/zemul/Programming/research/research/frontend
+cd /home/zemul/Programming/research/frontend
 
 # Install dependencies
 yarn install
@@ -185,7 +185,7 @@ sudo -u postgres psql research_pilot
 ### Terminal 1: Backend Server
 
 ```bash
-cd /home/zemul/Programming/research/research/backend
+cd /home/zemul/Programming/research/backend
 source venv/bin/activate
 python server.py
 ```
@@ -199,7 +199,7 @@ INFO:     Uvicorn running on http://0.0.0.0:8000
 ### Terminal 2: Frontend Development Server
 
 ```bash
-cd /home/zemul/Programming/research/research/frontend
+cd /home/zemul/Programming/research/frontend
 yarn start
 ```
 
@@ -272,7 +272,7 @@ sudo systemctl start redis-server
 **LLM API Key Error:**
 ```bash
 # Verify .env file exists and has the key
-cd /home/zemul/Programming/research/research/backend
+cd /home/zemul/Programming/research/backend
 cat .env | grep EMERGENT_LLM_KEY
 ```
 
