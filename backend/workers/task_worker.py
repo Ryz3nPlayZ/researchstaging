@@ -191,16 +191,33 @@ class TaskWorker:
         result = await session.execute(
             select(Project).where(Project.id == task.project_id)
         )
-        project = result.scalar_one()
-        
+        project = result.scalar_one_or_none()
+
+        if not project:
+            raise ValueError(f"Project {task.project_id} not found")
+
         # Search literature sources
         papers = await literature_service.search_all(project.research_goal, limit_per_source=20)
-        
-        # Store papers
+
+        # Track existing external_ids to avoid duplicates
+        existing_papers_result = await session.execute(
+            select(Paper.external_id).where(
+                Paper.project_id == task.project_id,
+                Paper.external_id.isnot(None)
+            )
+        )
+        existing_external_ids = set(existing_papers_result.scalars().all())
+
+        # Store papers (skip duplicates)
+        added_count = 0
         for paper_data in papers:
+            external_id = paper_data.get("external_id")
+            if external_id and external_id in existing_external_ids:
+                continue  # Skip duplicate
+
             paper = Paper(
                 project_id=task.project_id,
-                external_id=paper_data.get("external_id"),
+                external_id=external_id,
                 source=paper_data.get("source", "unknown"),
                 title=paper_data.get("title", ""),
                 authors=paper_data.get("authors", []),
@@ -211,6 +228,9 @@ class TaskWorker:
                 pdf_url=paper_data.get("pdf_url"),
             )
             session.add(paper)
+            if external_id:
+                existing_external_ids.add(external_id)
+            added_count += 1
         
         # Create artifact
         artifact = Artifact(
@@ -356,11 +376,14 @@ class TaskWorker:
     ) -> str:
         """Execute synthesis task."""
         from database import Project
-        
+
         proj_result = await session.execute(
             select(Project).where(Project.id == task.project_id)
         )
-        project = proj_result.scalar_one()
+        project = proj_result.scalar_one_or_none()
+
+        if not project:
+            raise ValueError(f"Project {task.project_id} not found")
         
         papers_result = await session.execute(
             select(Paper).where(Paper.project_id == task.project_id)
@@ -401,11 +424,14 @@ class TaskWorker:
     ) -> str:
         """Execute drafting task."""
         from database import Project
-        
+
         proj_result = await session.execute(
             select(Project).where(Project.id == task.project_id)
         )
-        project = proj_result.scalar_one()
+        project = proj_result.scalar_one_or_none()
+
+        if not project:
+            raise ValueError(f"Project {task.project_id} not found")
         
         # Get synthesis artifact
         synth_result = await session.execute(
