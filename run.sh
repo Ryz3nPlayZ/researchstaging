@@ -148,7 +148,7 @@ SCRIPT
             "$terminal" --title="Backend Server" -e bash "$temp_script" &
             ;;
         kitty)
-            "$terminal" --title="Backend Server" bash "$temp_script" &
+            "$terminal" --title="Backend Server" sh -c "bash '$temp_script'; exec bash" &
             ;;
         termite)
             "$terminal" --name="Backend Server" -e bash "$temp_script" &
@@ -215,7 +215,7 @@ SCRIPT
             "$terminal" --title="Frontend Server" -e bash "$temp_script" &
             ;;
         kitty)
-            "$terminal" --title="Frontend Server" bash "$temp_script" &
+            "$terminal" --title="Frontend Server" sh -c "bash '$temp_script'; exec bash" &
             ;;
         termite)
             "$terminal" --name="Frontend Server" -e bash "$temp_script" &
