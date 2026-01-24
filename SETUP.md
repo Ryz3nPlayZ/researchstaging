@@ -138,19 +138,39 @@ DATABASE_URL=postgresql+asyncpg://research_user:your_secure_password@localhost:5
 # Redis
 REDIS_URL=redis://localhost:6379/0
 
-# LLM API Key (REQUIRED)
-EMERGENT_LLM_KEY=your_llm_api_key_here
+# LLM API Keys (REQUIRED - add at least one)
+OPENAI_API_KEY=your_openai_api_key_here
+GEMINI_API_KEY=your_gemini_api_key_here
+MISTRAL_API_KEY=your_mistral_api_key_here
+GROQ_API_KEY=your_groq_api_key_here
 
 # CORS (for development)
 CORS_ORIGINS=http://localhost:3000,http://localhost:3001
 ```
 
-### Get LLM API Key
+### Get LLM API Keys
 
-You need an API key for the Emergent Integrations LLM service:
-- Sign up at the service provider
-- Copy your API key
-- Paste it in the `.env` file as `EMERGENT_LLM_KEY`
+You need API keys for the LLM providers. Add at least one:
+
+**OpenAI (GPT models):**
+- Sign up at https://platform.openai.com/
+- Get your API key
+- Add as `OPENAI_API_KEY`
+
+**Google (Gemini models):**
+- Sign up at https://aistudio.google.com/
+- Get your API key
+- Add as `GEMINI_API_KEY`
+
+**Mistral AI:**
+- Sign up at https://console.mistral.ai/
+- Get your API key
+- Add as `MISTRAL_API_KEY`
+
+**Groq (fast inference):**
+- Sign up at https://console.groq.com/
+- Get your API key
+- Add as `GROQ_API_KEY`
 
 ---
 
@@ -271,9 +291,9 @@ sudo systemctl start redis-server
 
 **LLM API Key Error:**
 ```bash
-# Verify .env file exists and has the key
+# Verify .env file exists and has at least one key
 cd /home/zemul/Programming/research/backend
-cat .env | grep EMERGENT_LLM_KEY
+cat .env | grep -E "OPENAI_API_KEY|GEMINI_API_KEY|MISTRAL_API_KEY|GROQ_API_KEY"
 ```
 
 ### Frontend Issues
