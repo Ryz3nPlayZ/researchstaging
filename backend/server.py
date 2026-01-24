@@ -252,44 +252,64 @@ async def generate_research_plan(data: PlanningAnswers, db: AsyncSession = Depen
 
 @api_router.post("/planning/approve")
 async def approve_plan_and_create_project(
-    data: PlanApproval, 
+    data: PlanApproval,
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db)
 ):
     """Approve plan and create project with tasks."""
-    answers = data.answers
-    plan_data = data.plan
-    
-    # Create project
-    project = Project(
-        research_goal=answers.get("research_goal", ""),
-        output_type=OutputType(answers.get("output_type", "literature_review")),
-        audience=answers.get("audience"),
-        status=ProjectStatus.PLANNED
-    )
-    db.add(project)
-    await db.flush()
-    
-    # Create immutable plan
-    plan = Plan(
-        project_id=project.id,
-        title=plan_data.get("title", project.research_goal[:100]),
-        summary=plan_data.get("summary"),
-        scope=plan_data.get("scope"),
-        phases=plan_data.get("phases", []),
-        search_terms=plan_data.get("search_terms", []),
-        key_themes=plan_data.get("key_themes", []),
-        estimated_papers=plan_data.get("estimated_papers", 30)
-    )
-    db.add(plan)
-    await db.flush()
-    
-    # Expand plan into tasks
-    await orchestration_engine.expand_plan_to_tasks(db, project.id, plan)
-    
-    await db.commit()
-    
-    return {"project_id": project.id, "plan_id": plan.id, "message": "Project created successfully"}
+    try:
+        logger.info(f"Approving plan with answers: {data.answers}")
+
+        answers = data.answers
+        plan_data = data.plan
+
+        # Create project
+        project = Project(
+            research_goal=answers.get("research_goal", ""),
+            output_type=OutputType(answers.get("output_type", "literature_review")),
+            audience=answers.get("audience"),
+            status=ProjectStatus.PLANNED
+        )
+        db.add(project)
+        await db.flush()
+        logger.info(f"Created project {project.id}")
+
+        # Create immutable plan
+        plan = Plan(
+            project_id=project.id,
+            title=plan_data.get("title", project.research_goal[:100]),
+            summary=plan_data.get("summary"),
+            scope=plan_data.get("scope"),
+            phases=plan_data.get("phases", []),
+            search_terms=plan_data.get("search_terms", []),
+            key_themes=plan_data.get("key_themes", []),
+            estimated_papers=plan_data.get("estimated_papers", 30)
+        )
+        db.add(plan)
+        await db.flush()
+        logger.info(f"Created plan {plan.id} for project {project.id}")
+
+        # Expand plan into tasks
+        logger.info(f"Expanding plan to tasks for project {project.id}...")
+        tasks = await orchestration_engine.expand_plan_to_tasks(db, project.id, plan)
+        logger.info(f"Created {len(tasks)} tasks for project {project.id}")
+
+        await db.commit()
+        logger.info(f"Successfully created project {project.id} with plan {plan.id}")
+
+        return {
+            "project_id": str(project.id),
+            "plan_id": str(plan.id),
+            "message": "Project created successfully"
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to create project: {e}", exc_info=True)
+        await db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create project: {str(e)}"
+        )
 
 
 # ============== Project Endpoints ==============
@@ -301,72 +321,88 @@ async def create_project(
     db: AsyncSession = Depends(get_db)
 ):
     """Create a new project (simple flow without guided planning)."""
-    project = Project(
-        research_goal=project_input.research_goal,
-        output_type=OutputType(project_input.output_type),
-        audience=project_input.audience,
-        status=ProjectStatus.CREATED
-    )
-    db.add(project)
-    await db.flush()
-    
-    # Generate default plan
-    default_plan = Plan(
-        project_id=project.id,
-        title=f"Research: {project_input.research_goal[:80]}",
-        summary=f"Automated research on: {project_input.research_goal}",
-        phases=[
-            {
-                "name": "Discovery",
-                "tasks": [
-                    {"name": "Literature Search", "type": "literature_search", "description": "Search academic databases", "dependencies": []},
-                    {"name": "PDF Acquisition", "type": "pdf_acquisition", "description": "Download available PDFs", "dependencies": ["Literature Search"]},
-                ]
-            },
-            {
-                "name": "Analysis",
-                "tasks": [
-                    {"name": "Reference Extraction", "type": "reference_extraction", "description": "Extract citations", "dependencies": ["PDF Acquisition"]},
-                    {"name": "Summarization", "type": "summarization", "description": "Summarize papers", "dependencies": ["PDF Acquisition"]},
-                ]
-            },
-            {
-                "name": "Synthesis",
-                "tasks": [
-                    {"name": "Literature Synthesis", "type": "synthesis", "description": "Synthesize findings", "dependencies": ["Summarization"]},
-                ]
-            },
-            {
-                "name": "Output",
-                "tasks": [
-                    {"name": "Document Drafting", "type": "drafting", "description": "Draft final document", "dependencies": ["Literature Synthesis"]},
-                ]
-            }
-        ],
-        estimated_papers=30
-    )
-    db.add(default_plan)
-    await db.flush()
-    
-    # Expand plan into tasks
-    await orchestration_engine.expand_plan_to_tasks(db, project.id, default_plan)
-    
-    project.status = ProjectStatus.PLANNED
-    await db.commit()
-    await db.refresh(project)
-    
-    return ProjectResponse(
-        id=project.id,
-        research_goal=project.research_goal,
-        output_type=project.output_type.value,
-        audience=project.audience,
-        status=project.status.value,
-        task_counts=project.task_counts or {},
-        created_at=project.created_at,
-        updated_at=project.updated_at,
-        started_at=project.started_at,
-        completed_at=project.completed_at
-    )
+    try:
+        logger.info(f"Creating project: {project_input.research_goal}")
+
+        project = Project(
+            research_goal=project_input.research_goal,
+            output_type=OutputType(project_input.output_type),
+            audience=project_input.audience,
+            status=ProjectStatus.CREATED
+        )
+        db.add(project)
+        await db.flush()
+        logger.info(f"Created project {project.id}")
+
+        # Generate default plan
+        default_plan = Plan(
+            project_id=project.id,
+            title=f"Research: {project_input.research_goal[:80]}",
+            summary=f"Automated research on: {project_input.research_goal}",
+            phases=[
+                {
+                    "name": "Discovery",
+                    "tasks": [
+                        {"name": "Literature Search", "type": "literature_search", "description": "Search academic databases", "dependencies": []},
+                        {"name": "PDF Acquisition", "type": "pdf_acquisition", "description": "Download available PDFs", "dependencies": ["Literature Search"]},
+                    ]
+                },
+                {
+                    "name": "Analysis",
+                    "tasks": [
+                        {"name": "Reference Extraction", "type": "reference_extraction", "description": "Extract citations", "dependencies": ["PDF Acquisition"]},
+                        {"name": "Summarization", "type": "summarization", "description": "Summarize papers", "dependencies": ["PDF Acquisition"]},
+                    ]
+                },
+                {
+                    "name": "Synthesis",
+                    "tasks": [
+                        {"name": "Literature Synthesis", "type": "synthesis", "description": "Synthesize findings", "dependencies": ["Summarization"]},
+                    ]
+                },
+                {
+                    "name": "Output",
+                    "tasks": [
+                        {"name": "Document Drafting", "type": "drafting", "description": "Draft final document", "dependencies": ["Literature Synthesis"]},
+                    ]
+                }
+            ],
+            estimated_papers=30
+        )
+        db.add(default_plan)
+        await db.flush()
+        logger.info(f"Created default plan {default_plan.id}")
+
+        # Expand plan into tasks
+        logger.info(f"Expanding plan to tasks for project {project.id}...")
+        tasks = await orchestration_engine.expand_plan_to_tasks(db, project.id, default_plan)
+        logger.info(f"Created {len(tasks)} tasks for project {project.id}")
+
+        project.status = ProjectStatus.PLANNED
+        await db.commit()
+        await db.refresh(project)
+        logger.info(f"Successfully created project {project.id}")
+
+        return ProjectResponse(
+            id=project.id,
+            research_goal=project.research_goal,
+            output_type=project.output_type.value,
+            audience=project.audience,
+            status=project.status.value,
+            task_counts=project.task_counts or {},
+            created_at=project.created_at,
+            updated_at=project.updated_at,
+            started_at=project.started_at,
+            completed_at=project.completed_at
+        )
+
+    except Exception as e:
+        logger.error(f"Failed to create project: {e}", exc_info=True)
+        await db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create project: {str(e)}"
+        )
 
 
 @api_router.get("/projects", response_model=List[ProjectResponse])
