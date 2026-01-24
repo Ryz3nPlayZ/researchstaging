@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import ReactFlow, {
   Background,
   Controls,
@@ -112,11 +112,13 @@ const nodeTypes = {
 export const TaskGraph = ({ nodes: initialNodes, edges: initialEdges, type = 'task' }) => {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const initializedRef = useRef(false);
 
-  // Update nodes and edges when props change
+  // Update nodes and edges when props change - use JSON string for deep comparison
   useEffect(() => {
     if (initialNodes && initialNodes.length > 0) {
       setNodes(initialNodes);
+      initializedRef.current = true;
     }
   }, [initialNodes, setNodes]);
 
@@ -128,16 +130,17 @@ export const TaskGraph = ({ nodes: initialNodes, edges: initialEdges, type = 'ta
 
   const proOptions = useMemo(() => ({ hideAttribution: true }), []);
 
-  if (!nodes || nodes.length === 0) {
+  // Show loading state while data is being fetched
+  if (!initialNodes || initialNodes.length === 0) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-muted/30 rounded-lg border border-border">
+      <div className="w-full h-full flex items-center justify-center bg-muted/30 rounded-lg border border-border" style={{ minHeight: '500px' }}>
         <p className="text-sm text-muted-foreground">No graph data available</p>
       </div>
     );
   }
 
   return (
-    <div className="w-full h-full bg-background rounded-lg border border-border overflow-hidden" style={{ minHeight: '400px' }}>
+    <div className="w-full h-full bg-background rounded-lg border border-border overflow-hidden" style={{ height: '500px' }}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -146,27 +149,29 @@ export const TaskGraph = ({ nodes: initialNodes, edges: initialEdges, type = 'ta
         nodeTypes={nodeTypes}
         proOptions={proOptions}
         fitView
-        fitViewOptions={{ padding: 0.3 }}
+        fitViewOptions={{ padding: 0.2 }}
         defaultEdgeOptions={{
           type: 'smoothstep',
           style: { stroke: '#64748b', strokeWidth: 2 },
           animated: false,
         }}
+        minZoom={0.3}
+        maxZoom={2}
       >
         <Background color="#e2e8f0" gap={20} size={1} />
-        <Controls 
-          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg"
+        <Controls
+          className="bg-card border border-border rounded-lg shadow-sm"
           showInteractive={false}
         />
-        <MiniMap 
-          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg"
+        <MiniMap
+          className="bg-card border border-border rounded-lg shadow-sm"
           nodeColor={(node) => {
             if (node.data?.status === 'running') return '#3b82f6';
             if (node.data?.status === 'completed') return '#22c55e';
             if (node.data?.status === 'failed') return '#ef4444';
             return '#94a3b8';
           }}
-          maskColor="rgba(255, 255, 255, 0.8)"
+          maskColor="hsl(var(--background) / 0.8)"
         />
       </ReactFlow>
     </div>

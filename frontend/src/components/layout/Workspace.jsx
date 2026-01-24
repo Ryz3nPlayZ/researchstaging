@@ -312,16 +312,28 @@ export const Workspace = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="tasks" className="flex-1 m-0 p-4">
-            {taskGraph && (
-              <TaskGraph nodes={taskGraph.nodes} edges={taskGraph.edges} type="task" />
-            )}
+          <TabsContent value="tasks" className="flex-1 m-0 p-0 data-[state=active]:flex data-[state=active]:flex-col">
+            <div className="w-full h-full p-4">
+              {taskGraph ? (
+                <TaskGraph nodes={taskGraph.nodes} edges={taskGraph.edges} type="task" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <p className="text-sm text-muted-foreground">Loading task graph...</p>
+                </div>
+              )}
+            </div>
           </TabsContent>
 
-          <TabsContent value="agents" className="flex-1 m-0 p-4">
-            {agentGraph && (
-              <AgentGraph nodes={agentGraph.nodes} edges={agentGraph.edges} />
-            )}
+          <TabsContent value="agents" className="flex-1 m-0 p-0 data-[state=active]:flex data-[state=active]:flex-col">
+            <div className="w-full h-full p-4">
+              {agentGraph ? (
+                <AgentGraph nodes={agentGraph.nodes} edges={agentGraph.edges} />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <p className="text-sm text-muted-foreground">Loading agent graph...</p>
+                </div>
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent value="citations" className="flex-1 m-0 p-0 overflow-hidden">
