@@ -36,27 +36,29 @@ class OrchestrationEngine:
         self._running = False
     
     async def expand_plan_to_tasks(
-        self, 
-        session: AsyncSession, 
-        project_id: str, 
+        self,
+        session: AsyncSession,
+        project_id: str,
         plan: Plan
     ) -> List[Task]:
         """
         Expand a Plan into a directed acyclic graph of Tasks.
-        
+
         This creates Task records and dependency relationships in the database.
         Cycles are explicitly disallowed.
         """
         task_name_to_id: Dict[str, str] = {}
         all_tasks: List[Task] = []
-        
+        phase_tasks: List[Task] = []  # Track tasks per phase for auto-dependencies
+
         phase_index = 0
         for phase in plan.phases or []:
+            current_phase_tasks = []
             sequence_index = 0
             for task_def in phase.get("tasks", []):
                 # Map task type
                 task_type = self._map_task_type(task_def.get("type", ""))
-                
+
                 # Create task
                 task = Task(
                     project_id=project_id,
@@ -68,26 +70,96 @@ class OrchestrationEngine:
                     state=TaskState.PENDING,
                     agent_config=task_def.get("agent_config"),
                 )
-                
+
                 session.add(task)
                 await session.flush()  # Get the ID
-                
+
                 task_name_to_id[task.name] = task.id
+                current_phase_tasks.append(task)
                 all_tasks.append((task, task_def.get("dependencies", [])))
                 sequence_index += 1
-            
+
+            phase_tasks.append(current_phase_tasks)
             phase_index += 1
-        
+
         # Create dependency relationships
+        dependencies_created = 0
         for task, dep_names in all_tasks:
+            # Track if this task has any explicit dependencies
+            has_explicit_deps = False
+
+            # First try to create explicit dependencies from the plan
             for dep_name in dep_names:
+                # Try exact match first
                 if dep_name in task_name_to_id:
                     dep = TaskDependency(
                         dependent_task_id=task.id,
                         dependency_task_id=task_name_to_id[dep_name]
                     )
                     session.add(dep)
-        
+                    dependencies_created += 1
+                    has_explicit_deps = True
+                    logger.info(f"Created dependency: {task.name} -> {dep_name}")
+                else:
+                    # Try fuzzy matching - find task name that contains the dep_name
+                    for task_name, task_id in task_name_to_id.items():
+                        if dep_name.lower() in task_name.lower() or task_name.lower() in dep_name.lower():
+                            dep = TaskDependency(
+                                dependent_task_id=task.id,
+                                dependency_task_id=task_id
+                            )
+                            session.add(dep)
+                            dependencies_created += 1
+                            has_explicit_deps = True
+                            logger.info(f"Created fuzzy dependency: {task.name} -> {task_name} (matched: {dep_name})")
+                            break
+
+            # If no explicit dependencies and this isn't the first task in its phase,
+            # create a dependency on the previous task in the same phase
+            if not has_explicit_deps and task.sequence_index > 0:
+                # Find the task in the same phase with sequence_index - 1
+                for other_task, _ in all_tasks:
+                    if (other_task.phase_index == task.phase_index and
+                        other_task.sequence_index == task.sequence_index - 1):
+                        dep = TaskDependency(
+                            dependent_task_id=task.id,
+                            dependency_task_id=other_task.id
+                        )
+                        session.add(dep)
+                        dependencies_created += 1
+                        logger.info(f"Created sequential dependency: {task.name} -> {other_task.name}")
+                        break
+
+        # Also create dependencies between phases - each task in phase N depends on
+        # the last task of phase N-1
+        for i in range(1, len(phase_tasks)):
+            prev_phase_last_task = phase_tasks[i-1][-1] if phase_tasks[i-1] else None
+            if prev_phase_last_task:
+                for task in phase_tasks[i]:
+                    # Check if this task already has any dependencies
+                    has_deps = False
+                    for other_task, _ in all_tasks:
+                        if other_task.id == task.id:
+                            # Check if we created any dependencies for this task
+                            result = await session.execute(
+                                select(TaskDependency).where(
+                                    TaskDependency.dependent_task_id == task.id
+                                )
+                            )
+                            if result.scalars().first():
+                                has_deps = True
+                            break
+
+                    if not has_deps:
+                        dep = TaskDependency(
+                            dependent_task_id=task.id,
+                            dependency_task_id=prev_phase_last_task.id
+                        )
+                        session.add(dep)
+                        dependencies_created += 1
+                        logger.info(f"Created phase dependency: {task.name} -> {prev_phase_last_task.name}")
+
+        logger.info(f"Total dependencies created: {dependencies_created}")
         await session.flush()
         
         # Validate DAG (no cycles)
