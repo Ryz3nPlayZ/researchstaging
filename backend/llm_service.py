@@ -359,38 +359,82 @@ Use clear topic sentences, proper transitions, and maintain a formal academic to
         audience: Optional[str] = None
     ) -> Dict[str, Any]:
         """Generate a research execution plan."""
-        system_message = """You are a research planning expert. Your task is to create
-structured research execution plans that are practical and achievable."""
+        system_message = """You are an expert academic research planner with extensive experience in designing rigorous, systematic literature reviews and research projects. Your plans are known for being:
+
+1. **Methodologically Sound**: Following established research protocols (PRISMA, Cochrane, etc.)
+2. **Comprehensive**: Covering all necessary aspects of high-quality research
+3. **Actionable**: Breaking down complex research into clear, executable steps
+4. **Quality-Focused**: Including validation, synthesis, and peer review at every stage
+5. **Audience-Appropriate**: Tailoring depth and terminology to the target audience
+
+Create detailed, phased research execution plans that a graduate student or research team could follow directly."""
 
         audience_text = f"Target Audience: {audience}" if audience else ""
+        output_guidance = self._get_output_type_guidance(output_type)
 
-        prompt = f"""Create a detailed research execution plan for the following:
+        prompt = f"""Create a comprehensive, methodologically rigorous research execution plan for:
 
-Research Goal: {research_goal}
-Output Type: {output_type}
+**Research Goal**: {research_goal}
+**Output Type**: {output_type.replace('_', ' ').title()}
 {audience_text}
 
-Provide a JSON response with the following structure:
+{output_guidance}
+
+**IMPORTANT REQUIREMENTS**:
+
+1. **Phase Structure**: Create 4-6 sequential phases that cover:
+   - **Discovery Phase**: Comprehensive literature search across multiple databases (Semantic Scholar, Google Scholar, arXiv, PubMed if relevant)
+   - **Screening & Selection**: Title/abstract screening, full-text review with inclusion/exclusion criteria
+   - **Deep Analysis**: Critical appraisal, quality assessment, detailed extraction
+   - **Synthesis**: Thematic analysis, identifying patterns, contradictions, gaps
+   - **Validation**: Cross-checking findings, methodological triangulation
+   - **Output Generation**: Drafting, revision, formatting for target venue
+
+2. **Task Specificity**: Each phase should have 3-5 specific, actionable tasks with:
+   - Clear objectives
+   - Dependencies on previous tasks
+   - Concrete deliverables
+   - Quality checkpoints
+
+3. **Search Strategy**: Include specific, relevant search terms that:
+   - Cover the core concepts
+   - Include synonyms and related terms
+   - Use Boolean operators (AND, OR) effectively
+   - Target relevant databases
+
+4. **Quality Assurance**: Build in validation tasks such as:
+   - Dual-screener for study selection
+   - Quality appraisal tools (CASP, Cochrane ROB, etc.)
+   - Cross-validation of findings
+   - Reference reconciliation
+
+5. **Estimated Scope**: Suggest realistic paper counts (15-50 based on comprehensiveness)
+
+**RESPONSE FORMAT** (JSON):
 {{
-    "title": "Proposed title for the research output",
+    "title": "Comprehensive, academic title for the research",
+    "summary": "2-3 sentence executive summary of research approach and key contributions expected",
+    "scope": "Detailed description of research scope, inclusion/exclusion criteria, and boundaries",
     "phases": [
         {{
-            "name": "Phase name",
-            "description": "What this phase accomplishes",
+            "name": "Phase Name (e.g., 'Multi-Database Literature Discovery')",
+            "description": "What this phase accomplishes and why it matters",
             "tasks": [
                 {{
-                    "name": "Task name",
-                    "type": "literature_search|summarization|synthesis|drafting",
-                    "description": "Task description"
+                    "name": "Specific Task Name",
+                    "type": "literature_search|pdf_acquisition|reference_extraction|summarization|synthesis|validation|drafting",
+                    "description": "Detailed description of what, how, and why",
+                    "dependencies": ["Task name this depends on"]
                 }}
             ]
         }}
     ],
-    "estimated_papers_to_review": number,
-    "key_search_terms": ["term1", "term2", ...]
+    "estimated_papers": <realistic number based on scope>,
+    "search_terms": ["<concept1>", "<concept2 AND concept3>", "<synonym1 OR synonym2>"],
+    "key_themes": ["<theme1>", "<theme2>", "<theme3>"]  // 5-7 expected themes/questions to guide analysis
 }}
 
-Focus on literature review and synthesis tasks. Do not include tasks requiring external data collection or experiments."""
+Remember: Create plans that demonstrate deep understanding of research methodology and would impress experienced researchers."""
 
         # Use OpenAI for structured JSON output if available
         response = await self.generate(
@@ -408,9 +452,50 @@ Focus on literature review and synthesis tasks. Do not include tasks requiring e
             if start != -1 and end > start:
                 return json.loads(response[start:end])
         except json.JSONDecodeError:
-            logger.warning("Could not parse research plan JSON, returning raw response")
+            logger.warning(f"Could not parse research plan JSON, returning raw response: {response[:200]}...")
 
         return {"raw_response": response}
+
+    def _get_output_type_guidance(self, output_type: str) -> str:
+        """Get specific guidance for different output types."""
+        guidance = {
+            "literature_review": """
+**Literature Review Requirements**:
+- Follow PRISMA guidelines for transparency and reproducibility
+- Include: PICO framework if applicable, exclusion criteria, quality assessment
+- Output: Systematic review with thematic synthesis, gap analysis, future directions
+- Structure: Introduction → Methods → Results (by theme) → Discussion → Conclusion
+- Target: 4000-8000 words for standard review, up to 15000 for comprehensive
+""",
+            "research_paper": """
+**Research Paper Requirements**:
+- Include: Abstract, Introduction, Literature Review, Methods (if applicable), Results, Discussion, Conclusion
+- Emphasize: Novel contributions, theoretical framework, practical implications
+- Structure: IMRaD or CARS (Creating a Research Space) model
+- Target: 6000-10000 words depending on venue
+- Include: Figures/tables, limitations, future work
+""",
+            "research_brief": """
+**Research Brief Requirements**:
+- Executive summary format for policymakers or practitioners
+- Include: Problem statement, key findings, implications, recommendations
+- Emphasize: Actionable insights, real-world applications
+- Structure: Executive summary → Background → Key Findings → Implications → Recommendations
+- Target: 1500-3000 words
+- Include: Infographics, callout boxes for key statistics
+""",
+            "systematic_review": """
+**Systematic Review Requirements**:
+- Strict adherence to PRISMA-P or Cochrane guidelines
+- Pre-register protocol (PROSPERO)
+- Include: Registered protocol, comprehensive search strategy, risk of bias assessment
+- Emphasize: Reproducibility, minimization of bias, statistical synthesis if possible
+- Structure: Protocol → Search strategy → Selection → Quality assessment → Synthesis → Discussion
+- Target: 8000-15000 words
+- Include: PRISMA flow diagram, risk of bias tables, forest plots (if meta-analysis)
+"""
+        }
+        return guidance.get(output_type, "")
 
 
 # Singleton instance
