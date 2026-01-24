@@ -6,7 +6,7 @@ Build an AI-native research execution system with autonomous research pipeline e
 ## Architecture (v3.0 - PostgreSQL/Redis/WebSocket)
 - **Backend**: FastAPI + PostgreSQL (SQLAlchemy async) + Redis (task queue/pub-sub)
 - **Frontend**: React + Tailwind + Shadcn UI + React Flow
-- **LLM**: emergentintegrations (GPT-4.1-mini, Gemini models)
+- **LLM**: Multi-provider support (OpenAI GPT-4, Google Gemini, Mistral, Groq)
 - **Literature**: Semantic Scholar + arXiv APIs
 - **PDF Processing**: PyMuPDF + pdfplumber
 - **Export**: Pandoc (MD/DOCX/HTML)
@@ -72,7 +72,7 @@ Build an AI-native research execution system with autonomous research pipeline e
 - [x] Plan caching (no redundant API calls)
 
 ### Services (Complete)
-- [x] LLM service with Emergent integrations
+- [x] LLM service with multi-provider support (OpenAI, Gemini, Mistral, Groq)
 - [x] Literature search (Semantic Scholar + arXiv)
 - [x] PDF acquisition and parsing
 - [x] Reference extraction
@@ -118,9 +118,10 @@ Build an AI-native research execution system with autonomous research pipeline e
 ### Backend (.env)
 - DATABASE_URL: PostgreSQL connection string
 - REDIS_URL: Redis connection string
-- MONGO_URL: Legacy (kept for reference)
-- DB_NAME: Legacy database name
-- EMERGENT_LLM_KEY: Universal LLM API key
+- OPENAI_API_KEY: OpenAI API key (optional)
+- GEMINI_API_KEY: Google Gemini API key (optional)
+- MISTRAL_API_KEY: Mistral AI API key (optional)
+- GROQ_API_KEY: Groq API key (optional)
 - CORS_ORIGINS: Allowed origins
 - WORKER_CONCURRENCY: Task worker threads
 
