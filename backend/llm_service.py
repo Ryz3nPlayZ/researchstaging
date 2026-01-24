@@ -86,7 +86,9 @@ class LLMService:
     def _get_mistral_client(self):
         """Lazy load Mistral client."""
         if self._mistral_client is None and MODELS["mistral"]["enabled"]:
-            from mistralai.async import MistralAsyncClient
+            import importlib
+            mistralai_async = importlib.import_module('mistralai.async')
+            MistralAsyncClient = mistralai_async.MistralAsyncClient
             self._mistral_client = MistralAsyncClient(api_key=MODELS["mistral"]["api_key"])
         return self._mistral_client
 
