@@ -23,13 +23,13 @@ PIDS=()
 detect_terminal() {
     # List of terminal emulators to try (in order of preference)
     TERMINALS=(
+        "kitty"
         "gnome-terminal"
         "konsole"
         "xfce4-terminal"
         "mate-terminal"
         "lxterminal"
         "alacritty"
-        "kitty"
         "termite"
         "rxvt"
         "xterm"
