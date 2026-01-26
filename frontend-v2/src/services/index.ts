@@ -1,2 +1,3 @@
 // API services barrel file
-export { api, ApiError } from './api';
+export { api } from './api';
+export type { ApiError } from './api';
