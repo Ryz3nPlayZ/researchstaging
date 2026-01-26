@@ -5,16 +5,16 @@
 ## Current Position
 
 **Phase:** 1 of 1 (Frontend Foundation)
-**Plan:** 1 of 1 (Design System Foundation)
+**Plan:** 2 of 2 (Project Structure and State Setup)
 **Status:** In progress
-**Last Activity:** 2026-01-26 - Completed 01-01-PLAN.md (Design System Foundation)
+**Last Activity:** 2026-01-26 - Completed 01-02-PLAN.md (Project Structure and State Setup)
 
-**Progress:** ████████░░░░░░░░░░░░░ 40% (1/2.5 plans estimated)
+**Progress:** ██████████░░░░░░░░░░░ 66% (2/3 plans completed)
 
 ## Session Continuity
 
-**Last Session:** 2026-01-26 14:50 UTC
-**Stopped At:** Completed 01-01-PLAN.md (Design System Foundation)
+**Last Session:** 2026-01-26 15:11 UTC
+**Stopped At:** Completed 01-02-PLAN.md (Project Structure and State Setup)
 **Resume File:** None
 
 ## Accumulated Decisions
@@ -73,6 +73,67 @@
 - Use `var(--token-name)` for component-specific custom styling
 - All Tailwind extensions must align with design token values
 
+### 4. Zustand State Management (Plan 01-02)
+
+**Decision:** Use Zustand for global state management
+
+**Rationale:**
+- Simpler API than Redux (no actions, reducers, providers)
+- Built-in TypeScript support
+- Smaller bundle size
+- Easier to learn and maintain
+- Sufficient for our state management needs
+
+**Stores Implemented:**
+- useProjectStore: Active project, task graph, task status tracking
+- useCreditStore: Credit balance (remaining, used, purchased)
+- useUIStore: Sidebar, details panel, active view
+- useAuthStore: User authentication, token management
+
+**Constraints:**
+- All stores must include reset() action for cleanup
+- TODOs mark where backend API integration will happen
+
+### 5. TypeScript Type System (Plan 01-02)
+
+**Decision:** Comprehensive TypeScript types for all core entities
+
+**Rationale:**
+- Compile-time type safety prevents bugs
+- Better IDE autocomplete and refactoring
+- Self-documenting code
+- Catches type errors early
+
+**Types Defined:**
+- Project: Project, ProjectStatus (enum), TaskCounts, CreateProjectRequest
+- Task: Task, TaskState (enum), TaskType (enum), TaskDependency, TaskGraphNode, TaskGraphEdge
+- Artifact: Artifact, ArtifactType (enum), Paper, Citation, SearchResults
+- API: ApiResponse, ApiError, PaginationParams, PaginatedResponse, User, AuthResponse, CreditBalance
+
+**Constraints:**
+- Must sync enum values with backend API responses
+- Use TypeScript generics for type-safe API calls
+
+### 6. Base API Service Architecture (Plan 01-02)
+
+**Decision:** Custom fetch wrapper with TypeScript generics
+
+**Rationale:**
+- Full control over error handling
+- Lightweight (no Axios dependency)
+- TypeScript generics for type safety
+- Automatic authentication header injection
+
+**Implementation:**
+- ApiRequestError class extends Error for structured error handling
+- get/post/put/patch/delete methods with generic typing
+- Authentication via Bearer token from localStorage
+- Configurable API base URL via environment variable
+
+**Constraints:**
+- Backend must return consistent error response format
+- Token must be stored in localStorage as 'auth_token'
+
 ## Blockers & Concerns
 
 ### Current Blockers
@@ -120,17 +181,54 @@ None identified
 
 **Summary:** `.planning/phases/01-frontend-foundation/01-01-SUMMARY.md`
 
+#### Plan 01-02: Project Structure and State Setup ✅
+
+**Commits:**
+- b3d5759: Create folder structure per FRONTEND_ARCHITECTURE.md
+- bbc451a: Create TypeScript types for core entities
+- 5958959: Implement Zustand stores for state management
+- 7962a24: Create base API service with fetch wrapper
+- a6faadb: Fix isolatedModules compatibility
+- a1cc23f: Fix barrel files with proper export {} statements
+- 6cba692: Fix ApiError export conflict
+- 907c15a: Rename ApiError to ApiRequestError
+- 78c3426: Remove duplicate ApiRequestError export
+
+**Deliverables:**
+- ✅ Complete folder structure (components/, pages/, stores/, hooks/, services/, types/, utils/)
+- ✅ TypeScript types for Project, Task, Artifact entities (5 files, 308 lines)
+- ✅ Four Zustand stores with TypeScript (useProjectStore, useCreditStore, useUIStore, useAuthStore)
+- ✅ Base API service with typed fetch wrappers (156 lines)
+- ✅ Barrel files for clean imports
+- ✅ Build compiles successfully (61.74 kB gzipped)
+
+**Summary:** `.planning/phases/01-frontend-foundation/01-02-SUMMARY.md`
+
 ## Upcoming Work
 
 ### Phase 01: Frontend Foundation (Continued)
 
-Estimated remaining plans: 1-2
+Estimated remaining plans: 0-1
 
 Potential next plans:
-- Component library setup (buttons, inputs, cards)
-- Layout components (sidebar, details panel)
-- Typography components
-- Or copy previous frontend work to frontend-v2 with design token integration
+- Layout components (Sidebar, DetailsPanel, Statusbar, WorkspaceLayout)
+- Basic UI components (Button, Input, Card)
+- Or proceed directly to Phase 02 (Core Functionality) if component library will be built as-needed
+
+### Next Steps Options:
+
+**Option A:** Complete Layout Components
+- Create Sidebar, DetailsPanel, Statusbar, WorkspaceLayout
+- Integrate with Zustand stores (useUIStore, useCreditStore, useAuthStore)
+- Use design tokens for styling
+- Estimated: 1 plan
+
+**Option B:** Proceed to Core Functionality
+- Build layout components as needed during page development
+- Start with HomeDashboard and ProjectWorkspace pages
+- Integrates state management and API layer immediately
+
+**Recommendation:** Option A - Complete layout components first to establish consistent UI patterns.
 
 ### Phase 02: Core Functionality (Not Started)
 
@@ -169,6 +267,30 @@ Potential next plans:
 ```
 frontend-v2/
 ├── src/
+│   ├── components/
+│   │   ├── ui/                  # shadcn/ui components (future)
+│   │   ├── graphs/              # Graph visualizations
+│   │   ├── editor/              # Tiptap editor
+│   │   ├── layout/              # Layout components (future)
+│   │   ├── artifacts/           # Artifact viewers
+│   │   ├── tasks/               # Task components
+│   │   ├── chat/                # Chat interface
+│   │   └── common/              # Shared components
+│   ├── pages/                   # Page components (future)
+│   ├── stores/                  # Zustand stores ✅
+│   │   ├── useProjectStore.ts   # Project state
+│   │   ├── useCreditStore.ts    # Credit balance
+│   │   ├── useUIStore.ts        # UI state
+│   │   └── useAuthStore.ts      # Authentication
+│   ├── hooks/                   # Custom hooks (future)
+│   ├── services/
+│   │   └── api.ts               # Base API client ✅
+│   ├── types/                   # TypeScript types ✅
+│   │   ├── project.ts           # Project types
+│   │   ├── task.ts              # Task types
+│   │   ├── artifact.ts          # Artifact types
+│   │   └── api.ts               # API types
+│   ├── utils/                   # Utility functions (future)
 │   ├── styles/
 │   │   └── design-tokens.css    # All CSS custom properties
 │   ├── index.css                # Global styles with design token import
