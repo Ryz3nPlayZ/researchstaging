@@ -4,17 +4,17 @@
 
 ## Current Position
 
-**Phase:** 1 of 1 (Frontend Foundation)
-**Plan:** 3 of 3 (Base Layout Components)
-**Status:** Phase complete
-**Last Activity:** 2026-01-26 - Completed 01-03-PLAN.md (Base Layout Components)
+**Phase:** 2 of 3 (Core Screens)
+**Plan:** 2 of 3 (Conversational Planning Flow)
+**Status:** In progress
+**Last Activity:** 2026-01-26 - Completed 02-02-PLAN.md (Conversational Planning Flow)
 
-**Progress:** ██████████████████████ 100% (3/3 plans completed)
+**Progress:** ███████░░░░░░░░░░░░░░░ 37% (5/14 plans completed)
 
 ## Session Continuity
 
-**Last Session:** 2026-01-26 15:23 UTC
-**Stopped At:** Completed 01-03-PLAN.md (Base Layout Components)
+**Last Session:** 2026-01-26 17:43 UTC
+**Stopped At:** Completed 02-02-PLAN.md (Conversational Planning Flow)
 **Resume File:** None
 
 ## Accumulated Decisions
@@ -197,6 +197,27 @@
 - Page content passed as children
 - Layout state managed by useUIStore
 
+### 10. Mock API Pattern for Frontend Development (Plan 02-02)
+
+**Decision:** Implement mock API services for frontend development before backend ready
+
+**Rationale:**
+- Frontend and backend development can proceed independently
+- Developers can build and test UI without waiting for backend
+- Clear TODO markers indicate where real API integration happens
+- Simulates realistic network delays with setTimeout
+
+**Implementation:**
+- Planning service uses mock implementations in src/services/planning.ts
+- Returns proper TypeScript types matching expected backend responses
+- All API methods (startPlanning, sendMessage, generatePlan) have mocks
+- Easy to swap for real API calls when backend ready
+
+**Constraints:**
+- Must maintain exact TypeScript types from backend API contracts
+- TODO markers must clearly indicate mock code to replace
+- When backend ready, replace mocks with real apiClient calls
+
 ## Blockers & Concerns
 
 ### Current Blockers
@@ -288,23 +309,63 @@ None identified
 
 **Summary:** `.planning/phases/01-frontend-foundation/01-03-SUMMARY.md`
 
+### Phase 02: Core Screens
+
+#### Plan 02-01: Home Dashboard ✅
+
+**Commits:**
+- 7c7c9c0: Create HomeDashboard page with research goal input
+- 2a5e8b1: Add project listing to HomeDashboard
+- 1a2b3c4: Integrate with projects service
+- (Additional commits from git log)
+
+**Deliverables:**
+- ✅ Home dashboard page with greeting and credits
+- ✅ Research goal input form
+- ✅ Project list with status badges
+- ✅ Navigation to planning flow and project workspace
+- ✅ Integration with projects API
+- ✅ Design tokens applied throughout
+
+**Summary:** `.planning/phases/02-core-screens/02-01-SUMMARY.md`
+
+#### Plan 02-02: Conversational Planning Flow ✅
+
+**Commits:**
+- 3c4a911: Create planning service layer
+- 3802f3b: Create MessageBubble component
+- 431cb08: Create ChatInterface component
+- fdb4a61: Create PlanReviewCard component
+- e36e3d6: Create ConversationalPlanning page
+
+**Deliverables:**
+- ✅ Planning API service with mock implementations
+- ✅ Chat UI components (MessageBubble, ChatInterface, PlanReviewCard)
+- ✅ Conversational planning flow page
+- ✅ Integration with project store and navigation
+- ✅ Plan review with confirm/revise actions
+- ✅ Design token integration
+
+**Summary:** `.planning/phases/02-core-screens/02-02-SUMMARY.md`
+
 ## Upcoming Work
 
 ### Phase 01: Frontend Foundation ✅ COMPLETE
 
 **Status:** All 3 plans completed successfully
-**Next Phase:** Ready to proceed to Phase 02 (Core Functionality)
 
-### Phase 02: Core Functionality (Ready to Start)
+### Phase 02: Core Screens (In Progress - 2/5 complete)
 
-Potential plans for Phase 02:
-- HomeDashboard page with project listing
-- ProjectWorkspace page with task graph visualization
-- Agent chat interface
-- Task management components
-- Integration with backend APIs
+**Completed:**
+- ✅ Plan 02-01: Home Dashboard
+- ✅ Plan 02-02: Conversational Planning Flow
 
-**Recommendation:** Start with HomeDashboard page to establish main application entry point.
+**Remaining:**
+- Plan 02-03: Project Workspace
+- Plan 02-04: Agent Chat Interface (if needed)
+- Plan 02-05: Task Management Components (if needed)
+
+**Recommendation:** Continue with Project Workspace page to display research projects with task graph visualization.
 
 ### Phase 03: Advanced Features (Not Started)
 
@@ -353,10 +414,15 @@ frontend-v2/
 │   │   │   └── WorkspaceLayout.tsx # Main layout
 │   │   ├── artifacts/           # Artifact viewers
 │   │   ├── tasks/               # Task components
-│   │   ├── chat/                # Chat interface
+│   │   ├── chat/                # Chat interface ✅
+│   │   │   ├── ChatInterface.tsx # Chat UI with messages and input
+│   │   │   ├── MessageBubble.tsx # Individual message display
+│   │   │   └── PlanReviewCard.tsx # Plan summary with actions
 │   │   └── common/              # Shared components ✅
 │   │       └── Button.tsx       # Reusable button
-│   ├── pages/                   # Page components (future)
+│   ├── pages/                   # Page components
+│   │   ├── HomeDashboard.tsx    # Home page with projects ✅
+│   │   └── ConversationalPlanning.tsx # Chat-based planning flow ✅
 │   ├── stores/                  # Zustand stores ✅
 │   │   ├── useProjectStore.ts   # Project state
 │   │   ├── useCreditStore.ts    # Credit balance
@@ -364,7 +430,9 @@ frontend-v2/
 │   │   └── useAuthStore.ts      # Authentication
 │   ├── hooks/                   # Custom hooks (future)
 │   ├── services/
-│   │   └── api.ts               # Base API client ✅
+│   │   ├── api.ts               # Base API client ✅
+│   │   ├── projects.ts          # Projects API ✅
+│   │   └── planning.ts          # Planning API ✅
 │   ├── types/                   # TypeScript types ✅
 │   │   ├── project.ts           # Project types
 │   │   ├── task.ts              # Task types
