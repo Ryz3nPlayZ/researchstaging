@@ -1,1 +1,1 @@
-// Editor components barrel file
+export {};

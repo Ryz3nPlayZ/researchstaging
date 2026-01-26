@@ -1,1 +1,1 @@
-// Artifact viewer components barrel file
+export {};

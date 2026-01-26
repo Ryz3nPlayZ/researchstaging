@@ -1,1 +1,1 @@
-// Page components barrel file
+export {};
