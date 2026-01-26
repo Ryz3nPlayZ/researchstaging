@@ -10,7 +10,7 @@ import { useUIStore } from '../../stores/useUIStore';
 
 interface DetailsPanelProps {
   title?: string;
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 /**
@@ -70,7 +70,7 @@ export const DetailsPanel: React.FC<DetailsPanelProps> = ({ title = 'Details', c
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-4">
-          {children}
+          {children || <p className="text-[var(--color-text-secondary)]">No details available</p>}
         </div>
       </div>
     </>
