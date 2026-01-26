@@ -15,19 +15,19 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api
 /**
  * Custom API Error class for handling API errors
  */
-export class ApiError extends Error {
+export class ApiRequestError extends Error {
   constructor(
     message: string,
     public status: number,
     public response?: any
   ) {
     super(message);
-    this.name = 'ApiError';
+    this.name = 'ApiRequestError';
   }
 }
 
 /**
- * Handle HTTP response, parsing JSON or throwing ApiError
+ * Handle HTTP response, parsing JSON or throwing ApiRequestError
  */
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -36,7 +36,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
       message: 'An unknown error occurred',
       status: response.status,
     }));
-    throw new ApiError(error.message || error.error, error.status, error);
+    throw new ApiRequestError(error.message || error.error, error.status, error);
   }
 
   const contentType = response.headers.get('content-type');
@@ -154,4 +154,4 @@ export const api = {
   delete: del,
 };
 
-export { ApiError, handleResponse };
+export { ApiRequestError, handleResponse };
