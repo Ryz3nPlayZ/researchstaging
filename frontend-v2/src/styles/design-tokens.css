@@ -1,0 +1,220 @@
+/**
+ * Design Tokens - Research Orchestration Platform
+ *
+ * CSS Custom Properties (CSS Variables) for consistent styling across the application.
+ * Reference: DESIGN_TOKENS.md
+ */
+
+:root {
+  /* ============================================
+     COLOR SYSTEM
+     ============================================ */
+
+  /* Primary Colors - Navy Theme */
+  --color-primary: #0f172a;         /* Slate 900 - Deep premium navy */
+  --color-primary-light: #1e293b;   /* Slate 800 - Lighter navy for hover states */
+  --color-primary-lighter: #334155; /* Slate 700 - Even lighter navy */
+  --color-primary-dark: #020617;    /* Slate 950 - Darkest navy */
+
+  /* Secondary Colors */
+  --color-secondary: #64748b;       /* Slate 500 - Secondary UI elements */
+  --color-secondary-light: #94a3b8; /* Slate 400 - Disabled states */
+  --color-secondary-dark: #475569;  /* Slate 600 - Secondary hover */
+
+  /* Functional Status Colors (Workspace) */
+  --color-success: #10b981;         /* Green 500 - Completed */
+  --color-success-bg: #d1fae5;      /* Green 100 - Completed background */
+
+  --color-ready: #3b82f6;           /* Blue 500 - Ready to run */
+  --color-ready-bg: #dbeafe;        /* Blue 100 - Ready background */
+
+  --color-blocked: #d1d5db;         /* Gray 300 - Blocked */
+  --color-blocked-bg: #f3f4f6;      /* Gray 100 - Blocked background */
+
+  --color-warning: #f59e0b;         /* Amber 500 - Requires attention */
+  --color-warning-bg: #fef3c7;      /* Amber 100 - Warning background */
+
+  --color-error: #ef4444;           /* Red 500 - Failed */
+  --color-error-bg: #fee2e2;        /* Red 100 - Error background */
+
+  /* Neutral Colors */
+  --color-bg-primary: #ffffff;      /* White - Main background */
+  --color-bg-secondary: #f8fafc;    /* Slate 50 - Section backgrounds */
+  --color-bg-tertiary: #f1f5f9;     /* Slate 100 - Card backgrounds */
+
+  --color-text-primary: #0f172a;    /* Slate 900 - Primary text */
+  --color-text-secondary: #475569;  /* Slate 600 - Secondary text */
+  --color-text-tertiary: #94a3b8;   /* Slate 400 - Tertiary text/disabled */
+
+  --color-border: #e2e8f0;          /* Slate 200 - Borders */
+  --color-border-focus: #0f172a;    /* Slate 900 - Focus rings */
+
+  /* Semantic Colors */
+  --color-link: #3b82f6;            /* Blue 500 - Links */
+  --color-link-hover: #2563eb;      /* Blue 600 - Link hover */
+
+  --color-info: #06b6d4;            /* Cyan 500 - Info */
+  --color-info-bg: #cffafe;         /* Cyan 100 - Info background */
+
+  /* ============================================
+     TYPOGRAPHY
+     ============================================ */
+
+  /* Font Family */
+  --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Font Sizes */
+  --font-size-display: 48px;        /* Research goals, greetings */
+  --font-size-h1: 32px;             /* Page titles */
+  --font-size-h2: 24px;             /* Section headers */
+  --font-size-h3: 18px;             /* Card titles */
+  --font-size-h4: 16px;             /* Subsection headers */
+  --font-size-body: 16px;           /* Default text */
+  --font-size-small: 14px;          /* Metadata, captions */
+  --font-size-x-small: 12px;        /* Fine print */
+  --font-size-mono: 14px;           /* Code, logs */
+
+  /* Font Weights */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Line Heights */
+  --line-height-tight: 1.2;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+
+  /* ============================================
+     SPACING
+     ============================================ */
+
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 24px;
+  --spacing-xl: 32px;
+  --spacing-2xl: 48px;
+  --spacing-3xl: 64px;
+
+  /* ============================================
+     BORDER RADIUS
+     ============================================ */
+
+  --radius-sm: 4px;                 /* Small elements */
+  --radius-md: 8px;                 /* Buttons, inputs */
+  --radius-lg: 12px;                /* Cards */
+  --radius-xl: 16px;                /* Large cards */
+  --radius-full: 9999px;            /* Pills, badges */
+
+  /* ============================================
+     SHADOWS
+     ============================================ */
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+
+  /* ============================================
+     Z-INDEX SCALE
+     ============================================ */
+
+  --z-base: 0;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-fixed: 300;
+  --z-modal-backdrop: 400;
+  --z-modal: 500;
+  --z-popover: 600;
+  --z-tooltip: 700;
+
+  /* ============================================
+     COMPONENT-SPECIFIC TOKENS
+     ============================================ */
+
+  /* Buttons */
+  --button-primary-bg: var(--color-primary);
+  --button-primary-text: #ffffff;
+  --button-primary-hover: var(--color-primary-light);
+
+  --button-secondary-bg: var(--color-bg-tertiary);
+  --button-secondary-text: var(--color-primary);
+  --button-secondary-hover: var(--color-border);
+
+  --button-padding-sm: 8px 16px;
+  --button-padding-md: 12px 20px;
+  --button-padding-lg: 16px 24px;
+
+  /* Inputs */
+  --input-bg: var(--color-bg-primary);
+  --input-border: var(--color-border);
+  --input-border-focus: var(--color-primary);
+  --input-padding: 10px 14px;
+  --input-placeholder: var(--color-text-tertiary);
+
+  /* Task Graph Nodes */
+  --node-bg: var(--color-bg-primary);
+  --node-border: var(--color-border);
+  --node-border-completed: var(--color-success);
+  --node-border-ready: var(--color-ready);
+  --node-border-blocked: var(--color-blocked);
+  --node-border-warning: var(--color-warning);
+  --node-border-failed: var(--color-error);
+
+  --node-size: 200px;               /* Width of task node */
+  --node-padding: var(--spacing-md);
+
+  /* Sidebar */
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 64px;
+  --sidebar-bg: var(--color-bg-secondary);
+  --sidebar-border: var(--color-border);
+
+  /* Details Panel */
+  --details-panel-width: 400px;
+  --details-panel-bg: var(--color-bg-primary);
+  --details-panel-border: var(--color-border);
+
+  /* ============================================
+     ANIMATION
+     ============================================ */
+
+  /* Durations */
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 350ms;
+
+  /* Easing */
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ============================================
+     TRANSITIONS
+     ============================================ */
+
+  --transition-fast: all var(--duration-fast) var(--ease-out);
+  --transition-normal: all var(--duration-normal) var(--ease-out);
+  --transition-slow: all var(--duration-slow) var(--ease-out);
+
+  /* ============================================
+     BREAKPOINTS
+     ============================================ */
+
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;           /* Minimum supported */
+  --breakpoint-2xl: 1440px;
+  --breakpoint-3xl: 1920px;
+
+  /* ============================================
+     OPACITY
+     ============================================ */
+
+  --opacity-disabled: 0.5;
+  --opacity-hover: 0.8;
+  --opacity-focus: 0.9;
+}
