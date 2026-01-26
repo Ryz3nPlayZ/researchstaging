@@ -15,7 +15,7 @@ const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api
 /**
  * Custom API Error class for handling API errors
  */
-export class ApiRequestError extends Error {
+class ApiRequestError extends Error {
   constructor(
     message: string,
     public status: number,
