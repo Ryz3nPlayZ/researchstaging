@@ -6,7 +6,7 @@
  */
 
 import { create } from 'zustand';
-import type { User, LoginCredentials } from '../types/api';
+import type { User } from '../types/api';
 
 interface AuthState {
   // Authentication state
@@ -47,7 +47,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     //   token: data.token,
     //   isAuthenticated: true,
     // });
-    console.log('TODO: Implement API call to authenticate', email);
   },
 
   logout: () => {

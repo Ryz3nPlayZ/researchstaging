@@ -6,7 +6,6 @@
  */
 
 import type {
-  ApiResponse,
   ApiError as ApiErrorResponse,
 } from '../types/api';
 

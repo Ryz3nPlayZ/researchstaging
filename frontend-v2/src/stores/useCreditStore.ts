@@ -40,7 +40,6 @@ export const useCreditStore = create<CreditState>((set, get) => ({
     //   creditsUsed: data.used,
     //   creditsPurchased: data.purchased,
     // });
-    console.log('TODO: Implement API call to fetch current credits');
   },
 
   decrementCredits: (amount) =>

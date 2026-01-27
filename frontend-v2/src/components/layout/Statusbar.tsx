@@ -20,7 +20,7 @@ export const Statusbar: React.FC = () => {
 
   // For now, simulate connection status
   // In production, this would come from a WebSocket or API connection store
-  const [connectionStatus, setConnectionStatus] = React.useState<ConnectionStatus>('connected');
+  const [connectionStatus] = React.useState<ConnectionStatus>('connected');
 
   const statusColors = {
     connected: 'bg-[var(--color-success)]',

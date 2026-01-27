@@ -21,9 +21,6 @@ interface WorkspaceLayoutProps {
 export const WorkspaceLayout: React.FC<WorkspaceLayoutProps> = ({ children }) => {
   const { sidebarCollapsed } = useUIStore();
 
-  const sidebarWidth = sidebarCollapsed ? 'w-16' : 'w-64';
-  const detailsPanelWidth = 'w-96';
-
   return (
     <div className="h-screen overflow-hidden bg-[var(--color-background)]">
       <div className="flex h-full">

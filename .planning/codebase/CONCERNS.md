@@ -1,291 +1,279 @@
 # Codebase Concerns
 
-**Analysis Date:** 2025-01-23
+**Analysis Date:** 2026-01-26
 
 ## Tech Debt
 
-**Error Handling Pattern:**
-- Issue: Widespread use of bare `except Exception:` clauses that silently swallow errors
-- Files: `/home/zemul/Programming/research/research/backend/pdf_service.py:178`, `/home/zemul/Programming/research/research/backend/database/connection.py:39`, `/home/zemul/Programming/research/research/backend/export_service.py:78`
-- Impact: Errors are logged but not properly propagated, making debugging difficult
-- Fix approach: Replace with specific exception types and ensure proper error handling or re-raising
+**Incomplete API Integration:**
+- Issue: Store methods have TODO comments instead of actual API implementations
+- Files: `/home/zemul/Programming/research/frontend-v2/src/stores/useCreditStore.ts:43`, `/home/zemul/Programming/research/frontend-v2/src/stores/useAuthStore.ts:50`
+- Impact: Authentication and credit management are non-functional stubs
+- Fix approach: Implement API calls to backend endpoints for login/logout and credit fetching
 
-**Return Value Silencing:**
-- Issue: Extensive use of `return None`, `return []`, and `return {}` on error paths without distinction between error and empty result
-- Files: `/home/zemul/Programming/research/research/backend/pdf_service.py` (lines 30, 40, 48, 155, 164), `/home/zemul/Programming/research/research/backend/export_service.py` (lines 53, 73, 130, 137, 157, 164, 191, 198)
-- Impact: Callers cannot distinguish between "no results" and "operation failed"
-- Fix approach: Use Result types (success/error) or raise exceptions instead of returning None
+**TypeScript Type Safety Issues:**
+- Issue: Use of `any` type in multiple locations bypasses type checking
+- Files: `/home/zemul/Programming/research/frontend-v2/src/services/api.ts:22`, `/home/zemul/Programming/research/frontend-v2/src/pages/ConversationalPlanning.tsx:141`
+- Impact: Loss of type safety increases runtime error risk
+- Fix approach: Define proper types for API responses and plan output types
 
-**Duplicate Task Execution Logic:**
-- Issue: Two separate task executors exist with overlapping responsibilities
-- Files: `/home/zemul/Programming/research/research/backend/task_executor.py` (MongoDB-based) and `/home/zemul/Programming/research/research/backend/workers/task_worker.py` (PostgreSQL-based)
-- Impact: Confusion about which executor is used, potential for divergence, maintenance burden
-- Fix approach: Consolidate to single executor using PostgreSQL models, remove MongoDB implementation
+**Mock Test File:**
+- Issue: Test file contains default create-react-app placeholder test
+- Files: `/home/zemul/Programming/research/frontend-v2/src/App.test.tsx`
+- Impact: No actual test coverage, gives false sense of testing
+- Fix approach: Write real tests for App component routing and layout
 
-**Hardcoded Processing Limits:**
-- Issue: Magic numbers scattered throughout code for limiting batch sizes
-- Files: `/home/zemul/Programming/research/research/backend/workers/task_worker.py:245` (30 papers), `:329` (20 papers), `/home/zemul/Programming/research/research/backend/task_executor.py:140` (50 papers), `:259` (30 papers)
-- Impact: No centralized configuration, difficult to tune for performance
-- Fix approach: Extract to configuration file with environment-specific overrides
+**Excessive Console Logging:**
+- Issue: Debug console.log statements throughout production code
+- Files: `/home/zemul/Programming/research/frontend-v2/src/stores/useCreditStore.ts:43`, `/home/zemul/Programming/research/frontend-v2/src/stores/useAuthStore.ts:50`, `/home/zemul/Programming/research/frontend-v2/src/pages/ConversationalPlanning.tsx:64,109,170`, `/home/zemul/Programming/research/frontend-v2/src/pages/HomeDashboard.tsx:91,116`
+- Impact: Clutters console, potential performance impact, information leakage in production
+- Fix approach: Replace with proper logging library or remove entirely
 
-**Incomplete Exception Handling in Worker Loop:**
-- Issue: Worker catches all exceptions in main loop but continues running
-- Files: `/home/zemul/Programming/research/research/backend/workers/task_worker.py:491-493`
-- Impact: Persistent errors cause repeated failures without backoff or escalation
-- Fix approach: Add circuit breaker pattern, exponential backoff, and max consecutive failure threshold
+**Empty Error Catch Blocks:**
+- Issue: Try-catch blocks with empty catch clauses in MessageBubble
+- Files: `/home/zemul/Programming/research/frontend-v2/src/components/chat/MessageBubble.tsx:32`
+- Impact: Timestamp parsing errors silently swallowed
+- Fix approach: Add error logging or fallback behavior
+
+**Component Size:**
+- Issue: Large component files with 300+ lines
+- Files: `/home/zemul/Programming/research/frontend-v2/src/pages/HomeDashboard.tsx:330`, `/home/zemul/Programming/research/frontend-v2/src/pages/ConversationalPlanning.tsx:247`
+- Impact: Reduced maintainability, harder to test, violates single responsibility
+- Fix approach: Extract child components and custom hooks
 
 ## Known Bugs
 
-**Task Run Creation Edge Case:**
-- Symptoms: Line 171 in task_worker.py references `run.id` when `run` may not be defined on exception
-- Files: `/home/zemul/Programming/research/research/backend/workers/task_worker.py:171`
-- Trigger: Exception occurring before task run creation completes
-- Workaround: None exists, will crash on task failure before run creation
-- Fix approach: Check if run variable exists before using it in exception handler
-
-**WebSocket Memory Leak:**
-- Symptoms: Active connections dictionary accumulates dead WebSocket connections
-- Files: `/home/zemul/Programming/research/research/backend/realtime/websocket.py:27`
-- Trigger: Client disconnects without proper close, network issues
-- Workaround: Manual cleanup only
-- Fix approach: Implement periodic connection health check with automatic cleanup
-
-**PDF Content Truncation:**
-- Symptoms: Full text truncated to 50000 characters without warning
-- Files: `/home/zemul/Programming/research/research/backend/workers/task_worker.py:249`, `/home/zemul/Programming/research/research/backend/task_executor.py:158`
-- Trigger: Papers with longer content
-- Workaround: None, data silently lost
-- Fix approach: Store in chunks or use TEXT field with proper size limits, add logging when truncated
-
-**JSON Parsing in LLM Responses:**
-- Symptoms: Research plan generation fails silently if LLM returns non-JSON
-- Files: `/home/zemul/Programming/research/research/backend/llm_service.py:188-197`, `/home/zemul/Programming/research/research/backend/planning_service.py:191-196`
-- Trigger: LLM returns conversational text before/after JSON block
-- Workaround: Falls back to raw response but loses structured plan
-- Fix approach: Add retry with refined prompt, better JSON extraction regex
+**No Known Bugs:**
+- Status: No specific bugs identified in current frontend-v2 codebase
+- Note: Code is relatively new and under active development
 
 ## Security Considerations
 
-**Database Credentials in URL:**
-- Risk: Hardcoded credentials in default DATABASE_URL
-- Files: `/home/zemul/Programming/research/research/backend/database/connection.py:12`
-- Current mitigation: None documented, uses default credentials
-- Recommendations: Require DATABASE_URL from environment, fail fast if not set
+**API Keys in Environment Files:**
+- Risk: Real API keys stored in backend/.env file
+- Files: `/home/zemul/Programming/research/backend/.env` contains OPENAI_API_KEY, GEMINI_API_KEY, MISTRAL_API_KEY, GROQ_API_KEY, OPENROUTER_API_KEY
+- Current mitigation: File exists in repository (should be gitignored)
+- Recommendations: Ensure .env is in .gitignore, rotate all exposed API keys, use .env.template only
 
-**CORS Configuration:**
-- Risk: Default CORS allows all origins (`*`) if not configured
-- Files: `/home/zemul/Programming/research/research/backend/server.py:1020`
-- Current mitigation: Relies on CORS_ORIGINS env var
-- Recommendations: Set strict default, document required env var, validate origins format
+**Weak JWT Secret:**
+- Risk: Default JWT_SECRET_KEY is weak developer key
+- Files: `/home/zemul/Programming/research/backend/.env:JWT_SECRET_KEY=dev-secret-key-change-in-production-12345678`
+- Current mitigation: Documented as needing change in production
+- Recommendations: Generate strong random secret, require from environment, fail fast if not set
 
-**No Rate Limiting:**
-- Risk: No rate limits on API endpoints
-- Files: `/home/zemul/Programming/research/research/backend/server.py` (endpoints lack rate limiting)
+**localStorage for Auth Tokens:**
+- Risk: Authentication tokens stored in localStorage (XSS vulnerable)
+- Files: `/home/zemul/Programming/research/frontend-v2/src/services/api.ts:54`, `/home/zemul/Programming/research/frontend-v2/src/stores/useAuthStore.ts:54,65`
 - Current mitigation: None
-- Recommendations: Add rate limiting middleware, especially for LLM endpoints and project creation
+- Recommendations: Use httpOnly cookies or implement secure token storage with CSRF protection
 
-**External API Keys:**
-- Risk: LLM API key loaded from environment but no validation on startup
-- Files: `/home/zemul/Programming/research/research/backend/llm_service.py:29-31`
-- Current mitigation: Warning logged but service continues
-- Recommendations: Fail fast if EMERGENT_LLM_KEY not set, validate key format
+**No Token Expiration Handling:**
+- Risk: No refresh token logic or expiration checking visible
+- Files: `/home/zemul/Programming/research/frontend-v2/src/services/api.ts` (getAuthHeader function)
+- Current mitigation: None
+- Recommendations: Implement token refresh mechanism, handle 401 responses with re-authentication
 
-**Subprocess Command Injection:**
-- Risk: Export service uses subprocess.run with Pandoc
-- Files: `/home/zemul/Programming/research/research/backend/export_service.py:116-125`, `143-152`, `172-181`
-- Current mitigation: Arguments are hardcoded lists, not user input
-- Recommendations: Document security assumption, add validation if format/params become user-controlled
+**Hardcoded Backend URL:**
+- Risk: API_BASE_URL falls back to localhost without validation
+- Files: `/home/zemul/Programming/research/frontend-v2/src/services/api.ts:13`
+- Current mitigation: Uses REACT_APP_API_URL env var if set
+- Recommendations: Validate URL on startup, provide clear error if not configured
+
+**Email in Environment:**
+- Risk: Email address exposed in .env.template
+- Files: `/home/zemul/Programming/research/backend/.env.template:60` (UNPAYWALL_EMAIL)
+- Current mitigation: None documented
+- Recommendations: Document that this should be replaced, is acceptable for API registration
 
 ## Performance Bottlenecks
 
-**Synchronous PDF Processing:**
-- Problem: PDFs processed sequentially in task execution
-- Files: `/home/zemul/Programming/research/research/backend/workers/task_worker.py:245-254`
-- Cause: Loop awaits each PDF processing call individually
-- Improvement path: Process PDFs concurrently with asyncio.gather and semaphore for rate limiting
+**No Optimistic UI Updates:**
+- Problem: All API calls block UI until response
+- Files: `/home/zemul/Programming/research/frontend-v2/src/pages/ConversationalPlanning.tsx:75-122`
+- Cause: No immediate state updates before API calls
+- Improvement path: Implement optimistic updates with rollback on error
 
-**N+1 Query in Task List:**
-- Problem: Listing project tasks may trigger separate queries for dependencies
-- Files: `/home/zemul/Programming/research/research/backend/server.py:496-500`
-- Cause: SQLAlchemy relationship loading not optimized
-- Improvement path: Use selectinload() or joinedload() for dependencies in initial query
+**Uncontrolled Re-renders:**
+- Problem: Components may re-render unnecessarily on store changes
+- Files: `/home/zemul/Programming/research/frontend-v2/src/pages/HomeDashboard.tsx` (useProjectStore without selectors)
+- Cause: Zustand stores accessed without selectors, triggers render on any state change
+- Improvement path: Use selectors to subscribe only to needed state slices
 
-**No Connection Pooling for External APIs:**
-- Problem: New httpx client created for each service instance
-- Files: `/home/zemul/Programming/research/research/backend/literature_service.py:191-192`
-- Cause: Client instantiation in __init__
-- Improvement path: Use singleton httpx client with connection pooling at module level
+**No Request Debouncing:**
+- Problem: Auto-save in Workspace not debounced
+- Files: `/home/zemul/Programming/research/frontend/src/components/layout/Workspace.jsx:179-190`
+- Cause: Direct API call on every content change
+- Improvement path: Implement debounce with 500-1000ms delay
 
-**Full Text Search Not Indexed:**
-- Problem: No full-text search indexes on Paper.title or abstract
-- Files: `/home/zemul/Programming/research/research/backend/database/models.py:382-385`
-- Cause: Only basic indexes defined
-- Improvement path: Add PostgreSQL GIN indexes for full-text search capability
+**No Code Splitting:**
+- Problem: All components loaded in initial bundle
+- Files: `/home/zemul/Programming/research/frontend-v2/src/App.tsx` (no React.lazy visible)
+- Cause: No lazy loading routes or heavy components
+- Improvement path: Implement React.lazy for pages, especially ConversationalPlanning and HomeDashboard
 
-**Citation Network Graph Computation:**
-- Problem: Graph layout computed on every request
-- Files: `/home/zemul/Programming/research/research/backend/server.py:924-943`
-- Cause: Layout algorithm runs server-side for each request
-- Improvement path: Cache layout positions, compute incrementally, or delegate to frontend
+**Missing React.memo:**
+- Problem: Child components re-render when parent updates
+- Files: Chat components, layout components
+- Cause: No memoization of expensive component renders
+- Improvement path: Add React.memo to MessageBubble, PlanReviewCard, and other frequent-render components
 
 ## Fragile Areas
 
-**Orchestration State Machine:**
-- Files: `/home/zemul/Programming/research/research/backend/orchestration/engine.py:254-312`
-- Why fragile: State transitions manually validated, complex dependency resolution
-- Safe modification: Add state transition logging, write comprehensive integration tests
-- Test coverage: No automated tests for state transition validation visible
+**Planning Flow State Machine:**
+- Files: `/home/zemul/Programming/research/frontend-v2/src/pages/ConversationalPlanning.tsx:38-72`
+- Why fragile: Complex useEffect initialization with error handling, multiple interdependent states (messages, sessionId, planSummary, isLoading)
+- Safe modification: Extract initialization to custom hook, add comprehensive error boundaries
+- Test coverage: No tests for initialization failure, missing research goal, or API error scenarios
 
-**Reference Extraction Regex:**
-- Files: `/home/zemul/Programming/research/research/backend/reference_service.py:28-49`
-- Why fragile: Relies on regex patterns for citation parsing, many edge cases
-- Safe modification: Add test corpus of diverse citation formats, gradual pattern refinement
-- Test coverage: Confidence scoring exists but no tests for accuracy visible
+**Navigation State Passing:**
+- Files: `/home/zemul/Programming/research/frontend-v2/src/pages/ConversationalPlanning.tsx:36`, `/home/zemul/Programming/research/frontend-v2/src/pages/HomeDashboard.tsx:97-116`
+- Why fragile: Relies on useLocation state which is lost on page refresh
+- Safe modification: Store research_goal in sessionStorage or URL query params
+- Test coverage: No tests for direct navigation to /plan route, refresh scenarios
 
-**DAG Validation Algorithm:**
-- Files: `/home/zemul/Programming/research/research/backend/orchestration/engine.py:118-162`
-- Why fragile: Custom cycle detection, no tests for malformed graphs
-- Safe modification: Add test cases for various DAG structures, validate performance with large graphs
-- Test coverage: No test fixtures for complex dependency graphs visible
+**API Error Handling:**
+- Files: `/home/zemul/Programming/research/frontend-v2/src/services/api.ts:32-48`
+- Why fragile: Generic error handling, may not catch all edge cases (non-JSON responses, network failures)
+- Safe modification: Add specific handling for network errors, timeout errors, parse errors
+- Test coverage: No tests for various API failure scenarios
 
-**WebSocket Connection Management:**
-- Files: `/home/zemul/Programming/research/research/backend/realtime/websocket.py:21-128`
-- Why fragile: Manual connection tracking, no heartbeat validation, memory leak risk
-- Safe modification: Add connection TTL monitoring, implement graceful shutdown
-- Test coverage: No tests for connection lifecycle or reconnection scenarios
+**Type Safety Gaps:**
+- Files: Multiple files using `any` type or loose typing
+- Why fragile: Type errors only caught at runtime, bypasses TypeScript benefits
+- Safe modification: Create comprehensive type definitions for all API contracts
+- Test coverage: No TypeScript strict mode enabled
 
-**LLM Plan Generation:**
-- Files: `/home/zemul/Programming/research/research/backend/llm_service.py:145-198`, `/home/zemul/Programming/research/research/backend/planning_service.py:139-211`
-- Why fragile: Depends on unstructured LLM output, JSON parsing fragile
-- Safe modification: Add schema validation with pydantic, implement retry with fallback
-- Test coverage: No tests for malformed LLM responses visible
+**WebSocket Integration (Frontend):**
+- Files: `/home/zemul/Programming/research/frontend/src/lib/api.js:48-96`
+- Why fragile: No reconnection logic, manual ping interval, error handling may not cover all cases
+- Safe modification: Add automatic reconnection with exponential backoff, connection health monitoring
+- Test coverage: No tests for WebSocket lifecycle, connection failure scenarios
 
 ## Scaling Limits
 
-**Single Worker Process:**
-- Current capacity: One worker loop processes all tasks sequentially
-- Limit: Cannot process multiple tasks concurrently, single point of failure
-- Scaling path: Deploy multiple worker instances with Redis queue, add worker health monitoring
+**Single Frontend Instance:**
+- Current capacity: Single React application instance
+- Limit: Cannot scale frontend horizontally without session management
+- Scaling path: Ensure stateless design, implement distributed session storage
 
-**Database Connection Pool:**
-- Current capacity: pool_size=10, max_overflow=20 (30 connections max)
-- Files: `/home/zemul/Programming/research/research/backend/database/connection.py:15-21`
-- Limit: 30 concurrent database connections
-- Scaling path: Configure based on deployment, add connection metrics, implement pgbouncer for high concurrency
+**No Request Caching:**
+- Current capacity: No caching layer for API responses
+- Files: `/home/zemul/Programming/research/frontend-v2/src/services/api.ts` (no caching logic)
+- Limit: Repeated requests to backend for same data
+- Scaling path: Implement React Query caching with proper cache invalidation
 
-**Redis Single Point of Failure:**
-- Current capacity: Single Redis instance for queue and pub/sub
-- Files: `/home/zemul/Programming/research/research/backend/realtime/websocket.py:18`, `/home/zemul/Programming/research/research/backend/workers/task_worker.py:39-42`
-- Limit: Redis failure breaks task queue and WebSocket updates
-- Scaling path: Add Redis Sentinel or Cluster, implement queue backup mechanism
+**No Pagination:**
+- Current capacity: Lists load all items at once
+- Files: Project lists in HomeDashboard, no pagination parameters visible
+- Limit: UI breaks with large datasets (>100 items)
+- Scaling path: Implement pagination, infinite scroll, or virtual lists
 
-**No Horizontal Scaling Support:**
-- Current capacity: Single server instance only
-- Limit: Cannot scale API servers horizontally
-- Scaling path: Add distributed session storage, remove any in-memory state, document stateless requirements
+**No Lazy Loading for Images:**
+- Current capacity: All images loaded immediately
+- Limit: Poor performance with many images
+- Scaling path: Implement lazy loading for paper thumbnails, profile images
 
-**Task Throughput:**
-- Current capacity: Limited by LLM API rate limits and sequential processing
-- Limit: No batching for LLM calls, rate limiting handled client-side
-- Scaling path: Implement request batching, add priority queues, cache LLM responses
+**WebSocket Connection Limit:**
+- Current capacity: One WebSocket per project
+- Files: `/home/zemul/Programming/research/frontend/src/lib/api.js:49`
+- Limit: Browser connection limits (~6 per domain), memory issues with many projects
+- Scaling path: Implement multiplexing over single connection, close unused connections
 
 ## Dependencies at Risk
 
-**emergentintegrations:**
-- Risk: Custom/unknown package for LLM integration (version 0.1.0)
-- Files: `/home/zemul/Programming/research/research/backend/requirements.txt:38`
-- Impact: Breaks all LLM functionality if package becomes unavailable
-- Migration plan: Abstract LLM interface, implement fallback to direct OpenAI/Gemini APIs
+**React 19.2.3:**
+- Risk: Very recent React version, may have bugs or breaking changes
+- Files: `/home/zemul/Programming/research/frontend-v2/package.json:26-27`
+- Impact: Potential stability issues, ecosystem incompatibility
+- Migration plan: Monitor React issues, consider pinning to 19.0.x stable release
 
-**PyMuPDF (fitz):**
-- Risk: Used for PDF parsing, complex dependency
-- Files: `/home/zemul/Programming/research/research/backend/requirements.txt:96`
-- Impact: PDF processing fails if package breaks
-- Migration plan: pdfplumber already available as fallback, ensure both paths tested
+**TypeScript 4.9.5:**
+- Risk: Outdated TypeScript version (current is 5.x)
+- Files: `/home/zemul/Programming/research/frontend-v2/package.json:32`
+- Impact: Missing newer type features, potential bug fixes
+- Migration plan: Upgrade to TypeScript 5.x, test thoroughly for breaking changes
 
-**pypandoc:**
-- Risk: System dependency on Pandoc binary
-- Files: `/home/zemul/Programming/research/research/backend/requirements.txt:102`
-- Impact: Export to PDF/DOCX fails if Pandoc not installed
-- Migration plan: Add startup validation, provide pure-Python alternatives for basic formats
+**React Router DOM 7.13.0:**
+- Risk: Major version 7 with potential breaking changes from v6
+- Files: `/home/zemul/Programming/research/frontend-v2/package.json:28`
+- Impact: Routing behavior may change, migration needed from v6 patterns
+- Migration plan: Review v7 migration guide, test all navigation flows
 
-**redis.asyncio:**
-- Risk: Async Redis dependency, less mature than synchronous client
-- Files: `/home/zemul/Programming/research/research/backend/requirements.txt` (implied by aioredis)
-- Impact: WebSocket and task queue functionality
-- Migration plan: Consider using synchronous Redis with thread pool, or Celery for task queue
+**react-scripts 5.0.1:**
+- Risk: Aging build tool with webpack 4 under the hood
+- Files: `/home/zemul/Programming/research/frontend-v2/package.json:29`
+- Impact: Slower builds, missing optimizations, security vulnerabilities
+- Migration plan: Migrate to Vite for faster builds and better developer experience
 
-**motor (MongoDB async):**
-- Risk: MongoDB async driver, but PostgreSQL is primary database
-- Files: `/home/zemul/Programming/research/research/backend/requirements.txt:68`
-- Impact: Unused if task_executor.py is legacy code
-- Migration plan: Remove if MongoDB code path is deprecated, update requirements.txt
+**No ESLint Configuration:**
+- Risk: No linting to catch code quality issues
+- Files: No .eslintrc or eslint.config.* found in frontend-v2
+- Impact: Code quality degrades over time, inconsistent style, potential bugs
+- Migration plan: Add ESLint with TypeScript, React, and accessibility rules
 
 ## Missing Critical Features
 
-**No Authentication/Authorization:**
-- Problem: No user authentication or project ownership checks
-- Files: `/home/zemul/Programming/research/research/backend/server.py` (endpoints lack auth decorators)
-- Blocks: Multi-tenant deployment, access control, audit trails
+**No Error Boundaries:**
+- Problem: No React error boundaries to catch component errors
+- Files: App.tsx lacks ErrorBoundary components
+- Blocks: Graceful error handling, crashes show white screen of death
 
-**No Input Validation:**
-- Problem: Minimal validation on research_goal length, malicious input possible
-- Files: `/home/zemul/Programming/research/research/backend/server.py:68-72` (ProjectCreate model)
-- Blocks: Production deployment with untrusted users
+**No Loading States:**
+- Problem: No global loading state or skeleton screens
+- Files: Pages have local isLoading but no coordinated loading UX
+- Blocks: Poor user experience during data fetching, no indication of activity
 
-**No Task Cancellation:**
-- Problem: Cannot cancel running tasks, only pause project execution
-- Files: Task executor has CANCELLED state but no implementation
-- Blocks: User control over long-running operations, cost management
+**No Form Validation:**
+- Problem: Research goal input lacks validation
+- Files: HomeDashboard.tsx input for research goal
+- Blocks: Empty or invalid submissions, poor UX feedback
 
-**No Progress Reporting:**
-- Problem: Long-running tasks provide no progress updates during execution
-- Files: Task state only updates at completion
-- Blocks: User experience for operations like PDF processing on large paper sets
+**No Toast Notifications:**
+- Problem: No notification system for user feedback
+- Files: No toast/alert implementation in frontend-v2
+- Blocks: User feedback for actions (save, error, success)
 
-**No Retry Configuration:**
-- Problem: Max retries hardcoded to 3, no exponential backoff
-- Files: `/home/zemul/Programming/research/research/backend/database/models.py:194`
-- Blocks: Fine-tuning for different task types, cost optimization
+**No Offline Support:**
+- Problem: No service worker or offline capabilities
+- Files: No service worker registration
+- Blocks: Usage without internet, poor PWA experience
+
+**No Accessibility Testing:**
+- Problem: No a11y tests or axe-core integration
+- Files: No accessibility test files
+- Blocks: Compliance with accessibility standards, exclusion of users with disabilities
 
 ## Test Coverage Gaps
 
-**Untested area: Orchestration State Machine**
-- What's not tested: State transitions, DAG validation, dependency resolution
-- Files: `/home/zemul/Programming/research/research/backend/orchestration/engine.py`
-- Risk: Invalid states, circular dependencies breaking execution
+**No Frontend Tests:**
+- What's not tested: All frontend-v2 components, pages, hooks, services
+- Files: Only `/home/zemul/Programming/research/frontend-v2/src/App.test.tsx` exists (placeholder)
+- Risk: Regressions go undetected, refactoring is dangerous
 - Priority: High
 
-**Untested area: WebSocket Lifecycle**
-- What's not tested: Connection, reconnection, pub/sub message delivery
-- Files: `/home/zemul/Programming/research/research/backend/realtime/websocket.py`
-- Risk: Real-time updates failing silently, connection leaks
+**No Integration Tests:**
+- What's not tested: API service integration, store interactions, navigation flows
+- Files: No test files for services or stores
+- Risk: Broken API contracts, state management bugs
 - Priority: High
 
-**Untested area: Error Recovery**
-- What's not tested: Worker behavior on task failure, retry logic, partial completion
-- Files: `/home/zemul/Programming/research/research/backend/workers/task_worker.py`
-- Risk: Projects stuck in failed state, no recovery path
-- Priority: High
-
-**Untested area: PDF Processing Edge Cases**
-- What's not tested: Corrupted PDFs, password-protected files, malformed documents
-- Files: `/home/zemul/Programming/research/research/backend/pdf_service.py`
-- Risk: Batch failures on problematic PDFs
+**No E2E Tests:**
+- What's not tested: Critical user flows (create project, execute pipeline, view results)
+- Files: No Playwright or Cypress configuration
+- Risk: Broken user journeys, integration failures
 - Priority: Medium
 
-**Untested area: LLM Error Handling**
-- What's not tested: API timeout, rate limit responses, malformed JSON
-- Files: `/home/zemul/Programming/research/research/backend/llm_service.py`
-- Risk: Cascading failures on LLM issues
+**No Type Testing:**
+- What's not tested: TypeScript type assertions, API contract types
+- Files: No type testing or validation
+- Risk: Type mismatches caught only at runtime
 - Priority: Medium
 
-**Untested area: Reference Extraction Accuracy**
-- What's not tested: Citation parsing on diverse formats, confidence score calibration
-- Files: `/home/zemul/Programming/research/research/backend/reference_service.py`
-- Risk: Low-quality reference data, broken citation networks
+**No Visual Regression Tests:**
+- What's not tested: UI appearance, responsive design, design token application
+- Files: No screenshot or visual testing tools
+- Risk: Unexpected UI changes, broken layouts
 - Priority: Low
 
 ---
 
-*Concerns audit: 2025-01-23*
+*Concerns audit: 2026-01-26*

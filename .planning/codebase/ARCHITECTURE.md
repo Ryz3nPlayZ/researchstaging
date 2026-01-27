@@ -1,261 +1,223 @@
 # Architecture
 
-**Analysis Date:** 2025-01-23
+**Analysis Date:** 2025-01-26
 
 ## Pattern Overview
 
-**Overall:** State-driven orchestration with task DAG execution
+**Overall:** Three-tier service-oriented architecture with state-driven orchestration
 
 **Key Characteristics:**
-- All workflow execution is governed by persisted database state, not in-memory logic
-- Task execution follows a directed acyclic graph (DAG) with explicit dependency resolution
-- Stateless workers pull tasks from a Redis queue for fault-tolerant execution
-- Real-time updates pushed via WebSocket/Redis pub/sub
-- Clear separation between orchestration (state management) and execution (task processing)
+- **State-driven orchestration**: All workflow execution governed by persisted database state, not in-memory logic
+- **Event-driven real-time updates**: WebSocket + Redis pub/sub for live task/artifact updates
+- **Service layer separation**: Distinct services for LLM, literature, PDF, references, export, credits, auth
+- **Multi-frontend evolution**: Legacy React frontend (`frontend/`) + modern TypeScript rewrite (`frontend-v2/`)
+- **Agent-based task execution**: Worker pool with specialized task handlers (literature search, PDF acquisition, summarization, synthesis, drafting)
 
 ## Layers
 
-**API Layer:**
-- Purpose: HTTP interface for frontend and external consumers
-- Location: `research/backend/server.py`
-- Contains: FastAPI endpoints, Pydantic models, CORS middleware
-- Depends on: Database session, orchestration engine, service layer
-- Used by: Frontend React application via `research/frontend/src/lib/api.js`
+**Backend API Layer:**
+- Purpose: FastAPI REST/WebSocket server exposing research execution endpoints
+- Location: `/home/zemul/Programming/research/backend/server.py`
+- Contains: Route handlers, Pydantic models, WebSocket endpoints, health checks
+- Depends on: Database layer (SQLAlchemy), Orchestration engine, Service layer, Worker pool
+- Used by: Frontend applications via HTTP/WebSocket
 
-**Orchestration Layer:**
-- Purpose: Plan expansion, task state machine, dependency resolution, DAG validation
-- Location: `research/backend/orchestration/engine.py`
-- Contains: `OrchestrationEngine` class with methods for task lifecycle management
-- Depends on: Database models (Project, Plan, Task, TaskDependency)
-- Used by: API layer (for plan expansion), Worker layer (for state transitions)
-
-**Worker Execution Layer:**
-- Purpose: Stateless task execution with retry logic and artifact persistence
-- Location: `research/backend/workers/task_worker.py`
-- Contains: `TaskWorker` class with task-specific execution methods
-- Depends on: Database session, orchestration engine, service layer (LLM, PDF, literature)
-- Used by: Background worker loop started on server startup
+**Orchestration Engine:**
+- Purpose: State machine for task execution, dependency resolution, state transitions
+- Location: `/home/zemul/Programming/research/backend/orchestration/engine.py`
+- Contains: Task DAG construction, dependency graph traversal, state transition logic, ready-task scheduling
+- Depends on: Database models (Task, TaskDependency), Task state enums
+- Used by: Server endpoints (project execution, task retry), Worker pool
 
 **Service Layer:**
-- Purpose: External integrations and domain-specific operations
-- Location: `research/backend/` (individual service files)
-- Contains:
-  - `llm_service.py`: LLM text generation (OpenAI, Gemini)
-  - `literature_service.py`: Academic paper search (Semantic Scholar, arXiv)
-  - `pdf_service.py`: PDF download and text extraction
-  - `reference_service.py`: Citation extraction from paper text
-  - `export_service.py`: Document export (PDF, DOCX, Markdown)
-  - `planning_service.py`: Research plan generation
-- Depends on: External APIs (LLM providers, academic databases)
-- Used by: Worker layer for task execution
+- Purpose: Domain-specific business logic isolated into focused services
+- Location: `/home/zemul/Programming/research/backend/*.py` (llm_service.py, literature_service.py, pdf_service.py, reference_service.py, export_service.py, auth_service.py, credit_service.py, planning_service.py)
+- Contains: External API integrations (Semantic Scholar, arXiv, OpenAI/Gemini/Mistral), file processing, credit billing, LLM text generation
+- Depends on: External APIs (httpx), Environment configuration, Database (for auth/credits)
+- Used by: Task worker, Server endpoints (AI actions, planning)
 
-**Realtime Layer:**
-- Purpose: WebSocket connection management and event broadcasting
-- Location: `research/backend/realtime/websocket.py`
-- Contains: `ConnectionManager` class for Redis pub/sub and WebSocket multiplexing
-- Depends on: Redis, FastAPI WebSocket
-- Used by: API layer for project updates, worker layer for task completion events
+**Worker Pool:**
+- Purpose: Async task execution with queue-based scheduling
+- Location: `/home/zemul/Programming/research/backend/workers/task_worker.py`
+- Contains: Task queue management, task type dispatch to handlers, retry logic, artifact creation
+- Depends on: Database (Task state updates), Service layer (LLM, literature, PDF, etc.)
+- Used by: Orchestration engine (enqueues ready tasks)
 
 **Database Layer:**
-- Purpose: Persistent state storage with ORM abstraction
-- Location: `research/backend/database/`
-- Contains:
-  - `models.py`: SQLAlchemy ORM models (Project, Plan, Task, TaskDependency, TaskRun, Artifact, Paper, Reference, ExecutionLog)
-  - `connection.py`: Async database connection factory
-  - `__init__.py`: Model exports and session management
-- Depends on: PostgreSQL (production), configured via asyncpg
-- Used by: All layers for state persistence
+- Purpose: Persistent state for projects, plans, tasks, artifacts, papers, users, credits
+- Location: `/home/zemul/Programming/research/backend/database/` (models.py, connection.py, credit_models.py)
+- Contains: SQLAlchemy ORM models, async session management, UUID generation, JSONB fields
+- Depends on: PostgreSQL (via asyncpg)
+- Used by: All backend layers
 
-**Frontend Layer:**
-- Purpose: React-based UI for project management and monitoring
-- Location: `research/frontend/src/`
-- Contains: Components, contexts, hooks, API client
-- Depends on: API layer via REST/WebSocket
-- Used by: End users in browser
+**Realtime Layer:**
+- Purpose: WebSocket connection management and Redis pub/sub for live updates
+- Location: `/home/zemul/Programming/research/backend/realtime/websocket.py`
+- Contains: Connection multiplexing, Redis channel subscriptions, message broadcasting
+- Depends on: Redis, FastAPI WebSocket
+- Used by: Server (WebSocket endpoint), Worker (publishes task/artifact events)
+
+**Frontend Layer (Legacy):**
+- Purpose: Original React SPA with dashboard, planning flow, workspace visualization
+- Location: `/home/zemul/Programming/research/frontend/src/`
+- Contains: Pages, components, React Context for state management
+- Depends on: Backend API (axios), React Router, TipTap editor, ReactFlow
+- Used by: End users
+
+**Frontend Layer (v2 - Modern):**
+- Purpose: TypeScript rewrite with improved architecture, routing, and state management
+- Location: `/home/zemul/Programming/research/frontend-v2/src/`
+- Contains: Pages (HomeDashboard, ConversationalPlanning), Zustand stores, service layer (typed API clients)
+- Depends on: Backend API (fetch wrappers), React Router v7, Zustand, React Query
+- Used by: End users (future replacement for legacy frontend)
 
 ## Data Flow
 
 **Project Creation Flow:**
 
-1. User submits research goal via frontend planning wizard
-2. Frontend calls `POST /api/planning/generate-plan` with user answers
-3. LLM service generates structured plan (phases, tasks, dependencies)
-4. User approves plan via frontend
-5. Frontend calls `POST /api/planning/approve` with plan data
-6. API creates Project record, Plan record (immutable)
-7. Orchestration engine expands Plan into Task DAG with TaskDependency edges
-8. Tasks initialized as PENDING, then transitioned to READY if no dependencies
-9. Frontend redirects to workspace view
+1. User submits research goal via frontend (`HomeDashboard.tsx` or `PlanningFlow.js`)
+2. Frontend calls `POST /api/planning/generate-plan` with research goal and answers
+3. `llm_service.generate_research_plan()` creates structured plan (phases, search terms, key themes)
+4. User approves plan via `POST /api/planning/approve`
+5. Server creates `Project` and immutable `Plan` records in database
+6. `orchestration_engine.expand_plan_to_tasks()` converts plan phases into `Task` records with dependencies
+7. Returns project_id to frontend
 
-**Task Execution Flow:**
+**Project Execution Flow:**
 
-1. User clicks "Execute" in frontend, calls `POST /api/projects/{id}/execute`
-2. API fetches all READY tasks from orchestration engine
-3. Tasks enqueued to Redis queue `research_pilot:task_queue`
-4. Background worker loop dequeues task (blocking with timeout)
-5. Worker creates TaskRun record, marks task as RUNNING
-6. Worker executes task type-specific logic (e.g., literature search, PDF processing)
-7. Worker creates Artifact record with output
-8. Worker marks TaskRun as COMPLETED, transitions Task to COMPLETED
-9. Orchestration engine updates dependent tasks to READY (if all deps satisfied)
-10. Worker publishes event to Redis pub/sub `project:{project_id}`
-11. ConnectionManager broadcasts event to all WebSocket clients for project
-12. Frontend updates UI with new task state and artifact
-13. Repeat until all tasks complete or fail
+1. User triggers execution via `POST /api/projects/{project_id}/execute`
+2. Server updates `Project.status` to `EXECUTING`
+3. `orchestration_engine.get_ready_tasks()` queries tasks with no pending dependencies (state = READY)
+4. Each ready task enqueued in `task_worker` queue
+5. Worker loop:
+   - Polls queue for task
+   - Transitions task state to RUNNING
+   - Dispatches to handler based on `TaskType` (literature_search, pdf_acquisition, summarization, etc.)
+   - Handler calls appropriate service (literature_service, pdf_service, llm_service)
+   - On success: creates `Artifact` record, links to task, transitions task to COMPLETED
+   - On failure: records error, transitions task to FAILED (if retry_count < max_retries, transitions back to READY)
+6. Each task completion triggers dependency check: ready tasks enqueued
+7. All task completions publish events to Redis (`project:{project_id}`)
+8. WebSocket clients receive updates via `ConnectionManager` from Redis pub/sub
+9. Frontend updates UI in real-time (task graphs, artifact lists, status badges)
 
-**State Management:**
+**Task State Machine:**
 
-- **Project Status**: Derived from aggregate task counts (COMPLETED count vs total)
-- **Task State**: Finite state machine with atomic transitions (PENDING → READY → RUNNING → COMPLETED/FAILED)
-- **Artifacts**: Immutable versioned outputs linked to TaskRun
-- **Papers/References**: Scoped to project, used as task inputs
-- **Execution Logs**: Immutable audit trail for debugging
+```
+PENDING → READY → RUNNING → COMPLETED
+          ↑        ↓
+          └── FAILED (with retry)
+```
+
+- State transitions persisted atomically in database
+- Orchestration engine queries for READY tasks on each cycle
+- Worker transitions RUNNING → COMPLETED or RUNNING → FAILED
+- Failed tasks with remaining retries transition back to READY
+
+**Real-time Update Flow:**
+
+1. Task worker completes task (creates artifact, updates state)
+2. Worker calls `connection_manager.publish_event(project_id, "task_completed", {task_id, artifact_id})`
+3. ConnectionManager publishes to Redis channel `project:{project_id}`
+4. WebSocket listener (`_redis_listener`) receives message
+5. Forwards to all WebSocket connections for that project_id
+6. Frontend WebSocket handler updates Zustand store or React state
+7. Components re-render with new task/artifact data
 
 ## Key Abstractions
 
 **Project:**
-- Purpose: Top-level execution unit containing all research state
-- Examples: `research/backend/database/models.py:89` (Project model)
-- Pattern: Aggregate root with cascading deletes for all child records
+- Purpose: Top-level container for research work
+- Examples: `/home/zemul/Programming/research/backend/database/models.py:89` (SQLAlchemy model), `/home/zemul/Programming/research/frontend-v2/src/types/project.ts`
+- Pattern: Aggregate root containing Plan, Tasks, Artifacts, Papers, ExecutionLogs
 
 **Plan:**
-- Purpose: Immutable specification of intended workflow (phases and tasks)
-- Examples: `research/backend/database/models.py:130` (Plan model)
-- Pattern: Created once during planning phase, never modified, expanded into Tasks
+- Purpose: Immutable specification of intended workflow (phases, search terms, key themes)
+- Examples: `/home/zemul/Programming/research/backend/database/models.py:130`
+- Pattern: Generated once per project, expanded into executable Tasks, never modified
 
-**Task DAG:**
-- Purpose: Executable directed acyclic graph derived from Plan
-- Examples: `research/backend/orchestration/engine.py:38` (expand_plan_to_tasks)
-- Pattern: Nodes=Tasks with phase/sequence ordering, Edges=TaskDependency records, validated for cycles
-
-**Task State Machine:**
-- Purpose: Controlled transitions with validation and side effects
-- Examples: `research/backend/orchestration/engine.py:254` (transition_task_state)
-- Pattern: Enum-based states with valid transition mapping, atomic updates with row locks
-
-**TaskRun:**
-- Purpose: Individual execution attempt (including retries)
-- Examples: `research/backend/database/models.py:261` (TaskRun model)
-- Pattern: One task can have multiple runs, each produces separate artifact, tracks tokens/duration
+**Task:**
+- Purpose: Executable unit of work with type, dependencies, state, retry count
+- Examples: `/home/zemul/Programming/research/backend/database/models.py:236`
+- Pattern: State machine with transitions (PENDING → READY → RUNNING → COMPLETED/FAILED), linked to parent Plan via phase_index/sequence_index
 
 **Artifact:**
-- Purpose: Versioned immutable output from task execution
-- Examples: `research/backend/database/models.py:307` (Artifact model)
-- Pattern: Linked to task_id and run_id, versioned via parent_artifact_id, content or metadata only
+- Purpose: Output produced by task execution (search results, PDF content, summaries, drafts)
+- Examples: `/home/zemul/Programming/research/backend/database/models.py:330`
+- Pattern: Versioned content with metadata (paper IDs, reference counts), linked to Task and Project
 
-**Worker Queue:**
-- Purpose: Decouple task scheduling from execution
-- Examples: `research/backend/workers/task_worker.py:54` (enqueue_task)
-- Pattern: Redis list as queue, BLPOP for blocking dequeue, JSON payload with task_id/project_id/timestamp
+**Agent:**
+- Purpose: Logical abstraction for task type specialization (Router, Search, PDF, Reference, Summary, Synthesis, Drafting, Evaluator)
+- Examples: `/home/zemul/Programming/research/backend/server.py:577-586`
+- Pattern: Agent graph visualization in frontend, backed by TaskType enum and worker handlers
 
-**Realtime Events:**
-- Purpose: Push-based updates to connected clients
-- Examples: `research/backend/realtime/websocket.py:104` (publish_event)
-- Pattern: Redis pub/sub per project (`project:{project_id}`), WebSocket manager broadcasts to client set
+**Service:**
+- Purpose: Isolated business logic for external integrations (LLM providers, academic APIs, file processing)
+- Examples: `/home/zemul/Programming/research/backend/llm_service.py`, `/home/zemul/Programming/research/backend/literature_service.py`
+- Pattern: Singleton instances with lazy client initialization, provider fallback logic (OpenAI → Gemini → Mistral → Groq)
+
+**Store:**
+- Purpose: Frontend state management with Zustand
+- Examples: `/home/zemul/Programming/research/frontend-v2/src/stores/useProjectStore.ts`, `/home/zemul/Programming/research/frontend-v2/src/stores/useAuthStore.ts`, `/home/zemul/Programming/research/frontend-v2/src/stores/useCreditStore.ts`
+- Pattern: Global state slices (auth, credits, project, UI) with actions and selectors
 
 ## Entry Points
 
 **Backend Server:**
-- Location: `research/backend/server.py`
-- Triggers: `python research/backend/server.py` or uvicorn startup
-- Responsibilities:
-  - FastAPI app initialization with CORS middleware
-  - Database connection pool setup
-  - WebSocket route registration
-  - Task worker loop startup (background task)
-  - API router inclusion with /api prefix
+- Location: `/home/zemul/Programming/research/backend/server.py`
+- Triggers: `python server.py` or uvicorn startup
+- Responsibilities: FastAPI app initialization, route registration, startup/shutdown events (DB init, worker start, Redis connect)
 
-**Frontend Application:**
-- Location: `research/frontend/src/index.js`
-- Triggers: Browser loads `index.html`, React mounts App component
-- Responsibilities:
-  - Context providers (ThemeContext, ProjectProvider)
-  - Root routing via viewState (dashboard/planning/workspace)
-  - WebSocket connection setup per selected project
+**Frontend (Legacy) App:**
+- Location: `/home/zemul/Programming/research/frontend/src/index.js` (render root), `/home/zemul/Programming/research/frontend/src/App.js` (routing)
+- Triggers: Browser loads index.html, React mounts App
+- Responsibilities: View state management (dashboard/planning/workspace), context providers (Theme, Project), component rendering
 
-**Orchestration Engine:**
-- Location: `research/backend/orchestration/engine.py`
-- Triggers: Called by API endpoints (plan expansion, project execution)
-- Responsibilities:
-  - Plan-to-task DAG expansion with dependency resolution
-  - Task state transitions with validation
-  - Ready task queries for worker consumption
-  - Project status derivation from task counts
+**Frontend (v2) App:**
+- Location: `/home/zemul/Programming/research/frontend-v2/src/index.tsx` (render root), `/home/zemul/Programming/research/frontend-v2/src/App.tsx` (BrowserRouter setup)
+- Triggers: Browser loads index.html, React mounts App
+- Responsibilities: React Router configuration, route definitions (`/`, `/plan`, `/project/:id`)
 
 **Task Worker Loop:**
-- Location: `research/backend/workers/task_worker.py`
-- Triggers: Server startup event creates background asyncio task
-- Responsibilities:
-  - Continuous Redis queue polling with BLPOP timeout
-  - Task execution with run creation and artifact persistence
-  - Error handling with retry counting
-  - Event publishing for WebSocket broadcast
+- Location: `/home/zemul/Programming/research/backend/workers/task_worker.py:run_worker_loop()`
+- Triggers: Server startup calls `asyncio.create_task(task_worker.run_worker_loop())`
+- Responsibilities: Poll task queue, dispatch tasks to handlers by type, persist state transitions, publish events
 
-**Planning Service:**
-- Location: `research/backend/planning_service.py`
-- Triggers: User submits planning answers via frontend wizard
-- Responsibilities:
-  - LLM-based research plan generation
-  - Structured JSON response with phases/tasks/search terms
-  - Plan validation and formatting
+**Orchestration Engine:**
+- Location: `/home/zemul/Programming/research/backend/orchestration/engine.py`
+- Triggers: Server endpoints call `expand_plan_to_tasks()`, `get_ready_tasks()`, `transition_task_state()`
+- Responsibilities: Plan-to-task expansion, dependency graph queries, state machine transitions
 
 ## Error Handling
 
-**Strategy:** Multi-layer error handling with retry logic and event logging
+**Strategy:** Multi-layer error handling with retry logic and user feedback
 
 **Patterns:**
 
-**Task-level errors:**
-- Worker catches exceptions during task execution
-- Creates TaskRun with error_message and error_details
-- Calls `orchestration_engine.fail_task_run()` which:
-  - If retry_count < max_retries: transitions Task to READY for retry
-  - If retry_count >= max_retries: transitions Task to FAILED (terminal)
-- Publishes `task_failed` event via Redis
-- Logs to ExecutionLog table for audit
+**Backend Layer:**
+- HTTP exceptions with status codes (404 for not found, 400 for bad input, 500 for server errors)
+- Database transactions with rollback on exception (`try/except/rollback` pattern in `/home/zemul/Programming/research/backend/server.py`)
+- Task retry with exponential backoff (`task.retry_count < task.max_retries` in worker)
+- LLM provider fallback (OpenAI → Gemini → Mistral → Groq in `/home/zemul/Programming/research/backend/llm_service.py`)
 
-**API-level errors:**
-- FastAPI HTTPException for 404 (project/task not found)
-- Pydantic validation errors automatically return 400
-- Database errors caught and logged, return 500
+**Frontend Layer (Legacy):**
+- React Context error boundaries (not yet implemented)
+- axios interceptors for 401 auth errors (not yet implemented)
+- Sonner toast notifications for user feedback (`<Toaster />` in App.js)
 
-**WebSocket errors:**
-- ConnectionManager removes dead connections from active set
-- Client reconnects on disconnect with exponential backoff
-- Ping/pong every 30 seconds to detect stale connections
-
-**Service-level errors:**
-- LLM service errors propagate to worker as exceptions
-- PDF processing errors logged as warnings, continue with next paper
-- Literature search API errors caught and logged, partial results accepted
-
-**Database errors:**
-- AsyncSession with explicit commit/rollback
-- Row-level locks with `with_for_update()` for state transitions
-- Connection pooling handles transient connection errors
+**Frontend Layer (v2):**
+- `ApiRequestError` custom error class in `/home/zemul/Programming/research/frontend-v2/src/services/api.ts`
+- try/catch in service functions with error logging
+- Future: React Query error callbacks for automatic retry and UI feedback
 
 ## Cross-Cutting Concerns
 
-**Logging:** Python standard logging with structured format (timestamp, logger, level, message)
-- Database: ExecutionLog table for immutable audit trail
-- Application: logger.info/warning/error throughout
-- Frontend: console.log for WebSocket events, errors
-
-**Validation:**
-- Backend: Pydantic models for request/response validation
-- Database: SQLAlchemy constraints (unique, not null, foreign keys, check constraints)
-- Frontend: Zod schemas for form validation (react-hook-form)
-
-**Authentication:** Not currently implemented (no auth middleware)
-
-**Caching:** Redis used for queue and pub/sub only (no response caching)
-
-**Time:** All timestamps in UTC via `datetime.now(timezone.utc)`
-
-**IDs:** UUID v4 string format for all entities (Project, Task, Artifact, etc.)
-
-**Configuration:** Environment variables via python-dotenv, loaded in `server.py`
+**Logging:** Python `logging` module in backend, configured at INFO level, structured logging with timestamps
+**Validation:** Pydantic models for request/response validation in backend, TypeScript types in frontend-v2
+**Authentication:** JWT-based auth service (`/home/zemul/Programming/research/backend/auth_service.py`), token stored in localStorage (`auth_token`), Bearer header in API requests
+**CORS:** Configured via environment variable `CORS_ORIGINS` (default `*` for development)
+**Credits:** Usage tracking and billing in `credit_service.py`, credit packages, transaction history, low-balance warnings
 
 ---
 
-*Architecture analysis: 2025-01-23*
+*Architecture analysis: 2025-01-26*
