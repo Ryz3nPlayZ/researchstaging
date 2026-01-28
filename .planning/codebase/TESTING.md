@@ -1,68 +1,56 @@
 # Testing Patterns
 
-**Analysis Date:** 2025-01-23
+**Analysis Date:** 2026-01-27
 
 ## Test Framework
 
-**Backend Python:**
-- Runner: pytest (`pytest==9.0.2`)
-- Config: Not detected (uses pytest defaults)
-- Assertion library: pytest built-in assertions
-- HTTP testing: `requests` library for API tests
+**Backend (Python):**
+- **Runner:** pytest (`pytest>=7.4.0,<9.0.0`)
+- **Async support:** pytest-asyncio (`pytest-asyncio>=0.21.0,<1.0.0`)
+- **Config:** No pytest config file detected, using default pytest discovery
+- **Run command:** `pytest` (default), or `pytest tests/test_api.py -v --tb=short`
 
-**Frontend:**
-- Runner: Create React App test runner (via `react-scripts`)
-- Config: Built into CRA, no custom config detected
-- Test command: `yarn test` (uses `craco test`)
-- Framework: Not clearly configured (Jest is CRA default)
-
-**Run Commands:**
-
-```bash
-# Backend tests
-cd /home/zemul/Programming/research/research/backend
-pytest                           # Run all tests
-pytest -v                        # Verbose output
-pytest tests/test_api.py         # Run specific file
-pytest --tb=short               # Shorter tracebacks
-
-# Frontend tests
-cd /home/zemul/Programming/research/research/frontend
-yarn test                       # Run tests in watch mode
-yarn test --coverage            # Run with coverage
-```
+**Frontend (TypeScript):**
+- **Runner:** React Testing Library (via `react-scripts test`)
+- **Config:** Jest configured by create-react-app (`@testing-library/react`, `@testing-library/jest-dom`)
+- **Run commands:**
+  ```bash
+  npm test                # Run all tests in watch mode
+  npm test -- --coverage # Run with coverage
+  npm test -- --watchAll=false # Run once without watch
+  ```
+- **Note:** No test files found in frontend-v2/src during exploration
 
 ## Test File Organization
 
-**Location:**
-- Backend: Co-located in `research/backend/tests/` directory
-- Frontend: Not detected (no test files found)
-- Root level: `research/backend_test.py` (legacy/integration test)
+**Backend Location:**
+- Tests colocated in `/backend/tests/` directory (not with source files)
+- Test file naming: `test_*.py` pattern (e.g., `test_api.py`)
+- Only one test file found: `/backend/tests/test_api.py`
 
-**Naming:**
-- Backend: `test_*.py` pattern (pytest convention)
-- Example: `tests/test_api.py`
-- Main test file: `backend_test.py` (at backend root)
+**Frontend Location:**
+- Pattern from create-react-app: `src/__tests__/` or `*.test.tsx` / `*.spec.tsx`
+- No test files currently exist in frontend-v2
 
 **Structure:**
 ```
-research/
-├── backend/
-│   ├── tests/
-│   │   └── test_api.py          # API endpoint tests
-│   └── backend_test.py          # Integration test suite
-└── frontend/
-    └── [no test files detected]
+backend/
+├── tests/
+│   └── test_api.py           # API endpoint integration tests
+├── server.py                 # Main API file
+├── llm_service.py            # Service under test
+└── auth_service.py           # Service under test
+
+frontend-v2/
+├── src/                      # No test files detected
+└── setupTests.ts             # Test setup (create-react-app default)
 ```
 
 ## Test Structure
 
-**Suite Organization:**
-
-Backend uses class-based test organization with descriptive class names:
-
+**Backend Suite Organization:**
 ```python
-# Pattern from research/backend/tests/test_api.py
+# From test_api.py
 class TestHealthCheck:
     """Health check endpoint tests"""
 
@@ -70,70 +58,58 @@ class TestHealthCheck:
         """Test API health check endpoint"""
         response = requests.get(f"{BASE_URL}/api/")
         assert response.status_code == 200
-
+        # ...
 
 class TestProjectsCRUD:
     """Projects CRUD endpoint tests"""
 
     def test_list_projects(self):
         """Test listing all projects"""
-        response = requests.get(f"{BASE_URL}/api/projects")
-        assert response.status_code == 200
+        # ...
+
+    def test_create_project(self):
+        """Test creating a new project"""
+        # Creates data, asserts response, verifies persistence
+        # Stores ID for cleanup: self.__class__.created_project_id
 ```
 
 **Patterns:**
+- **Test classes:** Group related tests in classes (`TestHealthCheck`, `TestProjectsCRUD`, `TestTasksEndpoints`)
+- **Test methods:** `test_<descriptive_name>` pattern
+- **Docstrings:** Each test has a docstring describing what it tests
+- **Setup/Teardown:** Manual cleanup using `self.__class__` to share state between tests
+- **No fixtures detected:** Tests use direct API calls rather than pytest fixtures
 
-**Setup:**
-- Base URL from environment variable: `os.environ.get('REACT_APP_BACKEND_URL')`
-- Hardcoded test project ID: `TEST_PROJECT_ID = "e3567bdc-794c-468f-90af-c443644bf258"`
-- No pytest fixtures detected for setup/teardown
-- Tests create their own data and clean up (delete created projects)
-
-**Teardown:**
-- Manual cleanup in test methods
-- Example: Delete project after testing (`requests.delete(f"{BASE_URL}/api/projects/{project_id}")`)
-- No automatic cleanup fixtures
-
-**Assertion pattern:**
-- Use `assert response.status_code == 200` for status checks
-- Use `assert key in response.json()` for structure validation
-- Use `assert isinstance(data, list)` for type validation
-
-```python
-# Pattern from research/backend/tests/test_api.py
-data = response.json()
-assert "status" in data
-assert data["status"] == "healthy"
-assert isinstance(data["list"]), list)
-```
+**Assertions:**
+- Use standard `assert` statements
+- Assert status codes: `assert response.status_code == 200`
+- Assert JSON structure: `assert "projects" in data`
+- Assert data types: `assert isinstance(data, list)`
+- Print statements for debugging: `print("✓ Health check passed")`
 
 ## Mocking
 
-**Framework:** None detected (tests use real backend)
+**Framework:** No mocking framework detected in backend
 
 **Patterns:**
-- Tests run against live/remote backend (not mocked)
-- `BASE_URL` defaults to remote preview deployment
-- No pytest fixtures for mocking detected
-- No `unittest.mock` usage found
+- **No mocks used:** Current integration tests make real HTTP requests to live backend
+- **Test project ID:** Hardcoded `TEST_PROJECT_ID = "e3567bdc-794c-468f-90af-c443644bf258"`
+- **Cleanup:** Tests create/delete real projects for isolation
 
 **What to Mock:**
-- Not applicable in current test approach
-- External API calls should be mocked in unit tests (currently not done)
+- **Not currently mocked:** HTTP calls to backend (tests are integration tests)
+- **Should mock:** External API calls (LLM providers, Google OAuth, Semantic Scholar)
+- **Should mock:** Database operations for unit tests
 
 **What NOT to Mock:**
-- Database operations in integration tests (use test database instead)
-- HTTP client in integration tests (use test server)
+- **Integration tests:** Keep real database calls for end-to-end verification
+- **Pydantic models:** Don't mock validation logic
 
 ## Fixtures and Factories
 
 **Test Data:**
-- Created inline in test methods
-- No dedicated factory functions or fixtures
-- Test data hardcoded in test methods
-
 ```python
-# Pattern from research/backend/tests/test_api.py
+# Manual test data creation in test methods
 payload = {
     "research_goal": "TEST_Impact of quantum computing on cryptography",
     "output_type": "literature_review",
@@ -143,89 +119,74 @@ response = requests.post(f"{BASE_URL}/api/projects", json=payload)
 ```
 
 **Location:**
-- No fixtures directory detected
-- Test data defined within test methods
-- No shared test data files
+- Test data created inline in test methods
+- No fixture files or factory functions detected
+- No test database seeding scripts
+
+**Recommendations:**
+- Create pytest fixtures for common test data (projects, tasks, artifacts)
+- Use factory pattern for creating complex test objects
+- Separate test database to avoid polluting development data
 
 ## Coverage
 
-**Requirements:** None enforced
+**Requirements:** No coverage target enforced in requirements.txt
 
 **View Coverage:**
 ```bash
-# Backend coverage
+# Run pytest with coverage (need to install pytest-cov first)
 pytest --cov=. --cov-report=html
-pytest --cov=backend --cov-report=term-missing
 ```
 
-**Coverage tools installed:**
-- No coverage tool detected in requirements.txt
-- Consider adding `pytest-cov` for coverage reports
+**Current State:**
+- Only one test file (`test_api.py`)
+- Tests cover API endpoints but not services, models, or utilities
+- No coverage for `llm_service.py`, `auth_service.py`, `credit_service.py`, etc.
+- No frontend tests
 
 ## Test Types
 
 **Unit Tests:**
-- Not detected (all tests are integration/API tests)
-- Service layer methods are not tested in isolation
-- No unit tests for utility functions
+- **Not detected:** No unit tests for individual functions or classes
+- **Missing:** Tests for service methods, model validation, utility functions
+- **Should test:** LLM service method logic, auth token generation/verification
 
 **Integration Tests:**
-- Primary testing approach
-- `test_api.py` tests all CRUD endpoints
-- `backend_test.py` provides full API test suite
-- Tests run against real backend (possibly staging/preview)
-
-**Test categories in test_api.py:**
-- Health checks
-- Project CRUD operations
-- Task listing and retrieval
-- Task graph visualization
-- Agent graph visualization
-- Artifact endpoints
-- Paper endpoints
-- Project execution endpoints
-- Export formats
-- Global statistics
+- **Backend:** Present in `test_api.py` - tests full HTTP request/response cycle
+- **Scope:** API endpoints for projects, tasks, artifacts, papers, execution
+- **Approach:** Make real HTTP requests using `requests` library
+- **Example:** Create project via API, fetch it back, assert persistence
 
 **E2E Tests:**
-- Not used
-- Frontend has no automated tests
-- Consider Playwright or Cypress for frontend E2E
+- **Not detected:** No end-to-end UI tests
+- **Could use:** Playwright, Cypress, or Testing Library for React components
 
 ## Common Patterns
 
 **Async Testing:**
-- Backend uses pytest-async (implicit, tests are synchronous but call async APIs)
-- Frontend async testing patterns not detected
-
 ```python
-# Async test pattern (calling async backend from sync test)
-def test_create_project(self):
-    response = requests.post(f"{BASE_URL}/api/projects", json=payload)
-    assert response.status_code == 200
-    # Test waits for response (async operation handled by backend)
+# pytest-asyncio for async functions (not currently used)
+@pytest.mark.asyncio
+async def test_async_operation():
+    result = await some_async_function()
+    assert result is not None
 ```
 
 **Error Testing:**
-- Test 404 responses for non-existent resources
-- Test validation errors with invalid payloads
-
 ```python
-# Pattern from research/backend/tests/test_api.py
+# From test_api.py
 def test_get_nonexistent_project_returns_404(self):
+    """Test getting a non-existent project returns 404"""
     response = requests.get(f"{BASE_URL}/api/projects/nonexistent-id-12345")
     assert response.status_code == 404
     print("✓ Non-existent project returns 404")
 ```
 
-**Data cleanup pattern:**
-- Store created resource IDs on class for cleanup
-- Use `getattr(self.__class__, 'created_project_id', None)` pattern
-- Skip dependent tests if creation failed
-
+**State Sharing Between Tests:**
 ```python
+# Anti-pattern: using class-level state
 def test_create_project(self):
-    # ... create project ...
+    # ...
     self.__class__.created_project_id = data["id"]
 
 def test_delete_project(self):
@@ -234,11 +195,57 @@ def test_delete_project(self):
         pytest.skip("No project to delete - create test may have failed")
 ```
 
-**Test discovery:**
-- pytest automatically discovers `test_*.py` files
-- Tests organized by endpoint/resource (projects, tasks, artifacts, papers)
-- Class-based grouping for related tests
+**Better Pattern:** Use pytest fixtures
+```python
+@pytest.fixture
+async def test_project(db):
+    project = await create_test_project(db)
+    yield project
+    await cleanup_test_project(db, project.id)
+
+async def test_delete_project(test_project):
+    # Use test_project fixture
+    pass
+```
+
+## Testing Gaps
+
+**Untested Areas:**
+- **Backend Services:** No unit tests for `llm_service.py`, `auth_service.py`, `credit_service.py`, `planning_service.py`, `literature_service.py`, `reference_service.py`, `pdf_service.py`, `export_service.py`
+- **Database Models:** No tests for model validation, relationships, constraints
+- **Orchestration:** No tests for task graph logic, state transitions, dependency resolution
+- **WebSocket:** No tests for real-time updates
+- **Frontend:** No component tests, no hook tests, no integration tests
+
+**Critical Missing Tests:**
+- LLM service fallback logic (multiple providers)
+- JWT token generation/verification
+- Credit transaction logic
+- Task state machine transitions
+- React component rendering and user interactions
+
+**Priority Areas for Testing:**
+1. **High:** Auth service (JWT, OAuth flow)
+2. **High:** Credit service (financial transactions)
+3. **High:** Task orchestration (state machine, dependencies)
+4. **Medium:** LLM service (provider fallback, JSON parsing)
+5. **Medium:** Frontend components (critical user flows)
+6. **Low:** Utility functions
+
+## Test Data Management
+
+**Current Approach:**
+- Tests use hardcoded test project ID: `TEST_PROJECT_ID = "e3567bdc-794c-468f-90af-c443644bf258"`
+- Creates new test projects that need cleanup
+- No test database isolation
+
+**Recommended Improvements:**
+1. **Test database:** Separate PostgreSQL database for testing
+2. **Fixtures:** Create pytest fixtures for common test data
+3. **Cleanup:** Automatic cleanup using pytest fixtures (yield pattern)
+4. **Isolation:** Each test should create/clean its own data
+5. **Seeding:** Script to populate test database with known state
 
 ---
 
-*Testing analysis: 2025-01-23*
+*Testing analysis: 2026-01-27*

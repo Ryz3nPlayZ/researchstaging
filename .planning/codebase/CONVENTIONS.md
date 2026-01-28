@@ -1,232 +1,243 @@
 # Coding Conventions
 
-**Analysis Date:** 2025-01-23
+**Analysis Date:** 2026-01-27
 
 ## Naming Patterns
 
-**Python Backend (`research/backend/`):**
-- snake_case for files: `llm_service.py`, `task_executor.py`, `planning_service.py`
-- snake_case for functions and variables: `async def execute_task()`, `research_goal`, `task_counts`
-- PascalCase for classes: `LLMService`, `TaskExecutor`, `OrchestrationEngine`
-- UPPER_CASE for constants: `MODELS`, `DEFAULT_MODEL`
-- snake_case for module/directory names: `database/`, `orchestration/`, `realtime/`
+**Files:**
+- **Python:** `snake_case.py` - Backend service files use descriptive names (`llm_service.py`, `auth_service.py`, `planning_service.py`)
+- **TypeScript:** `PascalCase.ts` for types, `PascalCase.tsx` for components, `camelCase.ts` for utilities/services
+- **Components:** `PascalCase.tsx` - React components match their export names (`ChatInterface.tsx`, `Button.tsx`)
+- **Tests:** `test_*.py` for Python test files, colocated with backend code in `/tests` directory
 
-**JavaScript/React Frontend (`research/frontend/src/`):**
-- PascalCase for component files: `Dashboard.jsx`, `PlanningFlow.jsx`, `StatusBar.jsx`
-- PascalCase for React components: `export const Dashboard = () => {}`
-- camelCase for hooks: `useProject`, `useTheme`, `use-toast.js`
-- camelCase for utility functions: `createWebSocketConnection()`, `formatDate()`
-- kebab-case for directories with single-purpose files: `context/`, `hooks/`, `lib/`
-- PascalCase for UI component directories (container for multiple files): `ui/`
+**Functions:**
+- **Python:** `snake_case` for all functions and methods (`generate_research_plan`, `exchange_code_for_tokens`, `get_google_user_info`)
+- **TypeScript:** `camelCase` for functions (`getAuthHeader`, `handleResponse`, `setActiveProject`)
 
-**Database Models (`research/backend/database/models.py`):**
-- PascalCase for model classes: `Project`, `Task`, `Artifact`, `Paper`
-- UPPER_SNAKE_CASE for enums: `ProjectStatus`, `TaskState`, `TaskType`, `ArtifactType`
-- Enum values are UPPER_SNAKE_CASE: `LITERATURE_SEARCH`, `COMPLETED`, `FAILED`
+**Variables:**
+- **Python:** `snake_case` for local variables (`project_id`, `research_goal`, `access_token`)
+- **TypeScript:** `camelCase` for all variables (`messagesEndRef`, `textareaRef`, `isLoading`)
+
+**Types/Classes:**
+- **Python:** `PascalCase` for classes (`LLMService`, `AuthService`, `ProjectCreate`)
+- **TypeScript:** `PascalCase` for interfaces, types, and enums (`Project`, `TaskCounts`, `ProjectStatus`, `ButtonVariant`)
+
+**Constants:**
+- **Python:** `UPPER_SNAKE_CASE` for module-level constants (`GOOGLE_CLIENT_ID`, `JWT_SECRET_KEY`, `PROVIDER_ORDER`)
+- **TypeScript:** `UPPER_SNAKE_CASE` for constants (`API_BASE_URL`)
 
 ## Code Style
 
-**Python:**
-- Formatter: Black (`black==25.12.0`)
-- Linter: Flake8 (`flake8==7.3.0`)
-- Type checker: mypy (`mypy==1.19.1`)
-- Import sorter: isort (`isort==7.0.0`)
+**Formatting:**
+- **Python:** Black (specified in requirements.txt `black>=23.0.0,<25.0.0`)
+- **TypeScript:** No explicit formatter configured, but code follows consistent patterns
+- **Python tooling:** isort for imports (`isort>=5.12.0,<6.0.0`)
 
-**Key Python patterns:**
-- Max line length: 88 characters (Black default)
-- Use double quotes for strings
-- Trailing comma in multi-line function calls and list/dict definitions
-- 4 spaces for indentation
+**Linting:**
+- **Python:** flake8 (`flake8>=6.0.0,<9.0.0`), mypy (`mypy>=1.5.0,<2.0.0`)
+- **TypeScript:** ESLint configured in `package.json` - extends `react-app` and `react-app/jest`
 
-**JavaScript/React:**
-- Linter: ESLint (`eslint==9.23.0`)
-- Config: `@eslint/js`, `eslint-plugin-react`, `eslint-plugin-react-hooks`
-- Style: Tailwind CSS utility-first approach
-- No dedicated formatter detected (uses ESLint for formatting)
-
-**Key frontend patterns:**
-- Use `cn()` utility for conditional className merging (from `tailwind-merge`)
-- Class Variance Authority (CVA) for component variants
-- Lucide React for icons
-- Radix UI primitives for accessible components
+**Key Settings:**
+- **Python:** Line length not explicitly configured (Black default 88)
+- **TypeScript:** Strict mode enabled in `tsconfig.json`
+- **TypeScript:** Consistent type casing enforced (`forceConsistentCasingInFileNames: true`)
 
 ## Import Organization
 
-**Python imports order:**
+**Python Order:**
 1. Standard library imports
 2. Third-party imports
-3. Local application imports
+3. Local/application imports
 4. Blank line between each group
 
 ```python
-# Standard library
+# From server.py
 import os
 import logging
-from typing import Optional, Dict, Any
+from pathlib import Path
+from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone
+from pydantic import BaseModel, Field
+import json
 
-# Third-party
-from fastapi import FastAPI, HTTPException
-from sqlalchemy import select, update
-from dotenv import load_dotenv
-
-# Local
-from database.models import Project, Task, TaskState
+from database import get_db, init_db, close_db
+from orchestration import orchestration_engine
 from llm_service import llm_service
 ```
 
-**JavaScript imports order:**
-1. React hooks and core imports
-2. Third-party libraries
-3. Local components (absolute paths with `@/` alias)
-4. Relative imports
-5. CSS files
+**TypeScript Order:**
+1. React imports
+2. Third-party library imports
+3. Type imports
+4. Local component imports
+5. Relative imports (types, services, etc.)
 
-```javascript
-import { useState, useEffect, useCallback } from 'react';
-import { useProject } from '../../context/ProjectContext';
-import { projectsApi, statsApi } from '../../lib/api';
-import { Button } from '../ui/button';
-import { Card, CardContent } from '../ui/card';
-import './App.css';
+```typescript
+// From ChatInterface.tsx
+import React, { useState, useEffect, useRef } from 'react';
+import { MessageBubble } from './MessageBubble';
+
+export interface ChatMessage { ... }
+interface ChatInterfaceProps { ... }
 ```
 
-**Path Aliases (Frontend):**
-- `@/` maps to `src/` directory (configured in `craco.config.js`)
+**Path Aliases:**
+- No TypeScript path aliases configured in `tsconfig.json`
+- Uses relative imports: `import type { Project } from '../types/project'`
 
 ## Error Handling
 
-**Backend Python:**
-- Use `try/except` blocks for async operations
-- Raise `HTTPException` for API errors with status codes
-- Use `ValueError` for validation errors
-- Log errors with `logger.error()` before re-raising
-- Return `None` for expected failures in worker methods
+**Patterns:**
+- **Python:** Try-except with logging, raise `ValueError` or `HTTPException` for API errors
+- **Python API endpoints:** Wrap operations in try-except, rollback transactions on error, raise `HTTPException` with status codes
+- **TypeScript:** Custom `ApiRequestError` class, throw with status codes, catch in components
 
+**Python Example:**
 ```python
-# Pattern from research/backend/server.py
-if not project:
-    raise HTTPException(status_code=404, detail="Project not found")
-
-# Pattern from research/backend/llm_service.py
+# From server.py
+try:
+    logger.info(f"Creating project: {project_input.research_goal}")
+    project = Project(...)
+    db.add(project)
+    await db.commit()
 except Exception as e:
-    logger.error(f"LLM generation error: {e}")
-    raise
+    logger.error(f"Failed to create project: {e}", exc_info=True)
+    await db.rollback()
+    raise HTTPException(
+        status_code=500,
+        detail=f"Failed to create project: {str(e)}"
+    )
 ```
 
-**Frontend JavaScript:**
-- Use `try/catch` for async operations
-- Check for `response.status` when using axios
-- Console error logging for debugging
-- Display user-friendly error messages via toast/notifications
-
-```javascript
-// Pattern from research/frontend/src/lib/api.js
-ws.onerror = (error) => {
-  console.error('WebSocket error:', error);
-  if (onError) onError(error);
-};
+**TypeScript Example:**
+```typescript
+// From api.ts
+async function handleResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    const error: ApiErrorResponse = await response.json().catch(() => ({
+      error: 'UnknownError',
+      message: 'An unknown error occurred',
+      status: response.status,
+    }));
+    throw new ApiRequestError(error.message || error.error, error.status, error);
+  }
+  // ...
+}
 ```
+
+**Error Logging:**
+- Python: Use `logger.error()` with `exc_info=True` for exceptions
+- Python: Use `logger.warning()` for non-critical failures
+- TypeScript: No explicit logging framework detected
 
 ## Logging
 
-**Backend:**
-- Framework: Python `logging` module
-- Configure with `logging.basicConfig()` in `server.py`
-- Level: `INFO` by default, `ERROR` for exceptions
-- Format: `'%(asctime)s - %(name)s - %(levelname)s - %(message)s'`
-- Use module-level loggers: `logger = logging.getLogger(__name__)`
-
-**Frontend:**
-- Framework: `console` object
-- Use `console.error()` for exceptions
-- Use `console.log()` for WebSocket connection events
-- Use `console.warn()` for deprecation notices
+**Framework:** Python standard `logging` module
 
 **Patterns:**
-- Log task lifecycle events: started, completed, failed
-- Log external API call errors
-- Include context in error messages (task_id, project_id)
+- **Python:** Configure at module level: `logger = logging.getLogger(__name__)`
+- **Python:** Log levels: `logger.info()` for operations, `logger.warning()` for failures, `logger.error()` for exceptions
+- **Python:** Include context in log messages (IDs, status, key data)
+
+**When to Log:**
+- API endpoint entry/exit: `logger.info(f"Creating project: {research_goal}")`
+- Failed operations with context: `logger.warning(f"Failed to generate with {prov}: {e}")`
+- Exceptions with stack traces: `logger.error(f"Failed to create project: {e}", exc_info=True)`
 
 ## Comments
 
 **When to Comment:**
-- Docstrings for all classes and public methods
-- Inline comments for complex business logic
-- Section separators for large files
-- No comments for self-evident code
+- Module-level docstrings explain purpose and responsibilities
+- Function docstrings follow Google style (Args, Returns, Raises)
+- Inline comments for "why" not "what"
+- TODO comments for incomplete implementations
 
-**Docstring style:**
-- Triple double quotes (`"""`) for docstrings
-- Describe purpose, parameters, and return values
-- One-line summary for simple functions
-
+**Python Docstrings:**
 ```python
-# Pattern from research/backend/database/models.py
-class Project(Base):
+# From auth_service.py
+def get_google_auth_url(self, state: Optional[str] = None) -> str:
     """
-    Top-level unit of execution and persistence.
-    All execution state, tasks, artifacts, and logs are scoped to a Project.
+    Generate Google OAuth authorization URL.
+
+    Args:
+        state: Optional state parameter for CSRF protection
+
+    Returns:
+        Authorization URL
     """
 ```
 
-**JSDoc/TSDoc:**
-- Not used in this codebase
-- Component props are documented inline when complex
+**TypeScript JSDoc:**
+```typescript
+/**
+ * ChatInterface Component
+ *
+ * Reusable chat UI with message list and input area.
+ * Handles message display, auto-scroll, and user input.
+ */
+export const ChatInterface: React.FC<ChatInterfaceProps> = ({ ... }) => {
+```
+
+**TODO Pattern:**
+- TypeScript: `// TODO: [description]` - Found in `useCreditStore.ts`, `useAuthStore.ts`, `ConversationalPlanning.tsx`, `planning.ts`
 
 ## Function Design
 
 **Size:**
-- Backend functions: ~50-150 lines for task execution methods
-- Frontend components: ~150-250 lines for page components
-- UI components: ~30-80 lines (keep small and composable)
-- No hard limit, but prefer extraction when complexity grows
+- Python: Functions typically 10-50 lines, focused on single responsibility
+- Largest Python file: `server.py` (1072 lines) - monolithic API endpoints, should be split by feature
+- TypeScript: Components typically 50-200 lines, utility functions shorter
 
 **Parameters:**
-- Use type hints for Python function parameters
-- Destructure props in React components
-- Use `**kwargs` sparingly; prefer explicit parameters
-- Optional parameters have default values
-
-**Python parameter pattern:**
-```python
-async def generate(
-    self,
-    prompt: str,
-    system_message: str = "You are a helpful research assistant.",
-    model_name: str = DEFAULT_MODEL,
-    session_id: Optional[str] = None
-) -> str:
-```
-
-**React props pattern:**
-```javascript
-export const Dashboard = ({ onCreateProject, onSelectProject }) => {
-```
+- **Python:** Use type hints for all parameters, `Optional[T]` for nullable parameters
+- **Python:** Pydantic models for request/response validation in API endpoints
+- **TypeScript:** Interface definitions for props, use `React.FC<Props>` pattern
 
 **Return Values:**
-- Python functions use explicit return type hints
-- Async functions return awaited results, not promises
-- Return `None` for functions with side effects only
-- Frontend components return JSX
+- **Python:** Explicit return types using `-> Type:` annotation
+- **Python:** Return typed Pydantic models from API endpoints
+- **TypeScript:** Generic functions with `<T>` type parameter for API responses
 
 ## Module Design
 
 **Exports:**
-- Python: Use `__all__` for public API (not consistently used)
-- JavaScript: Named exports for components, default export for main component
-- Singleton instances exported directly: `llm_service = LLMService()`, `task_worker = TaskWorker()`
+- **Python:** Singleton instances exported at module level (`llm_service = LLMService()`, `auth_service = AuthService()`)
+- **TypeScript:** Named exports for components/types, default exports rare
 
 **Barrel Files:**
-- `research/backend/database/__init__.py` exports models and utilities
-- `research/backend/orchestration/__init__.py` exports orchestration engine
-- Frontend does not use barrel files; imports are direct
+- **TypeScript:** Index files in feature directories (`components/index.ts`, `services/index.ts`)
+- Pattern: Export all components/types from directory's `index.ts`
 
-**Service pattern:**
-- Backend services are singleton instances
-- Import service instances directly: `from llm_service import llm_service`
-- Services are initialized at module load time
+**Python Modules:**
+- Services: Class-based with singleton instance export
+- Database: SQLAlchemy models and session management
+- API routes: Single large `server.py` with all endpoints (anti-pattern to refactor)
+
+## Type Safety
+
+**Python:**
+- **Required:** Type hints on all function parameters and returns
+- **Required:** Pydantic models for API request/response
+- **Tooling:** mypy configured (`mypy>=1.5.0,<2.0.0`)
+
+**TypeScript:**
+- **Required:** `strict: true` in `tsconfig.json`
+- **Required:** Interface definitions for all data structures
+- **Required:** Type imports: `import type { Project } from '../types/project'`
+
+## Async Patterns
+
+**Python:**
+- Use `async def` for all I/O operations (database, HTTP calls)
+- Use `AsyncSession` for database operations
+- Use `httpx.AsyncClient()` for HTTP requests
+- Background tasks via FastAPI's `BackgroundTasks`
+
+**TypeScript:**
+- Use `async/await` for all API calls
+- Wrap fetch calls in Promise-returning functions
+- Use `try/catch` for error handling in async operations
 
 ---
 
-*Convention analysis: 2025-01-23*
+*Convention analysis: 2026-01-27*

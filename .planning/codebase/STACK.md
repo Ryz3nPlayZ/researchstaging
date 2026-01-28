@@ -1,120 +1,110 @@
 # Technology Stack
 
-**Analysis Date:** 2025-01-23
+**Analysis Date:** 2025-01-27
 
 ## Languages
 
 **Primary:**
-- Python 3.14.2 - Backend API, services, orchestration engine
-- JavaScript/JSX - Frontend React application
+- TypeScript 4.9.5 - Frontend (frontend-v2)
+- Python 3.14.2 - Backend
 
 **Secondary:**
-- SQL - Database queries (via SQLAlchemy ORM)
-- CSS - Styling (via Tailwind CSS)
+- JavaScript - Build scripts and legacy frontend (frontend)
+- SQL - PostgreSQL queries (via SQLAlchemy ORM)
 
 ## Runtime
 
 **Environment:**
-- Node.js v20.20.0 - Frontend development and build
+- Node.js v20.20.0 - Frontend runtime
 - Python 3.14.2 - Backend runtime
 
 **Package Manager:**
-- Yarn 1.22.22 - Frontend dependencies
-- pip/pip-tools - Backend Python dependencies
-- Lockfile: `yarn.lock` (frontend), requirements.txt (backend)
+- npm 11.7.0 - Frontend dependencies
+- pip - Python dependencies (via requirements.txt)
+- Lockfile: `package-lock.json` present for frontend-v2, no pip lock detected
 
 ## Frameworks
 
 **Core:**
-- FastAPI 0.110.1 - Async Python web framework for REST API
-- React 19.0.0 - Frontend UI framework
-- SQLAlchemy 2.x - Async ORM for PostgreSQL
-- Starlette 0.37.2 - ASGI framework (FastAPI dependency)
+- React 19.2.3 - Frontend UI framework
+- FastAPI 0.110.0-0.120.0 - Backend REST API
+- React Router DOM 7.13.0 - Frontend routing
+
+**State Management:**
+- Zustand 5.0.10 - Client-side state management
+- TanStack React Query 5.90.20 - Server state management
+- Redis 7-alpine - Backend caching/pub-sub
 
 **Testing:**
-- pytest 9.0.2 - Python test runner
-- react-scripts 5.0.1 - React testing utilities
+- React Testing Library 16.3.2 - Frontend component testing
+- Jest DOM 6.9.1 - Jest matchers for React
+- Pytest 7.4.0-9.0.0 - Backend testing
+- pytest-asyncio 0.21.0-1.0.0 - Async test support
 
 **Build/Dev:**
-- Craco 7.1.0 - React App configuration override
-- Tailwind CSS 3.4.17 - Utility-first CSS framework
-- PostCSS 8.4.49 - CSS processing
-- Vite/CRACO - Frontend build tooling
+- React Scripts 5.0.1 - Frontend build tooling
+- Tailwind CSS 3.4.19 - Utility-first CSS framework
+- Autoprefixer 10.4.23 - CSS vendor prefixing
+- PostCSS 8.5.6 - CSS transformation
 
 ## Key Dependencies
 
 **Critical:**
-- uvicorn 0.25.0 - ASGI server for FastAPI
-- pydantic 2.12.5 - Data validation and settings
-- httpx 0.28.1 - Async HTTP client
-- websockets 15.0.1 - WebSocket support
-- motor 3.3.1 - Async MongoDB driver (present but not actively used)
+- @tiptap/react 3.17.1 - Rich text editor for document creation
+- ReactFlow 11.11.4 - Interactive graph visualization for task/agent flows
+- Lucide React 0.563.0 - Icon library
+- Pydantic 2.0.0-3.0.0 - Data validation and settings management
 
 **Infrastructure:**
-- redis.asyncio - Async Redis client for pub/sub
-- asyncpg - Async PostgreSQL driver
-- boto3 1.42.29 - AWS SDK (included but usage unclear)
-- s3transfer 0.16.0 - S3 transfer utilities
+- SQLAlchemy 2.0.0-3.0.0 - Python ORM for PostgreSQL
+- asyncpg 0.29.0-0.31.0 - Async PostgreSQL driver
+- psycopg2-binary 2.9.0-3.0.0 - PostgreSQL adapter
+- redis[hiredis] 5.0.0-6.0.0 - Redis client with C parser
+- httpx 0.27.0-0.29.0 - Async HTTP client
+- aiohttp 3.9.0-4.0.0 - Async HTTP client/server
+- websockets 12.0.0-16.0.0 - WebSocket support
 
-**AI/ML:**
-- openai 1.99.9 - OpenAI API client (direct integration available)
-- google-generativeai 0.8.6 - Google Gemini API client
-- litellm 1.80.0 - Unified LLM API provider
-- tiktoken 0.12.0 - OpenAI tokenization
-- emergentintegrations 0.1.0 - Custom LLM integration package
+**PDF Processing:**
+- PyMuPDF 1.23.0-2.0.0 - Fast PDF text extraction
+- pdfplumber 0.10.0-0.12.0 - Table extraction from PDFs
+- pdfminer.six 20231228-20241001 - PDF parsing fallback
+- pypandoc 1.12.0-2.0.0 - Document conversion
 
-**Document Processing:**
-- PyMuPDF 1.26.7 (fitz) - PDF text extraction
-- pdfplumber 0.11.9 - PDF parsing with table support
-- pdfminer.six 20251230 - PDF parsing fallback
-- pypandoc 1.16.2 - Pandoc wrapper for document conversion
+**Authentication:**
+- python-jose[cryptography] 3.3.0-4.0.0 - JWT token handling
+- passlib[bcrypt] 1.7.4-2.0.0 - Password hashing
 
-**Frontend Libraries:**
-- axios 1.8.4 - HTTP client
-- react-router-dom 7.5.1 - Client-side routing
-- react-hook-form 7.56.2 - Form handling
-- @tiptap/react 3.17.0 - Rich text editor
-- reactflow 11.11.4 - Flow chart/graph visualization
-- recharts 3.6.0 - Charting library
-- @radix-ui/* - Headless UI component library
-- lucide-react 0.507.0 - Icon library
+**Data Processing:**
+- pandas 2.0.0-3.0.0 - Data manipulation
+- numpy 1.24.0-3.0.0 - Numerical computing
 
 ## Configuration
 
 **Environment:**
-- python-dotenv 1.2.1 - Environment variable loading from .env files
-- .env files in backend directory for secrets
+- python-dotenv 1.0.0-2.0.0 - Load environment variables from .env files
+- Backend `.env` location: `/home/zemul/Programming/research/backend/.env`
+- Frontend uses `REACT_APP_API_URL` environment variable (defaults to `http://localhost:8000/api`)
+- No `.env` file detected for frontend-v2 (uses defaults)
 
 **Build:**
-- craco.config.js - React app customization
-- tailwind.config.js - Tailwind CSS configuration
-- postcss.config.js - PostCSS plugins configuration
-- jsconfig.json - JavaScript path aliases
-
-**Linting/Formatting:**
-- black 25.12.0 - Python code formatter
-- flake8 7.3.0 - Python linter
-- isort 7.0.0 - Python import sorting
-- mypy 1.19.1 - Python type checker
-- eslint 9.23.0 - JavaScript linter
-- autoprefixer 10.4.20 - CSS vendor prefixing
+- `tsconfig.json` - TypeScript configuration with strict mode enabled
+- `tailwind.config.js` - Tailwind CSS customization with design tokens
+- `postcss.config.js` - PostCSS plugins (Tailwind + Autoprefixer)
 
 ## Platform Requirements
 
 **Development:**
-- Python 3.14+ with async/await support
-- Node.js 20+ and Yarn 1.22+
-- PostgreSQL 15+ with asyncpg support
-- Redis 7+ for pub/sub messaging
-- Pandoc installation for document export functionality
+- Node.js 20.20.0 or higher
+- Python 3.14.2
+- PostgreSQL 15 (via Docker or local)
+- Redis 7 (via Docker or local)
 
 **Production:**
-- Linux-compatible environment
-- ASGI-capable server (uvicorn recommended)
-- PostgreSQL database with JSONB support
-- Redis for real-time messaging
-- Sufficient disk space for temporary PDF storage
+- Backend deployed as ASGI application (Uvicorn)
+- Frontend built to static files (React build)
+- PostgreSQL database required
+- Redis required for WebSocket pub/sub and caching
 
 ---
 
-*Stack analysis: 2025-01-23*
+*Stack analysis: 2025-01-27*

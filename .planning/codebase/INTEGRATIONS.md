@@ -1,131 +1,163 @@
 # External Integrations
 
-**Analysis Date:** 2025-01-23
+**Analysis Date:** 2025-01-27
 
 ## APIs & External Services
 
-**Literature Search:**
-- Semantic Scholar API - Academic paper search and metadata
-  - Base URL: https://api.semanticscholar.org/graph/v1
-  - Implementation: `/home/zemul/Programming/research/research/backend/literature_service.py`
-  - Rate limiting: 1 request/second minimum interval
-  - Fields fetched: paperId, title, abstract, authors, year, citationCount, url, openAccessPdf, references
-
-- arXiv API - Preprint search and retrieval
-  - Base URL: https://export.arxiv.org/api/query
-  - Implementation: `/home/zemul/Programming/research/research/backend/literature_service.py`
-  - Format: XML responses parsed via ElementTree
-  - No explicit API key required
-
 **LLM Providers:**
-- Emergent Integrations LLM Service - Multi-provider LLM abstraction
-  - Package: emergentintegrations 0.1.0
-  - Implementation: `/home/zemul/Programming/research/research/backend/llm_service.py`
-  - Auth: EMERGENT_LLM_KEY environment variable
-  - Supported models: gpt-4.1-mini, gemini-2.5-flash, gemini-2.5-flash-lite, gemini-3-flash-preview
-  - Session management: Configurable session_id for conversation continuity
+- OpenAI - GPT-4.1-mini for text generation
+  - SDK/Client: `openai` Python package (AsyncOpenAI)
+  - Auth: `OPENAI_API_KEY` environment variable
+  - Config: `OPENAI_MODEL=gpt-4.1-mini`
+  - Location: `/home/zemul/Programming/research/backend/llm_service.py`
 
-- OpenAI API - Direct integration available (via openai 1.99.9)
-  - Not actively used in current codebase
+- Google Gemini - 2.5 Flash (primary) with fallbacks to 2.5 Flash Lite and 3.0 Flash Preview
+  - SDK/Client: `google-generativeai` Python package
+  - Auth: `GEMINI_API_KEY` environment variable
+  - Config: `GEMINI_MODEL_PRIMARY`, `GEMINI_MODEL_FALLBACK_1`, `GEMINI_MODEL_FALLBACK_2`
+  - Location: `/home/zemul/Programming/research/backend/llm_service.py`
 
-- Google Generative AI - Direct integration available (via google-generativeai 0.8.6)
-  - Not actively used in current codebase
+- Mistral AI - Mistral Large 3 model
+  - SDK/Client: `mistralai` Python package (async client)
+  - Auth: `MISTRAL_API_KEY` environment variable
+  - Config: `MISTRAL_MODEL=mistral-large-3`
+  - Location: `/home/zemul/Programming/research/backend/llm_service.py`
 
-- LiteLLM - Unified LLM API interface (via litellm 1.80.0)
-  - Included in dependencies but usage unclear
+- Groq - Llama 3.3 70B model
+  - SDK/Client: `groq` Python package (AsyncGroq)
+  - Auth: `GROQ_API_KEY` environment variable
+  - Config: `GROQ_MODEL=llama-3.3-70b`
+  - Location: `/home/zemul/Programming/research/backend/llm_service.py`
+
+- OpenRouter - Configurable model (optional)
+  - SDK/Client: `openai` Python package (AsyncOpenAI with custom base URL)
+  - Auth: `OPENROUTER_API_KEY` environment variable
+  - Config: `OPENROUTER_MODEL` (default: meta-llama/llama-3.3-70b)
+  - Location: `/home/zemul/Programming/research/backend/llm_service.py`
+
+**Literature Search:**
+- Semantic Scholar API - Academic paper search and citation data
+  - SDK/Client: Custom httpx.AsyncClient wrapper
+  - Auth: `SEMANTIC_SCHOLAR_API_KEY` environment variable (optional, increases rate limits)
+  - Base URL: `https://api.semanticscholar.org/graph/v1`
+  - Rate limiting: 1 request/second minimum
+  - Location: `/home/zemul/Programming/research/backend/literature_service.py` (SemanticScholarClient class)
+
+- arXiv API - Preprint server search
+  - SDK/Client: Custom httpx.AsyncClient wrapper with XML parsing
+  - Auth: None (public API)
+  - Base URL: `https://export.arxiv.org/api/query`
+  - Location: `/home/zemul/Programming/research/backend/literature_service.py` (ArxivClient class)
+
+- Unpaywall API - Open access PDF locator
+  - SDK/Client: Custom httpx client wrapper
+  - Auth: Email-based identification via `UNPAYWALL_EMAIL` environment variable
+  - Base URL: `https://api.unpaywall.org/v2`
+  - Location: `/home/zemul/Programming/research/backend/literature_service.py` (UnpaywallClient class)
 
 ## Data Storage
 
 **Databases:**
-- PostgreSQL - Primary relational database
-  - Connection: DATABASE_URL environment variable
-  - Default: postgresql+asyncpg://research_user:research_pass@localhost:5432/research_pilot
-  - ORM: SQLAlchemy with async support
-  - Schema location: `/home/zemul/Programming/research/research/backend/database/models.py`
-  - Key tables: projects, plans, tasks, task_dependencies, task_runs, artifacts, papers, references, execution_logs
-  - Features used: UUID types, JSONB columns, ARRAY types, asyncpg driver
-
-- MongoDB - Driver present but not actively used
-  - Client: motor 3.3.1 (async MongoDB driver)
-  - Status: Included in requirements but no implementation found
+- PostgreSQL 15-alpine
+  - Connection: `DATABASE_URL` environment variable (format: `postgresql+asyncpg://user:pass@host:port/db`)
+  - Client: SQLAlchemy 2.0 async ORM with asyncpg driver
+  - Connection config: `/home/zemul/Programming/research/backend/database/connection.py`
+  - Models location: `/home/zemul/Programming/research/backend/database/models.py`
+  - Default: `postgresql+asyncpg://research_user:research_pass_2024@localhost:5432/research_pilot`
+  - Pool size: 10 connections, max overflow 20
 
 **File Storage:**
-- Local filesystem temporary storage - PDF downloads and export processing
-  - PDF temp directory: `/tmp/research_pilot_pdfs`
-  - Export temp directory: `/tmp/research_pilot_exports`
-  - Implementation: `/home/zemul/Programming/research/research/backend/pdf_service.py`
+- Local filesystem - PDF downloads and export files
+  - PDF temp directory: `/tmp/research_pilot_pdfs` (configurable via `PDF_TEMP_DIR`)
+  - Export temp directory: `/tmp/research_pilot_exports` (configurable via `EXPORT_TEMP_DIR`)
+  - Location: `/home/zemul/Programming/research/backend/pdf_service.py`
 
 **Caching:**
-- Redis - Real-time messaging pub/sub
-  - Connection: REDIS_URL environment variable
-  - Default: redis://localhost:6379/0
-  - Implementation: `/home/zemul/Programming/research/research/backend/realtime/websocket.py`
-  - Usage pattern: pub/sub channels for project updates (project:{project_id})
-  - Client: redis.asyncio from redis package
+- Redis 7-alpine - Pub/sub for WebSocket broadcasts and task coordination
+  - Connection: `REDIS_URL` environment variable
+  - Client: `redis.asyncio` from redis[hiredis] package
+  - Default: `redis://localhost:6379/0`
+  - Location: `/home/zemul/Programming/research/backend/realtime/websocket.py`
+  - Used by: ConnectionManager for WebSocket pub/sub
 
 ## Authentication & Identity
 
 **Auth Provider:**
-- None detected - No authentication/authorization implementation found
-  - No JWT, OAuth, or session management
-  - API endpoints are publicly accessible
-  - Recommendations: Add API key authentication or OAuth2
+- Custom JWT-based authentication
+  - Implementation: Python-jose with cryptography backend
+  - JWT secret: `JWT_SECRET_KEY` environment variable (default: "your-secret-key-change-in-production")
+  - Algorithm: HS256
+  - Expiration: 7 days (configurable via `JWT_EXPIRATION_HOURS`)
+  - Password hashing: bcrypt via passlib[bcrypt]
+  - Location: `/home/zemul/Programming/research/backend/auth_service.py`
 
 ## Monitoring & Observability
 
 **Error Tracking:**
-- None detected - No Sentry, Rollbar, or similar service integration
+- None (uses Python logging with stdlib logger)
 
 **Logs:**
-- Python standard logging - Console-based logging
-  - Level: INFO
-  - Format: timestamp - name - level - message
-  - No centralized log aggregation
+- Python stdlib logging module
+- Log level: Configurable via `LOG_LEVEL` environment variable (default: INFO)
+- Format: `%(asctime)s - %(name)s - %(levelname)s - %(message)s`
+- No centralized log aggregation
 
 ## CI/CD & Deployment
 
 **Hosting:**
-- Not configured - No deployment configuration detected
+- Not detected (self-hosted based on Docker compose setup)
 
 **CI Pipeline:**
-- None detected - No GitHub Actions, GitLab CI, or similar configuration
+- None detected (manual testing with pytest)
 
-**Container:**
-- Emergent container image reference found in `/home/zemul/Programming/research/research/.emergent/emergent.yml`
-  - Image: fastapi_react_mongo_shadcn_base_image_cloud_arm:release-21012026-1
-  - Job ID: 391ce9d4-5ddd-4dfa-8911-8011649ffb5c
-  - Purpose: Appears to be part of an external orchestration/build system
+**Docker Support:**
+- Docker Compose configuration for local development
+- Location: `/home/zemul/Programming/research/docker-compose.yml`
+- Services:
+  - PostgreSQL 15-alpine (port 5432)
+  - Redis 7-alpine (port 6379)
+- No containerization for application code detected
 
 ## Environment Configuration
 
 **Required env vars:**
-- DATABASE_URL - PostgreSQL connection string
-- EMERGENT_LLM_KEY - API key for Emergent LLM service
-- REDIS_URL - Redis connection string for pub/sub
-- CORS_ORIGINS - Comma-separated list of allowed frontend origins (default: *)
-- REACT_APP_BACKEND_URL - Backend API URL for frontend (default in tests: https://papercraft-22.preview.emergentagent.com)
+- `DATABASE_URL` - PostgreSQL connection string
+- `REDIS_URL` - Redis connection string
+- At least one LLM provider API key (OPENAI_API_KEY, GEMINI_API_KEY, MISTRAL_API_KEY, or GROQ_API_KEY)
+- `JWT_SECRET_KEY` - JWT signing secret (production)
+
+**Optional env vars:**
+- `SEMANTIC_SCHOLAR_API_KEY` - Semantic Scholar API key for higher rate limits
+- `UNPAYWALL_EMAIL` - Email for Unpaywall API identification
+- `CORS_ORIGINS` - Comma-separated list of allowed frontend origins (default: http://localhost:3000,http://localhost:3001)
+- `ENVIRONMENT` - Environment name (development/production)
+- `LOG_LEVEL` - Logging level (DEBUG/INFO/WARNING/ERROR)
+- `MAX_TASK_RETRIES` - Maximum retry attempts for failed tasks (default: 3)
+- `PDF_TEMP_DIR` - Temporary directory for PDF downloads
+- `EXPORT_TEMP_DIR` - Temporary directory for exports
+
+**Frontend env vars:**
+- `REACT_APP_API_URL` - Backend API base URL (default: http://localhost:8000/api)
 
 **Secrets location:**
-- .env files in backend directory (not committed to git)
-- No secrets management service detected
+- Backend: `/home/zemul/Programming/research/backend/.env` (gitignored)
+- Template available at: `/home/zemul/Programming/research/backend/.env.template`
+- Frontend: No dedicated .env file (uses defaults)
 
 ## Webhooks & Callbacks
 
 **Incoming:**
-- None detected - No webhook endpoints for external services
+- None (no inbound webhook endpoints detected)
 
 **Outgoing:**
-- None detected - No outgoing webhook notifications to external services
+- None (no outgoing webhook integrations detected)
 
-## External Tools
-
-**Pandoc - Document Conversion:**
-- Installation: System-level binary required
-- Implementation: `/home/zemul/Programming/research/research/backend/export_service.py`
-- Usage: Converting markdown to PDF, DOCX, HTML
-- Fallback: Exports limited to markdown/HTML if Pandoc unavailable
-- PDF engine: Attempts weasyprint, falls back to HTML-only output
+**Real-time Updates:**
+- WebSocket connections for live project/task updates
+- Endpoint: `/api/ws/{project_id}` (WebSocket route)
+- Implementation: `/home/zemul/Programming/research/backend/realtime/websocket.py`
+- Pub/sub mechanism: Redis channels broadcast to connected WebSocket clients
 
 ---
 
-*Integration audit: 2025-01-23*
+*Integration audit: 2025-01-27*

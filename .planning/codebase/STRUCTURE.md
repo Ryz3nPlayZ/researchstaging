@@ -1,249 +1,233 @@
 # Codebase Structure
 
-**Analysis Date:** 2025-01-26
+**Analysis Date:** 2025-01-27
 
 ## Directory Layout
 
 ```
-research/
-├── backend/               # Python FastAPI backend service
-├── frontend/              # Legacy React SPA (JavaScript)
-├── frontend-v2/           # Modern React SPA (TypeScript rewrite)
-├── .planning/             # GSD planning documents and phases
-├── memory/                # Claude memory/context storage
-├── tests/                 # Integration test files
-└── [config files]         # docker-compose.yml, setup scripts, README
+[project-root]/
+├── backend/                 # Python FastAPI backend
+│   ├── database/           # SQLAlchemy models, connection
+│   ├── orchestration/     # Task DAG engine, state management
+│   ├── realtime/          # WebSocket, Redis pub/sub
+│   ├── workers/           # Task execution layer
+│   └── *.py               # Service modules (llm, pdf, literature, etc.)
+├── frontend-v2/           # React TypeScript frontend (v2)
+│   ├── public/            # Static assets
+│   ├── src/
+│   │   ├── components/    # React UI components
+│   │   ├── pages/         # Route-level page components
+│   │   ├── services/      # API clients
+│   │   ├── stores/        # Zustand state stores
+│   │   ├── types/         # TypeScript type definitions
+│   │   ├── hooks/         # Custom React hooks
+│   │   ├── styles/        # Global CSS, Tailwind config
+│   │   └── utils/         # Helper functions
+│   ├── build/             # Compiled output
+│   └── package.json       # Dependencies
+├── frontend/              # Legacy React frontend (v1)
+├── .planning/             # Planning documents, phases
+├── tests/                 # Integration tests
+└── *.sh                   # Startup scripts
 ```
 
 ## Directory Purposes
 
-**backend/:**
-- Purpose: FastAPI REST/WebSocket server with PostgreSQL, Redis, async task execution
-- Contains: Service layer, database models, orchestration engine, worker pool, realtime WebSocket handler
-- Key files: `server.py` (FastAPI app), `models.py` (Pydantic models), `llm_service.py`, `literature_service.py`, `orchestration/engine.py`, `workers/task_worker.py`, `realtime/websocket.py`
+**backend:**
+- Purpose: Python FastAPI server, all business logic, data persistence
+- Contains: Service modules, database models, orchestration engine, worker processes
+- Key files: `server.py`, `database/models.py`, `orchestration/engine.py`, `workers/task_worker.py`
 
-**frontend/:**
-- Purpose: Original React single-page application for research project management
-- Contains: React components, pages, contexts, hooks, utilities
-- Key files: `src/App.js` (view state routing), `src/index.js` (render root), `src/context/ProjectContext.js`, `src/components/` (layout, pages, graphs, artifacts, tasks, chat, dialogs, editor, viewer, ui)
+**backend/database:**
+- Purpose: Data persistence layer, SQLAlchemy ORM models
+- Contains: Model definitions (Project, Task, Artifact, etc.), async session management
+- Key files: `models.py`, `connection.py`, `credit_models.py`
 
-**frontend-v2/:**
-- Purpose: TypeScript rewrite with improved architecture, routing, and state management
-- Contains: React components (TypeScript), Zustand stores, typed API service layer, pages
-- Key files: `src/App.tsx` (BrowserRouter), `src/index.tsx` (render root), `src/pages/` (HomeDashboard, ConversationalPlanning), `src/stores/` (useProjectStore, useAuthStore, useCreditStore, useUIStore), `src/services/` (api.ts, projects.ts, planning.ts)
+**backend/orchestration:**
+- Purpose: Task orchestration engine, DAG management, state transitions
+- Contains: OrchestrationEngine class, dependency resolution, state machine logic
+- Key files: `engine.py`
 
-**.planning/:**
-- Purpose: GSD (Generative Software Development) planning and phase documents
-- Contains: `phases/` (implementation plans), `codebase/` (architecture docs, this file)
-- Generated: Yes (by GSD commands)
+**backend/realtime:**
+- Purpose: WebSocket connections, Redis pub/sub for real-time updates
+- Contains: ConnectionManager, WebSocket endpoint handler
+- Key files: `websocket.py`
 
-**memory/:**
-- Purpose: Claude AI memory/context persistence
-- Contains: Conversation history, project context
-- Generated: Yes
+**backend/workers:**
+- Purpose: Asynchronous task execution layer
+- Contains: TaskWorker class, task-specific execution methods
+- Key files: `task_worker.py`
 
-**tests/:**
-- Purpose: Integration test files
-- Contains: `test_servers.sh`, backend integration tests
-- Generated: No
+**frontend-v2:**
+- Purpose: Modern React TypeScript frontend with routing and state management
+- Contains: React app source, build configuration, dependencies
+- Key files: `src/App.tsx`, `src/index.tsx`, `package.json`
+
+**frontend-v2/src/components:**
+- Purpose: Reusable React UI components organized by domain
+- Contains: Presentational and container components
+- Key files: `layout/WorkspaceLayout.tsx`, `chat/ChatInterface.tsx`, `common/Button.tsx`
+
+**frontend-v2/src/pages:**
+- Purpose: Route-level page components corresponding to application routes
+- Contains: Page components that compose multiple UI components
+- Key files: `GreetingHome.tsx`, `ActiveChat.tsx`, `ProjectWorkspace.tsx`, `TaskGraphView.tsx`, `AgentGraphView.tsx`
+
+**frontend-v2/src/services:**
+- Purpose: API client layer, HTTP abstraction
+- Contains: Typed fetch wrappers, endpoint-specific service functions
+- Key files: `api.ts`, `planning.ts`, `projects.ts`
+
+**frontend-v2/src/stores:**
+- Purpose: Client-side state management using Zustand
+- Contains: Domain-specific stores (project, auth, credits, UI)
+- Key files: `useProjectStore.ts`, `useAuthStore.ts`, `useCreditStore.ts`, `useUIStore.ts`
+
+**frontend-v2/src/types:**
+- Purpose: TypeScript type definitions and interfaces
+- Contains: Domain models, API request/response types
+- Key files: `project.ts`, `task.ts`, `artifact.ts`, `api.ts`
+
+**frontend:**
+- Purpose: Legacy React frontend (v1), being replaced by frontend-v2
+- Contains: Old React code with different architecture
+- Key files: Various (not actively developed)
+
+**.planning:**
+- Purpose: Development planning documents, phase specifications
+- Contains: Codebase analysis docs, implementation phase plans
+- Key files: `codebase/*.md`, `phases/*/PLAN.md`
 
 ## Key File Locations
 
 **Entry Points:**
-- `/home/zemul/Programming/research/backend/server.py`: FastAPI server startup, route registration, startup/shutdown events
-- `/home/zemul/Programming/research/frontend/src/index.js`: Legacy frontend render root
-- `/home/zemul/Programming/research/frontend/src/App.js`: Legacy app with view state routing (dashboard/planning/workspace)
-- `/home/zemul/Programming/research/frontend-v2/src/index.tsx`: Modern frontend render root
-- `/home/zemul/Programming/research/frontend-v2/src/App.tsx`: Modern app with React Router
+- `/home/zemul/Programming/research/backend/server.py`: FastAPI application, HTTP/WebSocket routes
+- `/home/zemul/Programming/research/frontend-v2/src/index.tsx`: React application mount point
+- `/home/zemul/Programming/research/frontend-v2/src/App.tsx`: React Router configuration
 
 **Configuration:**
-- `/home/zemul/Programming/research/backend/.env`: Backend environment variables (API keys, database URLs, CORS origins)
-- `/home/zemul/Programming/research/backend/.env.template`: Environment variable template
+- `/home/zemul/Programming/research/backend/.env`: Backend environment variables (DB, Redis, API keys)
 - `/home/zemul/Programming/research/backend/requirements.txt`: Python dependencies
-- `/home/zemul/Programming/research/frontend/package.json`: Legacy frontend npm dependencies
-- `/home/zemul/Programming/research/frontend-v2/package.json`: Modern frontend npm dependencies
-- `/home/zemul/Programming/research/docker-compose.yml`: Docker services (PostgreSQL, Redis)
+- `/home/zemul/Programming/research/frontend-v2/package.json`: Node dependencies
+- `/home/zemul/Programming/research/frontend-v2/tailwind.config.js`: Tailwind CSS configuration
 
 **Core Logic:**
-- `/home/zemul/Programming/research/backend/orchestration/engine.py`: Task orchestration engine (state transitions, dependency resolution)
-- `/home/zemul/Programming/research/backend/workers/task_worker.py`: Async task execution loop with type dispatch
-- `/home/zemul/Programming/research/backend/llm_service.py`: LLM text generation with provider fallback (OpenAI/Gemini/Mistral/Groq)
-- `/home/zemul/Programming/research/backend/literature_service.py`: Academic literature search (Semantic Scholar, arXiv APIs)
+- `/home/zemul/Programming/research/backend/database/models.py`: All SQLAlchemy models (Project, Task, Artifact, etc.)
+- `/home/zemul/Programming/research/backend/orchestration/engine.py`: OrchestrationEngine, state transitions, DAG logic
+- `/home/zemul/Programming/research/backend/workers/task_worker.py`: TaskWorker, task execution by type
+- `/home/zemul/Programming/research/backend/llm_service.py`: LLM integration (OpenAI, Mistral, Groq)
+- `/home/zemul/Programming/research/backend/literature_service.py`: Literature search (Semantic Scholar, arXiv)
 - `/home/zemul/Programming/research/backend/pdf_service.py`: PDF download and text extraction
-- `/home/zemul/Programming/research/backend/reference_service.py`: Citation extraction and formatting
-- `/home/zemul/Programming/research/backend/planning_service.py`: Research plan generation from LLM
-- `/home/zemul/Programming/research/backend/auth_service.py`: JWT authentication and user management
-- `/home/zemul/Programming/research/backend/credit_service.py`: Credit billing and transaction tracking
-
-**Database:**
-- `/home/zemul/Programming/research/backend/database/models.py`: SQLAlchemy ORM models (Project, Plan, Task, TaskDependency, TaskRun, Artifact, Paper, Reference, ExecutionLog)
-- `/home/zemul/Programming/research/backend/database/connection.py`: Async database session management
-- `/home/zemul/Programming/research/backend/database/credit_models.py`: Credit and billing models (User, CreditTransaction, CreditPackage)
-
-**Realtime:**
-- `/home/zemul/Programming/research/backend/realtime/websocket.py`: WebSocket connection manager with Redis pub/sub
-
-**Frontend Components (Legacy):**
-- `/home/zemul/Programming/research/frontend/src/components/pages/`: Dashboard, PlanningFlow pages
-- `/home/zemul/Programming/research/frontend/src/components/layout/`: StatusBar, Navigator, Workspace, Inspector panels
-- `/home/zemul/Programming/research/frontend/src/components/graphs/`: Task graph, agent graph, citation network visualizations (ReactFlow)
-- `/home/zemul/Programming/research/frontend/src/components/artifacts/`: Artifact cards, viewers, editors
-- `/home/zemul/Programming/research/frontend/src/components/tasks/`: Task lists, status indicators
-- `/home/zemul/Programming/research/frontend/src/components/chat/`: Chat interface for AI interactions
-- `/home/zemul/Programming/research/frontend/src/components/editor/`: TipTap rich text editor
-- `/home/zemul/Programming/research/frontend/src/components/ui/`: Reusable UI components (buttons, inputs, dialogs)
-
-**Frontend Components (v2):**
-- `/home/zemul/Programming/research/frontend-v2/src/pages/`: HomeDashboard, ConversationalPlanning
-- `/home/zemul/Programming/research/frontend-v2/src/components/layout/`: WorkspaceLayout (app shell with header)
-- `/home/zemul/Programming/research/frontend-v2/src/components/common/`: Shared components (Button, CreditsDisplay)
-- `/home/zemul/Programming/research/frontend-v2/src/components/graphs/`: Task graph visualization (ReactFlow)
-- `/home/zemul/Programming/research/frontend-v2/src/components/artifacts/`: Artifact cards, content viewers
-- `/home/zemul/Programming/research/frontend-v2/src/components/tasks/`: Task status, task lists
-- `/home/zemul/Programming/research/frontend-v2/src/components/chat/`: Chat interface
-- `/home/zemul/Programming/research/frontend-v2/src/components/editor/`: TipTap editor
-- `/home/zemul/Programming/research/frontend-v2/src/components/ui/`: UI primitives
-
-**Frontend State (Legacy):**
-- `/home/zemul/Programming/research/frontend/src/context/ProjectContext.js`: React Context for project/task/artifact selection
-- `/home/zemul/Programming/research/frontend/src/context/ThemeContext.js`: Theme provider (light/dark mode)
-
-**Frontend State (v2):**
-- `/home/zemul/Programming/research/frontend-v2/src/stores/useProjectStore.ts`: Zustand store for active project, task graph, task statuses
-- `/home/zemul/Programming/research/frontend-v2/src/stores/useAuthStore.ts`: Zustand store for user authentication state
-- `/home/zemul/Programming/research/frontend-v2/src/stores/useCreditStore.ts`: Zustand store for credit balance
-- `/home/zemul/Programming/research/frontend-v2/src/stores/useUIStore.ts`: Zustand store for UI state (modals, sidebars)
-
-**Frontend Services (v2):**
-- `/home/zemul/Programming/research/frontend-v2/src/services/api.ts`: Base API client (fetch wrappers with auth headers, error handling)
-- `/home/zemul/Programming/research/frontend-v2/src/services/projects.ts`: Project API calls (getProjects, getProject, createProject, executeProject)
-- `/home/zemul/Programming/research/frontend-v2/src/services/planning.ts`: Planning API calls (generatePlan, approvePlan)
-
-**Frontend Types (v2):**
-- `/home/zemul/Programming/research/frontend-v2/src/types/project.ts`: Project, ProjectStatus, OutputType, TaskCounts
-- `/home/zemul/Programming/research/frontend-v2/src/types/task.ts`: Task, TaskState, TaskType, TaskGraphNode, TaskGraphEdge
-- `/home/zemul/Programming/research/frontend-v2/src/types/artifact.ts`: Artifact, ArtifactType
-- `/home/zemul/Programming/research/frontend-v2/src/types/api.ts`: API response/error types
+- `/home/zemul/Programming/research/backend/reference_service.py`: Citation extraction from PDFs
 
 **Testing:**
-- `/home/zemul/Programming/research/backend/tests/test_api.py`: Backend API integration tests (pytest)
-- `/home/zemul/Programming/research/frontend-v2/src/setupTests.ts`: Frontend test setup (React Testing Library)
-
-**Scripts:**
-- `/home/zemul/Programming/research/setup.sh`: Initial project setup (deps, DB, venv)
-- `/home/zemul/Programming/research/run-all.sh`: Start all services (backend + frontend)
-- `/home/zemul/Programming/research/run-backend.sh`: Start backend server only
-- `/home/zemul/Programming/research/run-frontend.sh`: Start frontend only
-- `/home/zemul/Programming/research/backend/scripts/migrate_add_credits.py`: Database migration for credit system
-- `/home/zemul/Programming/research/backend/scripts/add_dependencies_to_existing_project.py`: Migration for task dependencies
+- `/home/zemul/Programming/research/backend/tests/`: Backend test files
+- `/home/zemul/Programming/research/tests/`: Integration test scripts
 
 ## Naming Conventions
 
 **Files:**
-- Backend Python: `snake_case.py` (e.g., `llm_service.py`, `task_worker.py`)
-- Frontend JavaScript: `PascalCase.js` for components, `camelCase.js` for utilities (e.g., `StatusBar.js`, `api.js`)
-- Frontend TypeScript: `PascalCase.tsx` for components, `camelCase.ts` for utilities/services (e.g., `HomeDashboard.tsx`, `api.ts`)
-- Test files: `*_test.py` (backend), `*.test.tsx` or `*.test.ts` (frontend)
+- Python: `snake_case.py` (e.g., `llm_service.py`, `task_worker.py`)
+- TypeScript: `PascalCase.tsx` for components, `camelCase.ts` for utilities
+  - Component: `WorkspaceLayout.tsx`, `ChatInterface.tsx`
+  - Hook: `useProjectStore.ts`, `useAuthStore.ts`
+  - Utility: `api.ts`, `planning.ts`
+- Test files: `test_*.py` (backend), `*.test.ts` or `*.spec.ts` (frontend)
 
 **Directories:**
-- Backend: `snake_case` (e.g., `orchestration/`, `realtime/`)
-- Frontend: `camelCase` (e.g., `components/`, `pages/`, `services/`, `stores/`)
+- Lowercase with underscores: `orchestration/`, `realtime/`
+- Feature-based grouping: `components/chat/`, `components/layout/`
 
 **Functions:**
-- Backend Python: `snake_case` (e.g., `get_ready_tasks()`, `transition_task_state()`)
-- Frontend JavaScript/TypeScript: `camelCase` (e.g., `getProjects()`, `setActiveProject()`, `handleSubmit()`)
+- Python: `snake_case` (e.g., `expand_plan_to_tasks`, `transition_task_state`)
+- TypeScript: `camelCase` for functions, `PascalCase` for components/React hooks
 
-**Variables:**
-- Backend Python: `snake_case` (e.g., `project_id`, `task_counts`)
-- Frontend JavaScript/TypeScript: `camelCase` (e.g., `researchGoal`, `isLoadingProjects`)
-
-**Types/Classes:**
-- Backend Python: `PascalCase` (e.g., `Project`, `TaskState`, `LLMService`)
-- Frontend TypeScript: `PascalCase` (e.g., `Project`, `TaskGraphNode`, `ApiResponse`)
+**Classes:**
+- Python: `PascalCase` (e.g., `OrchestrationEngine`, `TaskWorker`, `ConnectionManager`)
+- TypeScript: `PascalCase` for classes/types
 
 **Constants:**
-- Backend Python: `UPPER_SNAKE_CASE` (e.g., `REDIS_URL`, `PROVIDER_ORDER`)
-- Frontend: `UPPER_SNAKE_CASE` (e.g., `API_BASE_URL`)
+- Python: `UPPER_SNAKE_CASE` (e.g., `REDIS_URL`, `API_BASE_URL`)
+- TypeScript: `UPPER_SNAKE_CASE` or `camelCase` depending on scope
 
 ## Where to Add New Code
 
-**New Backend Service:**
-- Implementation: `/home/zemul/Programming/research/backend/<service_name>_service.py`
-- Tests: `/home/zemul/Programming/research/backend/tests/test_<service_name>.py`
-- Import in: `server.py` if exposing endpoints
-
 **New Backend Endpoint:**
-- Implementation: Add route function in `/home/zemul/Programming/research/backend/server.py` under appropriate section (e.g., `# ============== Project Endpoints ==============`)
-- Pydantic models: Add request/response models at top of `server.py` or in `/home/zemul/Programming/research/backend/models.py`
+- Route definition: `/home/zemul/Programming/research/backend/server.py`
+- Add to `api_router` with appropriate HTTP method decorator
+- Use Pydantic models for request/response in server.py file
+- Business logic goes in appropriate service file or new service module
 
-**New Frontend (v2) Page:**
-- Implementation: `/home/zemul/Programming/research/frontend-v2/src/pages/<PageName>.tsx`
-- Add route: In `/home/zemul/Programming/research/frontend-v2/src/App.tsx` add `<Route path="/path" element={<PageName />} />`
-
-**New Frontend (v2) Component:**
-- Shared/common: `/home/zemul/Programming/research/frontend-v2/src/components/common/<ComponentName>.tsx`
-- Feature-specific: `/home/zemul/Programming/research/frontend-v2/src/components/<feature>/<ComponentName>.tsx`
-- UI primitives: `/home/zemul/Programming/research/frontend-v2/src/components/ui/<ComponentName>.tsx`
-
-**New Frontend (v2) Store:**
-- Implementation: `/home/zemul/Programming/research/frontend-v2/src/stores/use<StoreName>Store.ts`
-- Export from: `/home/zemul/Programming/research/frontend-v2/src/stores/index.ts`
-
-**New Frontend (v2) Service:**
-- Implementation: `/home/zemul/Programming/research/frontend-v2/src/services/<service>.ts`
-- Use base API client: Import `{ api }` from `./api` for typed HTTP methods
-
-**New Frontend (v2) Type:**
-- Implementation: `/home/zemul/Programming/research/frontend-v2/src/types/<domain>.ts`
-- Export types used across the app
+**New Backend Service:**
+- Implementation: `/home/zemul/Programming/research/backend/{service_name}_service.py`
+- Import pattern: `from {service_name}_service import {service_name}_service`
+- Singleton pattern: Create instance at module bottom
 
 **New Task Type:**
-- Backend: Add enum value to `/home/zemul/Programming/research/backend/database/models.py:TaskType`
-- Backend: Add handler in `/home/zemul/Programming/research/backend/workers/task_worker.py` (dispatch in execute_task method)
-- Frontend: Add to `/home/zemul/Programming/research/frontend-v2/src/types/task.ts:TaskType` enum
-- Frontend: Update agent graph in `/home/zemul/Programming/research/backend/server.py:get_agent_graph()`
+- Enum: Add to `/home/zemul/Programming/research/backend/database/models.py` in `TaskType` enum
+- Worker method: Add `_execute_{task_type}` in `/home/zemul/Programming/research/backend/workers/task_worker.py`
+- Worker routing: Add elif branch in `execute_task()` method
 
-**New Artifact Type:**
-- Backend: Add enum value to `/home/zemul/Programming/research/backend/database/models.py:ArtifactType`
-- Frontend: Add to `/home/zemul/Programming/research/frontend-v2/src/types/artifact.ts:ArtifactType` enum
-- Frontend: Create viewer component in `/home/zemul/Programming/research/frontend-v2/src/components/artifacts/<ArtifactType>Viewer.tsx`
+**New Frontend Page:**
+- Component: `/home/zemul/Programming/research/frontend-v2/src/pages/{PageName}.tsx`
+- Route: Add to `/home/zemul/Programming/research/frontend-v2/src/App.tsx` Routes
+- Export: Use named export `export function {PageName}()`
+
+**New Frontend Component:**
+- Reusable UI: `/home/zemul/Programming/research/frontend-v2/src/components/{category}/{ComponentName}.tsx`
+- Category options: `common/`, `layout/`, `chat/`, `graphs/`, `tasks/`, `artifacts/`, `ui/`, `editor/`
+- Export: Use named export, add to `index.ts` barrel file
+
+**New Frontend Service/Client:**
+- Service file: `/home/zemul/Programming/research/frontend-v2/src/services/{domain}.ts`
+- Import base API: `import { api } from './api'`
+- Export functions for each endpoint
+
+**New Frontend State Store:**
+- Store file: `/home/zemul/Programming/research/frontend-v2/src/stores/use{Domain}Store.ts`
+- Use Zustand: `import { create } from 'zustand'`
+- Export: `export const use{Domain}Store = create<{Domain}State>()`
+
+**New Type Definitions:**
+- Domain types: `/home/zemul/Programming/research/frontend-v2/src/types/{domain}.ts`
+- Export interfaces and types, import into `/home/zemul/Programming/research/frontend-v2/src/types/index.ts`
 
 **Utilities:**
-- Backend: `/home/zemul/Programming/research/backend/utils.py` (create if not exists)
-- Frontend: `/home/zemul/Programming/research/frontend-v2/src/utils/<utility>.ts`
+- Backend helpers: Create in appropriate service module or new utility module
+- Frontend helpers: `/home/zemul/Programming/research/frontend-v2/src/utils/index.ts` or new utility file
 
 ## Special Directories
 
-**backend/venv/:**
-- Purpose: Python virtual environment
+**backend/venv:**
+- Purpose: Python virtual environment for dependencies
 - Generated: Yes
-- Committed: No
+- Committed: No (in .gitignore)
 
-**frontend/node_modules/, frontend-v2/node_modules/:**
-- Purpose: npm dependencies
+**frontend-v2/node_modules:**
+- Purpose: Node.js dependencies
 - Generated: Yes
-- Committed: No
+- Committed: No (in .gitignore)
 
-**backend/__pycache__/, frontend-v2/src/__pycache__/:**
+**frontend-v2/build:**
+- Purpose: Compiled React application for production
+- Generated: Yes (by `npm run build`)
+- Committed: No (in .gitignore)
+
+**backend/__pycache__:**
 - Purpose: Python bytecode cache
 - Generated: Yes
-- Committed: No
+- Committed: No (in .gitignore)
 
-**frontend/build/, frontend-v2/build/:**
-- Purpose: Production build output
-- Generated: Yes
-- Committed: No
-
-**.planning/:**
-- Purpose: GSD planning documents
-- Generated: Yes
+**.planning:**
+- Purpose: Development documentation, phase plans, codebase analysis
+- Generated: No (manually created)
 - Committed: Yes
 
-**memory/:**
-- Purpose: Claude AI memory/context
-- Generated: Yes
-- Committed: Yes (depends on workflow)
+**frontend:**
+- Purpose: Legacy frontend v1
+- Generated: No
+- Committed: Yes (but not actively developed)
 
 ---
 
-*Structure analysis: 2025-01-26*
+*Structure analysis: 2025-01-27*
