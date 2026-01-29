@@ -4,6 +4,7 @@ from textual.containers import Horizontal, Vertical
 from textual.widgets import DataTable, Static
 from textual import on
 from api_client import api_client
+from messages import ProjectSelected
 
 
 class ProjectsTab(Vertical):
@@ -47,3 +48,10 @@ class ProjectsTab(Vertical):
         except Exception as e:
             table = self.query_one(DataTable)
             table.add_row("Error", str(e), "", "")
+
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        """Handle project row selection"""
+        if event.row_key:
+            project_id = event.row_key.value if hasattr(event.row_key, 'value') else str(event.row_key)
+            # Emit message that other tabs can listen to
+            self.app.post_message(ProjectSelected(project_id))
