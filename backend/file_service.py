@@ -13,7 +13,7 @@ from fastapi import UploadFile, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import Folder, File, Project, get_project
+from database import Folder, File, Project
 from database.models import utc_now
 
 logger = logging.getLogger(__name__)
@@ -48,7 +48,10 @@ async def create_folder(
 ) -> Folder:
     """Create a new folder in a project."""
     # Verify project exists
-    project = await get_project(db, project_id)
+    result = await db.execute(select(Project).where(Project.id == project_id))
+    project = result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
 
     # Generate unique path
     parent_path = ""
@@ -91,7 +94,10 @@ async def upload_file(
 ) -> File:
     """Upload a file to a project."""
     # Verify project exists
-    project = await get_project(db, project_id)
+    result = await db.execute(select(Project).where(Project.id == project_id))
+    project = result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
 
     # Determine folder path
     folder_path = ""

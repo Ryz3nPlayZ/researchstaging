@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { login, mockLogin, logout, getMe } from '../lib/api';
 
 const AuthContext = createContext({
@@ -15,6 +15,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
+  const isMounted = useRef(true);
 
   // Check authentication on mount
   useEffect(() => {
@@ -22,19 +23,33 @@ export const AuthProvider = ({ children }) => {
       try {
         const savedToken = localStorage.getItem('auth_token');
         if (savedToken) {
-          const user = await getMe(savedToken);
-          setUser(user);
-          setToken(savedToken);
+          try {
+            const user = await getMe(savedToken);
+            if (isMounted.current) {
+              setUser(user);
+              setToken(savedToken);
+            }
+          } catch (apiError) {
+            // Token is invalid or API error
+            console.log('Token invalid or API error, clearing token');
+            localStorage.removeItem('auth_token');
+          }
         }
       } catch (error) {
         console.error('Auth check failed:', error);
         localStorage.removeItem('auth_token');
       } finally {
-        setLoading(false);
+        if (isMounted.current) {
+          setLoading(false);
+        }
       }
     };
 
     checkAuth();
+
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
 
   const loginAction = useCallback(async (code) => {

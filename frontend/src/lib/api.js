@@ -11,6 +11,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 10000, // 10 second default timeout
 });
 
 // Request interceptor to add auth token
@@ -163,7 +164,8 @@ export const authApi = {
     const response = await axios.get(`${API_BASE}/auth/me`, {
       headers: {
         Authorization: `Bearer ${token}`
-      }
+      },
+      timeout: 5000 // 5 second timeout
     });
     return response.data;
   },

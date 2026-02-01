@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
 
 from database import get_db
-from backend.file_service import (
+from file_service import (
     create_folder,
     upload_file,
     list_project_files,
@@ -20,13 +20,6 @@ from backend.file_service import (
 )
 
 logger = logging.getLogger(__name__)
-    create_folder,
-    upload_file,
-    list_project_files,
-    get_file,
-    delete_file,
-    get_project_file_tree
-)
 
 router = APIRouter(prefix="/files", tags=["files"])
 

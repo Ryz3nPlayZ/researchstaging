@@ -47,7 +47,7 @@ from export_service import export_service
 from auth_service import auth_service
 
 # File management imports
-from backend.file_api import router as file_router
+from file_api import router as file_router
 
 # Configure logging
 logging.basicConfig(
