@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useProject } from '../../context/ProjectContext';
-import { projectsApi, tasksApi, artifactsApi, createWebSocketConnection } from '../../lib/api';
+import { projectsApi, tasksApi, artifactsApi, filesApi, createWebSocketConnection } from '../../lib/api';
 import api from '../../lib/api';
 import { ScrollArea } from '../ui/scroll-area';
 import { Button } from '../ui/button';
@@ -8,7 +8,7 @@ import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { RichTextEditor } from '../editor/RichTextEditor';
 import { TaskGraph, AgentGraph } from '../graphs/TaskGraph';
-import { FileExplorer, mockFileTree } from '../explorer/FileExplorer';
+import { FileExplorer } from '../explorer/FileExplorer';
 import { TaskErrorRecovery } from '../tasks/TaskErrorRecovery';
 import { 
   Play, 
@@ -32,6 +32,7 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { toast } from 'sonner';
+import { Upload } from 'lucide-react';
 
 export const Workspace = () => {
   const { 
@@ -50,6 +51,9 @@ export const Workspace = () => {
   const [editedContent, setEditedContent] = useState(null);
   const [exporting, setExporting] = useState(false);
   const [tasks, setTasks] = useState([]);
+  const [fileTree, setFileTree] = useState(null);
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
 
   const fetchGraphs = useCallback(async () => {
     if (!selectedProject) return;
@@ -75,11 +79,47 @@ export const Workspace = () => {
     }
   }, [selectedProject]);
 
+  const fetchFileTree = useCallback(async () => {
+    if (!selectedProject) return;
+    try {
+      const response = await filesApi.getFileTree(selectedProject.id);
+      setFileTree(response.data);
+    } catch (error) {
+      console.error('Failed to fetch file tree:', error);
+      // Set empty tree if error
+      setFileTree({
+        id: 'root',
+        name: 'Project Files',
+        type: 'folder',
+        path: `project_${selectedProject.id}`,
+        children: []
+      });
+    }
+  }, [selectedProject]);
+
+  const handleFileUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file || !selectedProject) return;
+
+    setUploadingFile(true);
+    try {
+      await filesApi.uploadFile(selectedProject.id, file);
+      toast.success('File uploaded successfully');
+      fetchFileTree(); // Refresh file tree
+    } catch (error) {
+      console.error('Failed to upload file:', error);
+      toast.error('Failed to upload file');
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
   // Fetch task graph and tasks
   useEffect(() => {
     fetchGraphs();
     fetchTasks();
-  }, [fetchGraphs, fetchTasks]);
+    fetchFileTree();
+  }, [fetchGraphs, fetchTasks, fetchFileTree]);
 
   // WebSocket connection for real-time updates
   useEffect(() => {
@@ -315,22 +355,59 @@ export const Workspace = () => {
             <div className="h-full flex">
               {/* File Explorer - Left Sidebar */}
               <div className="w-64 border-r border-border bg-muted/30">
-                <div className="p-3 border-b border-border">
-                  <h3 className="text-sm font-semibold">Files</h3>
-                  <p className="text-xs text-muted-foreground">Project files and outputs</p>
+                <div className="p-3 border-b border-border flex justify-between items-center">
+                  <div>
+                    <h3 className="text-sm font-semibold">Files</h3>
+                    <p className="text-xs text-muted-foreground">Project files and outputs</p>
+                  </div>
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      className="hidden"
+                      onChange={handleFileUpload}
+                      disabled={uploadingFile}
+                    />
+                    <Upload className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                  </label>
                 </div>
-                <FileExplorer files={mockFileTree} />
+                {fileTree ? (
+                  <FileExplorer
+                    files={[fileTree]}
+                    onFileSelect={setSelectedFile}
+                    selectedFile={selectedFile}
+                  />
+                ) : (
+                  <div className="p-4 text-center text-sm text-muted-foreground">
+                    {uploadingFile ? 'Uploading...' : 'Loading files...'}
+                  </div>
+                )}
               </div>
 
               {/* File Preview - Main Area */}
               <div className="flex-1 p-4">
-                <div className="h-full flex items-center justify-center border-2 border-dashed border-border rounded-lg">
-                  <div className="text-center">
-                    <FileText className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">Select a file to preview</p>
-                    <p className="text-xs text-muted-foreground mt-1">Supports PDF, MD, JSON, CSV, code files</p>
+                {selectedFile ? (
+                  <div className="h-full flex flex-col">
+                    <div className="mb-4 pb-2 border-b">
+                      <h3 className="text-lg font-semibold">{selectedFile.name}</h3>
+                      <p className="text-sm text-muted-foreground">{selectedFile.path}</p>
+                    </div>
+                    <div className="flex-1 flex items-center justify-center border-2 border-dashed border-border rounded-lg">
+                      <div className="text-center">
+                        <FileText className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">File preview coming soon</p>
+                        <p className="text-xs text-muted-foreground mt-1">Type: {selectedFile.fileType || 'unknown'}</p>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="h-full flex items-center justify-center border-2 border-dashed border-border rounded-lg">
+                    <div className="text-center">
+                      <FileText className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">Select a file to preview</p>
+                      <p className="text-xs text-muted-foreground mt-1">Supports PDF, MD, JSON, CSV, code files</p>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </TabsContent>

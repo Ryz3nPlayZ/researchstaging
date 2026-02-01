@@ -46,6 +46,9 @@ from llm_service import llm_service
 from export_service import export_service
 from auth_service import auth_service
 
+# File management imports
+from backend.file_api import router as file_router
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -1158,8 +1161,9 @@ async def get_export_formats():
     return {"formats": export_service.get_supported_formats()}
 
 
-# Include router in app
+# Include routers in app
 app.include_router(api_router)
+app.include_router(file_router)
 
 # CORS middleware
 app.add_middleware(

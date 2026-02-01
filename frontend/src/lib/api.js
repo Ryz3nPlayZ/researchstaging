@@ -58,6 +58,35 @@ export const statsApi = {
   getGlobal: () => api.get('/stats'),
 };
 
+// Files API
+export const filesApi = {
+  // Folders
+  createFolder: (projectId, data) => api.post(`/files/projects/${projectId}/folders`, data),
+
+  // Files
+  uploadFile: (projectId, file, folderId = null, description = null) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    if (folderId) formData.append('folder_id', folderId);
+    if (description) formData.append('description', description);
+
+    return api.post(`/files/projects/${projectId}/files/upload`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+  },
+
+  listFiles: (projectId) => api.get(`/files/projects/${projectId}/files`),
+  getFileTree: (projectId) => api.get(`/files/projects/${projectId}/files/tree`),
+  getFile: (fileId) => api.get(`/files/files/${fileId}`),
+  downloadFile: (fileId) => {
+    const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+    return `${BACKEND_URL}/api/files/files/${fileId}/download`;
+  },
+  deleteFile: (fileId) => api.delete(`/files/files/${fileId}`),
+};
+
 // WebSocket connection for real-time updates
 export const createWebSocketConnection = (projectId, onEvent, onError) => {
   const wsUrl = BACKEND_URL.replace('http', 'ws').replace('https', 'wss');
