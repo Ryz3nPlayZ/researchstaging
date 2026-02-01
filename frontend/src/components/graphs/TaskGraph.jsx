@@ -7,6 +7,7 @@ import ReactFlow, {
   useEdgesState,
   Handle,
   Position,
+  MarkerType,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Badge } from '../ui/badge';
@@ -88,12 +89,16 @@ const AgentNode = ({ data }) => {
 
   const getTypeConfig = (type) => {
     switch (type) {
-      case 'router':
-        return { icon: Route, color: 'bg-purple-500/10 text-purple-500' };
-      case 'evaluator':
-        return { icon: CheckCircle, color: 'bg-orange-500/10 text-orange-500' };
+      case 'orchestrator':
+        return { icon: Route, color: 'bg-purple-500/10 text-purple-500 border-purple-500/50' };
+      case 'executor':
+        return { icon: Bot, color: 'bg-blue-500/10 text-blue-500 border-blue-500/50' };
+      case 'verifier':
+        return { icon: CheckCircle, color: 'bg-orange-500/10 text-orange-500 border-orange-500/50' };
+      case 'specialist':
+        return { icon: Search, color: 'bg-green-500/10 text-green-500 border-green-500/50' };
       default:
-        return { icon: Bot, color: 'bg-blue-500/10 text-blue-500' };
+        return { icon: Bot, color: 'bg-slate-500/10 text-slate-500 border-slate-500/50' };
     }
   };
 
@@ -102,25 +107,28 @@ const AgentNode = ({ data }) => {
   const TypeIcon = typeConfig.icon;
 
   return (
-    <div className={`px-4 py-3 rounded-xl border-2 ${statusConfig.color} min-w-[180px] transition-all duration-300 ${statusConfig.pulse ? 'animate-pulse' : ''} relative`}>
+    <div className={`px-4 py-3 rounded-xl border-2 ${statusConfig.color} ${typeConfig.color} min-w-[180px] transition-all duration-300 ${statusConfig.pulse ? 'animate-pulse' : ''} relative shadow-sm`}>
       {/* Input handle */}
       <Handle
         type="target"
         position={Position.Top}
-        className="w-3 h-3 bg-purple-400 border-2 border-white"
+        className="w-3 h-3 bg-slate-400 border-2 border-white"
       />
 
       <div className="flex items-center gap-2 mb-2">
-        <div className={`w-8 h-8 rounded-lg ${typeConfig.color} flex items-center justify-center`}>
-          <TypeIcon className="h-4 w-4" />
+        <div className={`w-10 h-10 rounded-lg ${typeConfig.color.split(' ')[0]} flex items-center justify-center border`}>
+          <TypeIcon className="h-5 w-5" />
         </div>
-        <span className="text-sm font-medium">{data?.label || 'Agent'}</span>
+        <div className="flex-1">
+          <div className="text-sm font-semibold">{data?.label || 'Agent'}</div>
+          <div className="text-[10px] text-muted-foreground capitalize">{data?.type || 'agent'}</div>
+        </div>
       </div>
-      <p className="text-xs text-muted-foreground line-clamp-2">{data?.description || ''}</p>
+      <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{data?.description || ''}</p>
       {data?.status && data.status !== 'idle' && (
         <Badge
           variant="outline"
-          className={`mt-2 text-[10px] ${data.status === 'running' ? 'bg-blue-500/10 text-blue-500' : 'bg-green-500/10 text-green-500'}`}
+          className={`text-[10px] ${data.status === 'running' ? 'bg-blue-500/10 text-blue-500' : 'bg-green-500/10 text-green-500'}`}
         >
           {data.status}
         </Badge>
@@ -130,7 +138,7 @@ const AgentNode = ({ data }) => {
       <Handle
         type="source"
         position={Position.Bottom}
-        className="w-3 h-3 bg-purple-400 border-2 border-white"
+        className="w-3 h-3 bg-slate-400 border-2 border-white"
       />
     </div>
   );

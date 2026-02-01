@@ -661,55 +661,68 @@ async def get_task_graph(project_id: str, db: AsyncSession = Depends(get_db)):
 
 @api_router.get("/projects/{project_id}/agent-graph")
 async def get_agent_graph(project_id: str, db: AsyncSession = Depends(get_db)):
-    """Get agent orchestration graph."""
+    """Get agent orchestration graph showing multi-agent architecture."""
+
     # Get task states for agent status
     result = await db.execute(
         select(Task.task_type, Task.state)
         .where(Task.project_id == project_id)
     )
     task_states = {row[0]: row[1] for row in result.all()}
-    
+
+    # Define agent hierarchy based on agentteam.md
     agents = [
-        {"id": "router", "name": "Router Agent", "type": "router", "description": "Plans and routes tasks"},
-        {"id": "search", "name": "Search Agent", "type": "worker", "description": "Literature search"},
-        {"id": "pdf", "name": "PDF Agent", "type": "worker", "description": "PDF processing"},
-        {"id": "reference", "name": "Reference Agent", "type": "worker", "description": "Citation extraction"},
-        {"id": "summary", "name": "Summary Agent", "type": "worker", "description": "Paper summarization"},
-        {"id": "synthesis", "name": "Synthesis Agent", "type": "worker", "description": "Literature synthesis"},
-        {"id": "draft", "name": "Drafting Agent", "type": "worker", "description": "Document drafting"},
-        {"id": "evaluator", "name": "Evaluator Agent", "type": "evaluator", "description": "Output evaluation"}
+        # Orchestrator (top level)
+        {"id": "orchestrator", "name": "Orchestrator", "type": "orchestrator", "description": "Main session coordination and planning"},
+
+        # Executor agents
+        {"id": "executor", "name": "Executor Agents", "type": "executor", "description": "Execute PLAN.md files atomically"},
+
+        # Verifier agents
+        {"id": "verifier", "name": "Verifier Agents", "type": "verifier", "description": "Verify phase goals against codebase"},
+
+        # Specialist agents (on-demand)
+        {"id": "mapper", "name": "Codebase Mapper", "type": "specialist", "description": "Explore and document codebase structure"},
+        {"id": "researcher", "name": "Phase Researcher", "type": "specialist", "description": "Research unknown domains before planning"},
+        {"id": "debugger", "name": "System Debugger", "type": "specialist", "description": "Investigate bugs systematically"}
     ]
-    
+
+    # Calculate agent status based on tasks
     type_to_agent = {
-        TaskType.LITERATURE_SEARCH: "search",
-        TaskType.PDF_ACQUISITION: "pdf",
-        TaskType.REFERENCE_EXTRACTION: "reference",
-        TaskType.SUMMARIZATION: "summary",
-        TaskType.SYNTHESIS: "synthesis",
-        TaskType.DRAFTING: "draft"
+        TaskType.LITERATURE_SEARCH: "executor",
+        TaskType.PDF_ACQUISITION: "executor",
+        TaskType.REFERENCE_EXTRACTION: "executor",
+        TaskType.SUMMARIZATION: "executor",
+        TaskType.SYNTHESIS: "executor",
+        TaskType.DRAFTING: "executor"
     }
-    
+
     nodes = []
+    # Hierarchical layout positions
     positions = {
-        "router": {"x": 400, "y": 50},
-        "search": {"x": 100, "y": 200},
-        "pdf": {"x": 250, "y": 200},
-        "reference": {"x": 400, "y": 200},
-        "summary": {"x": 550, "y": 200},
-        "synthesis": {"x": 400, "y": 350},
-        "draft": {"x": 400, "y": 500},
-        "evaluator": {"x": 700, "y": 350}
+        "orchestrator": {"x": 500, "y": 50},
+        "executor": {"x": 300, "y": 200},
+        "verifier": {"x": 700, "y": 200},
+        "mapper": {"x": 200, "y": 400},
+        "researcher": {"x": 400, "y": 400},
+        "debugger": {"x": 600, "y": 400}
     }
-    
+
     for agent in agents:
+        # Determine agent status based on tasks
         agent_status = "idle"
-        for task_type, state in task_states.items():
-            if type_to_agent.get(task_type) == agent["id"]:
-                if state == TaskState.RUNNING:
-                    agent_status = "running"
-                elif state == TaskState.COMPLETED:
-                    agent_status = "completed"
-        
+        active_count = 0
+
+        if agent["id"] == "executor":
+            # Check if any executor tasks are running
+            for task_type, state in task_states.items():
+                if type_to_agent.get(task_type) == "executor":
+                    if state == TaskState.RUNNING:
+                        active_count += 1
+                    elif state == TaskState.COMPLETED:
+                        active_count += 1
+            agent_status = "running" if any(s == TaskState.RUNNING for s in task_states.values()) else "idle"
+
         nodes.append({
             "id": agent["id"],
             "type": "agentNode",
@@ -721,21 +734,25 @@ async def get_agent_graph(project_id: str, db: AsyncSession = Depends(get_db)):
                 "description": agent["description"]
             }
         })
-    
+
+    # Define edges showing agent relationships
     edges = [
-        {"id": "router-search", "source": "router", "target": "search"},
-        {"id": "router-pdf", "source": "router", "target": "pdf"},
-        {"id": "router-reference", "source": "router", "target": "reference"},
-        {"id": "router-summary", "source": "router", "target": "summary"},
-        {"id": "search-synthesis", "source": "search", "target": "synthesis"},
-        {"id": "pdf-synthesis", "source": "pdf", "target": "synthesis"},
-        {"id": "reference-synthesis", "source": "reference", "target": "synthesis"},
-        {"id": "summary-synthesis", "source": "summary", "target": "synthesis"},
-        {"id": "synthesis-draft", "source": "synthesis", "target": "draft"},
-        {"id": "draft-evaluator", "source": "draft", "target": "evaluator"},
-        {"id": "evaluator-router", "source": "evaluator", "target": "router", "style": {"strokeDasharray": "5,5"}}
+        # Orchestrator coordinates all agents
+        {"id": "orchestrator-executor", "source": "orchestrator", "target": "executor", "label": "delegates"},
+        {"id": "orchestrator-verifier", "source": "orchestrator", "target": "verifier", "label": "requests verification"},
+        {"id": "orchestrator-mapper", "source": "orchestrator", "target": "mapper", "label": "spawns", "style": {"strokeDasharray": "5,5"}},
+        {"id": "orchestrator-researcher", "source": "orchestrator", "target": "researcher", "label": "spawns", "style": {"strokeDasharray": "5,5"}},
+        {"id": "orchestrator-debugger", "source": "orchestrator", "target": "debugger", "label": "spawns", "style": {"strokeDasharray": "5,5"}},
+
+        # Verifier checks executor work
+        {"id": "executor-verifier", "source": "executor", "target": "verifier", "label": "reports to"},
+
+        # Specialists report findings back
+        {"id": "mapper-orchestrator", "source": "mapper", "target": "orchestrator", "label": "reports", "style": {"strokeDasharray": "5,5"}},
+        {"id": "researcher-orchestrator", "source": "researcher", "target": "orchestrator", "label": "reports", "style": {"strokeDasharray": "5,5"}},
+        {"id": "debugger-orchestrator", "source": "debugger", "target": "orchestrator", "label": "reports", "style": {"strokeDasharray": "5,5"}}
     ]
-    
+
     return {"nodes": nodes, "edges": edges}
 
 
