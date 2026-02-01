@@ -16,7 +16,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 import httpx
 
-from database import User, credit_service
+from database import User
+from credit_service import credit_service
 
 logger = logging.getLogger(__name__)
 
