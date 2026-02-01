@@ -115,6 +115,11 @@ export const authApi = {
     return response.data;
   },
 
+  mockLogin: async (email, name) => {
+    const response = await api.post('/auth/login', { email, name });
+    return response.data;
+  },
+
   logout: async () => {
     const response = await api.post('/auth/logout');
     return response.data;
@@ -151,6 +156,12 @@ export const getAuthToken = () => {
 // Convenience functions for use in components
 export const login = async (code) => {
   const data = await authApi.login(code);
+  setAuthToken(data.token);
+  return data;
+};
+
+export const mockLogin = async (email, name) => {
+  const data = await authApi.mockLogin(email, name);
   setAuthToken(data.token);
   return data;
 };

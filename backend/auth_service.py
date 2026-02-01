@@ -273,6 +273,84 @@ class AuthService:
             logger.warning(f"Failed to verify JWT token: {e}")
         return None
 
+    async def mock_authenticate_user(
+        self,
+        email: str,
+        name: Optional[str],
+        db: AsyncSession
+    ) -> Dict[str, Any]:
+        """
+        Mock authentication for local development (no OAuth required).
+
+        Creates user if doesn't exist, grants initial free credits.
+
+        Args:
+            email: User email
+            name: Optional user name
+            db: Database session
+
+        Returns:
+            Dict with user info and JWT token
+        """
+        if not email:
+            raise ValueError("Email is required")
+
+        # Find or create user by email
+        result = await db.execute(
+            select(User).where(User.email == email)
+        )
+        user = result.scalar_one_or_none()
+
+        is_new_user = user is None
+
+        if is_new_user:
+            # Create new user
+            user = User(
+                google_id=None,  # No Google ID for mock auth
+                email=email,
+                name=name or email.split("@")[0],  # Use email username if no name provided
+                picture_url=None,
+                credits_remaining=0,  # Will grant initial credits below
+                credits_purchased=0,
+                credits_used=0,
+            )
+            db.add(user)
+            await db.flush()
+            logger.info(f"Created new mock user {user.id} with email {email}")
+
+        # Update last login
+        user.last_login_at = datetime.now(timezone.utc)
+
+        # Grant initial free credits for new users
+        if is_new_user:
+            from backend.credit_service import INITIAL_FREE_CREDITS
+            await credit_service.grant_credits(
+                db=db,
+                user_id=user.id,
+                amount=INITIAL_FREE_CREDITS,
+                transaction_type="grant",
+                description="Initial free credits for new user"
+            )
+            logger.info(f"Granted {INITIAL_FREE_CREDITS} free credits to new user {user.id}")
+
+        await db.commit()
+        await db.refresh(user)
+
+        # Generate JWT token
+        token = self._generate_jwt_token(user.id)
+
+        return {
+            "user": {
+                "id": user.id,
+                "email": user.email,
+                "name": user.name,
+                "picture_url": user.picture_url,
+                "credits_remaining": round(user.credits_remaining, 2),
+                "is_new_user": is_new_user,
+            },
+            "token": token,
+        }
+
     async def get_current_user(
         self,
         token: str,

@@ -193,7 +193,9 @@ class AIActionRequest(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    code: str
+    code: Optional[str] = None  # For Google OAuth
+    email: Optional[str] = None  # For mock auth
+    name: Optional[str] = None  # For mock auth
 
 
 class UserResponse(BaseModel):
@@ -259,13 +261,24 @@ async def health_check():
 
 @api_router.post("/auth/login", response_model=LoginResponse)
 async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
-    """Authenticate user with Google OAuth code."""
+    """Authenticate user with Google OAuth code or mock credentials."""
     try:
-        result = await auth_service.authenticate_user(data.code, db)
-        return LoginResponse(
-            user=UserResponse(**result["user"]),
-            token=result["token"]
-        )
+        # Mock authentication for local development
+        if data.email:
+            result = await auth_service.mock_authenticate_user(data.email, data.name, db)
+            return LoginResponse(
+                user=UserResponse(**result["user"]),
+                token=result["token"]
+            )
+        # Google OAuth (commented out until domain is available)
+        # elif data.code:
+        #     result = await auth_service.authenticate_user(data.code, db)
+        #     return LoginResponse(
+        #         user=UserResponse(**result["user"]),
+        #         token=result["token"]
+        #     )
+        else:
+            raise HTTPException(status_code=400, detail="Email required for mock authentication")
     except Exception as e:
         logger.error(f"Login failed: {e}", exc_info=True)
         raise HTTPException(status_code=401, detail=str(e))
@@ -307,13 +320,16 @@ async def logout():
 
 @api_router.get("/auth/google-url")
 async def get_google_auth_url():
-    """Get Google OAuth authorization URL."""
-    try:
-        auth_url = auth_service.get_google_auth_url()
-        return {"auth_url": auth_url}
-    except Exception as e:
-        logger.error(f"Failed to generate Google auth URL: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+    """Get Google OAuth authorization URL (disabled for mock auth)."""
+    # Google OAuth disabled - using mock authentication for local development
+    # Uncomment when domain is available for production OAuth
+    # try:
+    #     auth_url = auth_service.get_google_auth_url()
+    #     return {"auth_url": auth_url}
+    # except Exception as e:
+    #     logger.error(f"Failed to generate Google auth URL: {e}")
+    #     raise HTTPException(status_code=500, detail=str(e))
+    return {"auth_url": None, "message": "Google OAuth disabled - using mock authentication"}
 
 
 # ============== Planning Endpoints ==============

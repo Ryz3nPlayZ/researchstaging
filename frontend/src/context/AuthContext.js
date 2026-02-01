@@ -1,11 +1,12 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { login, logout, getMe } from '../lib/api';
+import { login, mockLogin, logout, getMe } from '../lib/api';
 
 const AuthContext = createContext({
   user: null,
   token: null,
   loading: true,
   login: () => Promise.resolve(),
+  mockLogin: () => Promise.resolve(),
   logout: () => Promise.resolve(),
   checkAuth: () => Promise.resolve(),
 });
@@ -55,6 +56,25 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  const mockLoginAction = useCallback(async (email, name) => {
+    try {
+      const response = await mockLogin(email, name);
+      const { user, token } = response;
+
+      // Save token to localStorage
+      localStorage.setItem('auth_token', token);
+
+      // Update state
+      setUser(user);
+      setToken(token);
+
+      return user;
+    } catch (error) {
+      console.error('Mock login failed:', error);
+      throw error;
+    }
+  }, []);
+
   const logoutAction = useCallback(async () => {
     try {
       await logout();
@@ -95,6 +115,7 @@ export const AuthProvider = ({ children }) => {
         token,
         loading,
         login: loginAction,
+        mockLogin: mockLoginAction,
         logout: logoutAction,
         checkAuth: checkAuthAction,
       }}
