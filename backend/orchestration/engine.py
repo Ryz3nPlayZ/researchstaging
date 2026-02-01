@@ -515,39 +515,86 @@ class OrchestrationEngine:
         )
         dependencies = list(dep_result.scalars().all())
         
-        # Build nodes
+        # Build nodes with improved hierarchical layout
         nodes = []
         task_positions = {}
+
+        # Group tasks by phase for better layout
+        phase_tasks = {}
+        for task in tasks:
+            if task.phase_index not in phase_tasks:
+                phase_tasks[task.phase_index] = []
+            phase_tasks[task.phase_index].append(task)
+
+        # Calculate positions using hierarchical layout
+        x_offset = 50
+        y_offset = 100
+        x_spacing = 350  # Horizontal spacing between phases
+        y_spacing = 150  # Vertical spacing between tasks
+
+        for phase_idx in sorted(phase_tasks.keys()):
+            phase_task_list = phase_tasks[phase_idx]
+            # Sort tasks by sequence_index within phase
+            phase_task_list.sort(key=lambda t: t.sequence_index)
+
+            # Center the phase's tasks vertically
+            phase_height = len(phase_task_list) * y_spacing
+            start_y = y_offset + (600 - phase_height) / 2  # Center in 600px height
+
+            for seq_idx, task in enumerate(phase_task_list):
+                x_pos = x_offset + (task.phase_index * x_spacing)
+                y_pos = start_y + (seq_idx * y_spacing)
+
+                task_positions[task.id] = {"x": x_pos, "y": y_pos}
+
+                nodes.append({
+                    "id": task.id,
+                    "type": "taskNode",
+                    "position": {"x": x_pos, "y": y_pos},
+                    "data": {
+                        "label": task.name,
+                        "status": task.state.value,
+                        "type": task.task_type.value,
+                        "description": task.description or "",
+                        "phase": task.phase_index,
+                    }
+                })
         
-        for i, task in enumerate(tasks):
-            # Calculate position based on phase and sequence
-            x_pos = 50 + (task.phase_index * 300)
-            y_pos = 100 + (task.sequence_index * 120)
-            
-            task_positions[task.id] = {"x": x_pos, "y": y_pos}
-            
-            nodes.append({
-                "id": task.id,
-                "type": "taskNode",
-                "position": {"x": x_pos, "y": y_pos},
-                "data": {
-                    "label": task.name,
-                    "status": task.state.value,
-                    "type": task.task_type.value,
-                    "description": task.description or "",
-                    "phase": task.phase_index,
-                }
-            })
-        
-        # Build edges
+        # Build edges with better styling
         edges = []
         for dep in dependencies:
+            # Determine edge style based on task states
+            source_task = next((t for t in tasks if t.id == dep.dependency_task_id), None)
+            target_task = next((t for t in tasks if t.id == dep.dependent_task_id), None)
+
+            # Animate edge if source is running or completed and target is ready/running
+            animated = (
+                source_task and target_task and
+                (source_task.state.value in ['running', 'completed'] and
+                 target_task.state.value in ['ready', 'running'])
+            )
+
+            # Color based on target status
+            if target_task and target_task.state.value == 'completed':
+                stroke_color = "#22c55e"  # green
+            elif target_task and target_task.state.value == 'failed':
+                stroke_color = "#ef4444"  # red
+            elif target_task and target_task.state.value == 'running':
+                stroke_color = "#3b82f6"  # blue
+            else:
+                stroke_color = "#64748b"  # slate
+
             edges.append({
                 "id": f"{dep.dependency_task_id}-{dep.dependent_task_id}",
                 "source": dep.dependency_task_id,
                 "target": dep.dependent_task_id,
-                "animated": False,
-                "style": {"stroke": "#64748b", "strokeWidth": 2}
+                "animated": animated,
+                "style": {
+                    "stroke": stroke_color,
+                    "strokeWidth": 2,
+                    "strokeLinecap": "round"
+                },
+                "type": "smoothstep"
             })
         
         return {"nodes": nodes, "edges": edges}
