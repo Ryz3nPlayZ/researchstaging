@@ -5,10 +5,12 @@ import ReactFlow, {
   MiniMap,
   useNodesState,
   useEdgesState,
+  Handle,
+  Position,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { Badge } from '../ui/badge';
-import { Clock, Loader2, CheckCircle, XCircle, Bot, Route, Search, FileText, Quote, Brain, Edit } from 'lucide-react';
+import { Clock, Loader2, CheckCircle, XCircle, Bot, Route, Search, FileText, Quote, Brain, Edit, ArrowRight } from 'lucide-react';
 
 // Custom Task Node Component
 const TaskNode = ({ data }) => {
@@ -20,6 +22,8 @@ const TaskNode = ({ data }) => {
         return { icon: CheckCircle, color: 'border-green-500 bg-green-500/10', iconClass: 'text-green-500' };
       case 'failed':
         return { icon: XCircle, color: 'border-red-500 bg-red-500/10', iconClass: 'text-red-500' };
+      case 'ready':
+        return { icon: Clock, color: 'border-cyan-500 bg-cyan-500/10', iconClass: 'text-cyan-500' };
       default:
         return { icon: Clock, color: 'border-yellow-500/50 bg-yellow-500/5', iconClass: 'text-yellow-500' };
     }
@@ -42,15 +46,29 @@ const TaskNode = ({ data }) => {
   const TypeIcon = getTypeIcon(data?.type);
 
   return (
-    <div className={`px-4 py-3 rounded-lg border-2 ${statusConfig.color} bg-card min-w-[180px] shadow-sm`}>
+    <div className={`px-4 py-3 rounded-lg border-2 ${statusConfig.color} bg-card min-w-[200px] shadow-sm relative`}>
+      {/* Input handle (left side) - for incoming edges */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="w-3 h-3 bg-gray-400 border-2 border-white"
+      />
+
       <div className="flex items-center gap-2 mb-1">
         <TypeIcon className="h-4 w-4 text-muted-foreground" />
-        <span className="text-sm font-medium truncate">{data?.label || 'Task'}</span>
+        <span className="text-sm font-medium truncate flex-1">{data?.label || 'Task'}</span>
       </div>
       <div className="flex items-center gap-1.5">
         <StatusIcon className={`h-3.5 w-3.5 ${statusConfig.iconClass}`} />
         <span className="text-xs text-muted-foreground capitalize">{data?.status || 'pending'}</span>
       </div>
+
+      {/* Output handle (right side) - for outgoing edges */}
+      <Handle
+        type="source"
+        position={Position.Right}
+        className="w-3 h-3 bg-gray-400 border-2 border-white"
+      />
     </div>
   );
 };
@@ -84,7 +102,14 @@ const AgentNode = ({ data }) => {
   const TypeIcon = typeConfig.icon;
 
   return (
-    <div className={`px-4 py-3 rounded-xl border-2 ${statusConfig.color} min-w-[160px] transition-all duration-300 ${statusConfig.pulse ? 'animate-pulse' : ''}`}>
+    <div className={`px-4 py-3 rounded-xl border-2 ${statusConfig.color} min-w-[180px] transition-all duration-300 ${statusConfig.pulse ? 'animate-pulse' : ''} relative`}>
+      {/* Input handle */}
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="w-3 h-3 bg-purple-400 border-2 border-white"
+      />
+
       <div className="flex items-center gap-2 mb-2">
         <div className={`w-8 h-8 rounded-lg ${typeConfig.color} flex items-center justify-center`}>
           <TypeIcon className="h-4 w-4" />
@@ -93,13 +118,20 @@ const AgentNode = ({ data }) => {
       </div>
       <p className="text-xs text-muted-foreground line-clamp-2">{data?.description || ''}</p>
       {data?.status && data.status !== 'idle' && (
-        <Badge 
-          variant="outline" 
+        <Badge
+          variant="outline"
           className={`mt-2 text-[10px] ${data.status === 'running' ? 'bg-blue-500/10 text-blue-500' : 'bg-green-500/10 text-green-500'}`}
         >
           {data.status}
         </Badge>
       )}
+
+      {/* Output handle */}
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="w-3 h-3 bg-purple-400 border-2 border-white"
+      />
     </div>
   );
 };

@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import httpx
 
 from database import User
-from credit_service import credit_service
+from credit_service import credit_service, INITIAL_FREE_CREDITS
 
 logger = logging.getLogger(__name__)
 
@@ -190,7 +190,6 @@ class AuthService:
 
         # Grant initial free credits for new users
         if is_new_user:
-            from backend.credit_service import INITIAL_FREE_CREDITS
             await credit_service.grant_credits(
                 db=db,
                 user_id=user.id,
@@ -324,7 +323,6 @@ class AuthService:
 
         # Grant initial free credits for new users
         if is_new_user:
-            from backend.credit_service import INITIAL_FREE_CREDITS
             await credit_service.grant_credits(
                 db=db,
                 user_id=user.id,

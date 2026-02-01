@@ -3,8 +3,8 @@ import axios from 'axios';
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
 const API_BASE = `${BACKEND_URL}/api`;
 
-// Store auth token in memory
-let authToken = null;
+// Store auth token in memory (initialize from localStorage)
+let authToken = localStorage.getItem('auth_token');
 
 const api = axios.create({
   baseURL: API_BASE,
@@ -62,36 +62,41 @@ export const statsApi = {
 export const createWebSocketConnection = (projectId, onEvent, onError) => {
   const wsUrl = BACKEND_URL.replace('http', 'ws').replace('https', 'wss');
   const ws = new WebSocket(`${wsUrl}/ws/${projectId}`);
-  
+
   ws.onopen = () => {
     console.log('WebSocket connected for project:', projectId);
   };
-  
+
   ws.onmessage = (event) => {
+    // Ignore ping/pong messages
+    if (event.data === 'ping' || event.data === 'pong') {
+      return;
+    }
+
     try {
       const data = JSON.parse(event.data);
       onEvent(data);
     } catch (error) {
-      console.error('WebSocket parse error:', error);
+      console.error('WebSocket parse error:', error, 'Data:', event.data);
     }
   };
-  
+
   ws.onerror = (error) => {
     console.error('WebSocket error:', error);
     if (onError) onError(error);
   };
-  
+
   ws.onclose = () => {
     console.log('WebSocket closed for project:', projectId);
   };
-  
+
   // Ping to keep connection alive
   const pingInterval = setInterval(() => {
     if (ws.readyState === WebSocket.OPEN) {
       ws.send('ping');
     }
   }, 30000);
-  
+
   // Return close function
   return {
     close: () => {

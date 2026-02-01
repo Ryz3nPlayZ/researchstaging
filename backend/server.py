@@ -5,7 +5,7 @@ FastAPI Backend Server with PostgreSQL, Redis, WebSocket, and Advanced Orchestra
 This system follows a state-driven orchestration model where all workflow execution
 is governed by persisted state rather than transient in-memory logic.
 """
-from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks, Depends, WebSocket
+from fastapi import FastAPI, APIRouter, HTTPException, BackgroundTasks, Depends, WebSocket, Header
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -286,7 +286,7 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
 
 @api_router.get("/auth/me", response_model=UserResponse)
 async def get_current_user(
-    authorization: Optional[str] = None,
+    authorization: Optional[str] = Header(None),
     db: AsyncSession = Depends(get_db)
 ):
     """Get current authenticated user."""

@@ -84,6 +84,8 @@ class OrchestrationEngine:
 
         # Create dependency relationships
         dependencies_created = 0
+        created_dependencies = set()  # Track (dependent_id, dependency_id) pairs to avoid duplicates
+
         for task, dep_names in all_tasks:
             # Track if this task has any explicit dependencies
             has_explicit_deps = False
@@ -92,26 +94,32 @@ class OrchestrationEngine:
             for dep_name in dep_names:
                 # Try exact match first
                 if dep_name in task_name_to_id:
-                    dep = TaskDependency(
-                        dependent_task_id=task.id,
-                        dependency_task_id=task_name_to_id[dep_name]
-                    )
-                    session.add(dep)
-                    dependencies_created += 1
-                    has_explicit_deps = True
-                    logger.info(f"Created dependency: {task.name} -> {dep_name}")
+                    dep_key = (str(task.id), str(task_name_to_id[dep_name]))
+                    if dep_key not in created_dependencies:
+                        dep = TaskDependency(
+                            dependent_task_id=task.id,
+                            dependency_task_id=task_name_to_id[dep_name]
+                        )
+                        session.add(dep)
+                        created_dependencies.add(dep_key)
+                        dependencies_created += 1
+                        has_explicit_deps = True
+                        logger.info(f"Created dependency: {task.name} -> {dep_name}")
                 else:
                     # Try fuzzy matching - find task name that contains the dep_name
                     for task_name, task_id in task_name_to_id.items():
                         if dep_name.lower() in task_name.lower() or task_name.lower() in dep_name.lower():
-                            dep = TaskDependency(
-                                dependent_task_id=task.id,
-                                dependency_task_id=task_id
-                            )
-                            session.add(dep)
-                            dependencies_created += 1
-                            has_explicit_deps = True
-                            logger.info(f"Created fuzzy dependency: {task.name} -> {task_name} (matched: {dep_name})")
+                            dep_key = (str(task.id), str(task_id))
+                            if dep_key not in created_dependencies:
+                                dep = TaskDependency(
+                                    dependent_task_id=task.id,
+                                    dependency_task_id=task_id
+                                )
+                                session.add(dep)
+                                created_dependencies.add(dep_key)
+                                dependencies_created += 1
+                                has_explicit_deps = True
+                                logger.info(f"Created fuzzy dependency: {task.name} -> {task_name} (matched: {dep_name})")
                             break
 
             # If no explicit dependencies and this isn't the first task in its phase,
@@ -121,13 +129,16 @@ class OrchestrationEngine:
                 for other_task, _ in all_tasks:
                     if (other_task.phase_index == task.phase_index and
                         other_task.sequence_index == task.sequence_index - 1):
-                        dep = TaskDependency(
-                            dependent_task_id=task.id,
-                            dependency_task_id=other_task.id
-                        )
-                        session.add(dep)
-                        dependencies_created += 1
-                        logger.info(f"Created sequential dependency: {task.name} -> {other_task.name}")
+                        dep_key = (str(task.id), str(other_task.id))
+                        if dep_key not in created_dependencies:
+                            dep = TaskDependency(
+                                dependent_task_id=task.id,
+                                dependency_task_id=other_task.id
+                            )
+                            session.add(dep)
+                            created_dependencies.add(dep_key)
+                            dependencies_created += 1
+                            logger.info(f"Created sequential dependency: {task.name} -> {other_task.name}")
                         break
 
         # Also create dependencies between phases - each task in phase N depends on
@@ -136,26 +147,14 @@ class OrchestrationEngine:
             prev_phase_last_task = phase_tasks[i-1][-1] if phase_tasks[i-1] else None
             if prev_phase_last_task:
                 for task in phase_tasks[i]:
-                    # Check if this task already has any dependencies
-                    has_deps = False
-                    for other_task, _ in all_tasks:
-                        if other_task.id == task.id:
-                            # Check if we created any dependencies for this task
-                            result = await session.execute(
-                                select(TaskDependency).where(
-                                    TaskDependency.dependent_task_id == task.id
-                                )
-                            )
-                            if result.scalars().first():
-                                has_deps = True
-                            break
-
-                    if not has_deps:
+                    dep_key = (str(task.id), str(prev_phase_last_task.id))
+                    if dep_key not in created_dependencies:
                         dep = TaskDependency(
                             dependent_task_id=task.id,
                             dependency_task_id=prev_phase_last_task.id
                         )
                         session.add(dep)
+                        created_dependencies.add(dep_key)
                         dependencies_created += 1
                         logger.info(f"Created phase dependency: {task.name} -> {prev_phase_last_task.name}")
 
