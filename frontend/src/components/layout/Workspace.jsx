@@ -363,18 +363,6 @@ export const Workspace = () => {
     );
   }
 
-  // If paper is selected, show PDF viewer
-  if (contentType === 'paper') {
-    return (
-      <main 
-        className="flex-1 overflow-hidden flex flex-col bg-background"
-        data-testid="workspace"
-      >
-        <PDFViewer paper={selectedPaper} />
-      </main>
-    );
-  }
-
   // Render content based on type
   return (
     <main 
