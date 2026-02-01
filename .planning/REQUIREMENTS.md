@@ -154,12 +154,70 @@ Which phases cover which requirements. Updated by create-roadmap.
 | AUTH-02 | Phase 1 | Pending |
 | AUTH-03 | Phase 1 | Pending |
 | AUTH-04 | Phase 1 | Pending |
+| FILE-01 | Phase 2 | Pending |
+| FILE-02 | Phase 2 | Pending |
+| FILE-03 | Phase 2 | Pending |
+| FILE-04 | Phase 2 | Pending |
+| FILE-05 | Phase 2 | Pending |
+| FILE-06 | Phase 2 | Pending |
+| FILE-07 | Phase 2 | Pending |
+| FILE-08 | Phase 2 | Pending |
+| FILE-09 | Phase 2 | Pending |
+| FILE-10 | Phase 2 | Pending |
+| FILE-11 | Phase 2 | Pending |
+| MEM-01 | Phase 3 | Pending |
+| MEM-02 | Phase 3 | Pending |
+| MEM-03 | Phase 3 | Pending |
+| MEM-04 | Phase 3 | Pending |
+| MEM-05 | Phase 3 | Pending |
+| MEM-06 | Phase 3 | Pending |
+| EDIT-01 | Phase 4 | Pending |
+| EDIT-02 | Phase 4 | Pending |
+| EDIT-03 | Phase 4 | Pending |
+| EDIT-04 | Phase 4 | Pending |
+| EDIT-05 | Phase 4 | Pending |
+| EDIT-06 | Phase 4 | Pending |
+| EDIT-07 | Phase 4 | Pending |
+| EDIT-08 | Phase 4 | Pending |
+| EDIT-09 | Phase 4 | Pending |
+| EDIT-10 | Phase 4 | Pending |
+| EDIT-11 | Phase 4 | Pending |
+| EDIT-12 | Phase 4 | Pending |
+| EDIT-13 | Phase 4 | Pending |
+| LIT-01 | Phase 5 | Pending |
+| LIT-02 | Phase 5 | Pending |
+| LIT-03 | Phase 5 | Pending |
+| LIT-04 | Phase 5 | Pending |
+| LIT-05 | Phase 5 | Pending |
+| LIT-06 | Phase 5 | Pending |
+| LIT-07 | Phase 5 | Pending |
+| AI-01 | Phase 6 | Pending |
+| AI-02 | Phase 6 | Pending |
+| AI-03 | Phase 6 | Pending |
+| AI-04 | Phase 6 | Pending |
+| AI-05 | Phase 6 | Pending |
+| AI-06 | Phase 6 | Pending |
+| AI-07 | Phase 6 | Pending |
+| AI-08 | Phase 6 | Pending |
+| AI-09 | Phase 6 | Pending |
+| AI-10 | Phase 6 | Pending |
+| ANA-01 | Phase 7 | Pending |
+| ANA-02 | Phase 7 | Pending |
+| ANA-03 | Phase 7 | Pending |
+| ANA-04 | Phase 7 | Pending |
+| ANA-05 | Phase 7 | Pending |
+| ANA-06 | Phase 7 | Pending |
+| ANA-07 | Phase 7 | Pending |
+| ANA-08 | Phase 7 | Pending |
+| ANA-09 | Phase 7 | Pending |
+| EXP-01 | Phase 8 | Pending |
+| EXP-02 | Phase 8 | Pending |
 
 **Coverage:**
 - v1 requirements: 62 total
-- Mapped to phases: 4
-- Unmapped: 58 ⚠️
+- Mapped to phases: 62
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2025-02-01*
-*Last updated: 2025-02-01 after initial definition*
+*Last updated: 2025-02-01 after roadmap creation*
