@@ -73,9 +73,20 @@ Waiting for user to refresh browser and verify
 
 **Result**: Better DAG visualization with clearer hierarchy
 
-- [x] Iteration 1: Examine current state ✅
-- [x] Iteration 2: Add Handles to nodes ✅
-- [x] Iteration 3: Test with real data ⏭️ Skipped (pending user verification)
-- [x] Iteration 4: Improve graph layout ✅
-- [ ] Iteration 5: Final polish and testing
-- [ ] Iteration 6-15: Remaining
+### Iteration 6-7 ✅ COMPLETE (Phase 2 Foundation)
+**Backend Changes**:
+- Redesigned agent hierarchy to match agentteam.md
+- Added 4 agent types: Orchestrator, Executor, Verifier, Specialist
+- Implemented hierarchical layout
+- Added edge labels for agent communication
+
+**Frontend Changes**:
+- Updated AgentNode with new type support
+- Added color-coded icons and borders
+- Improved styling and type labels
+
+- [x] Iteration 1-2: Fix Task Graph ✅
+- [x] Iteration 3-5: Polish Task Graph ✅
+- [x] Iteration 6-7: Build Agent Graph ✅
+- [ ] Iteration 8-10: Remaining Agent Graph work
+- [ ] Iteration 11-15: Build File Explorer (Phase 3)

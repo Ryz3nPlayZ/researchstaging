@@ -8,8 +8,7 @@ import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { RichTextEditor } from '../editor/RichTextEditor';
 import { TaskGraph, AgentGraph } from '../graphs/TaskGraph';
-import { CitationNetwork } from '../graphs/CitationNetwork';
-import { PDFViewer } from '../viewer/PDFViewer';
+import { FileExplorer, mockFileTree } from '../explorer/FileExplorer';
 import { TaskErrorRecovery } from '../tasks/TaskErrorRecovery';
 import { 
   Play, 
@@ -277,6 +276,10 @@ export const Workspace = () => {
               <LayoutGrid className="h-3.5 w-3.5" />
               Overview
             </TabsTrigger>
+            <TabsTrigger value="files" className="text-xs gap-1.5">
+              <FileText className="h-3.5 w-3.5" />
+              Files
+            </TabsTrigger>
             <TabsTrigger value="tasks" className="text-xs gap-1.5">
               <GitBranch className="h-3.5 w-3.5" />
               Task Graph
@@ -284,10 +287,6 @@ export const Workspace = () => {
             <TabsTrigger value="agents" className="text-xs gap-1.5">
               <Bot className="h-3.5 w-3.5" />
               Agent Graph
-            </TabsTrigger>
-            <TabsTrigger value="citations" className="text-xs gap-1.5">
-              <Network className="h-3.5 w-3.5" />
-              Citations
             </TabsTrigger>
           </TabsList>
 
@@ -308,6 +307,30 @@ export const Workspace = () => {
                     Pipeline completed! Select documents from the navigator to view results.
                   </p>
                 )}
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="files" className="flex-1 m-0 p-0 data-[state=active]:flex">
+            <div className="h-full flex">
+              {/* File Explorer - Left Sidebar */}
+              <div className="w-64 border-r border-border bg-muted/30">
+                <div className="p-3 border-b border-border">
+                  <h3 className="text-sm font-semibold">Files</h3>
+                  <p className="text-xs text-muted-foreground">Project files and outputs</p>
+                </div>
+                <FileExplorer files={mockFileTree} />
+              </div>
+
+              {/* File Preview - Main Area */}
+              <div className="flex-1 p-4">
+                <div className="h-full flex items-center justify-center border-2 border-dashed border-border rounded-lg">
+                  <div className="text-center">
+                    <FileText className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-sm text-muted-foreground">Select a file to preview</p>
+                    <p className="text-xs text-muted-foreground mt-1">Supports PDF, MD, JSON, CSV, code files</p>
+                  </div>
+                </div>
               </div>
             </div>
           </TabsContent>
@@ -334,10 +357,6 @@ export const Workspace = () => {
                 </div>
               )}
             </div>
-          </TabsContent>
-
-          <TabsContent value="citations" className="flex-1 m-0 p-0 overflow-hidden">
-            <CitationNetwork projectId={selectedProject.id} />
           </TabsContent>
         </Tabs>
       </main>
