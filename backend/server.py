@@ -44,6 +44,7 @@ from realtime import connection_manager, websocket_endpoint
 # Service imports
 from llm_service import llm_service
 from export_service import export_service
+from auth_service import auth_service
 
 # Configure logging
 logging.basicConfig(
@@ -191,6 +192,23 @@ class AIActionRequest(BaseModel):
     context: Optional[str] = None
 
 
+class LoginRequest(BaseModel):
+    code: str
+
+
+class UserResponse(BaseModel):
+    id: str
+    email: str
+    name: Optional[str]
+    picture_url: Optional[str]
+    credits_remaining: float
+
+
+class LoginResponse(BaseModel):
+    user: UserResponse
+    token: str
+
+
 # ============== Startup/Shutdown Events ==============
 
 @app.on_event("startup")
@@ -235,6 +253,67 @@ async def health_check():
         "version": "3.0.0",
         "features": ["postgresql", "redis", "websocket", "orchestration"]
     }
+
+
+# ============== Auth Endpoints ==============
+
+@api_router.post("/auth/login", response_model=LoginResponse)
+async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
+    """Authenticate user with Google OAuth code."""
+    try:
+        result = await auth_service.authenticate_user(data.code, db)
+        return LoginResponse(
+            user=UserResponse(**result["user"]),
+            token=result["token"]
+        )
+    except Exception as e:
+        logger.error(f"Login failed: {e}", exc_info=True)
+        raise HTTPException(status_code=401, detail=str(e))
+
+
+@api_router.get("/auth/me", response_model=UserResponse)
+async def get_current_user(
+    authorization: Optional[str] = None,
+    db: AsyncSession = Depends(get_db)
+):
+    """Get current authenticated user."""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    # Extract token from "Bearer <token>" format
+    if authorization.startswith("Bearer "):
+        token = authorization[7:]
+    else:
+        token = authorization
+
+    user = await auth_service.get_current_user(token, db)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        name=user.name,
+        picture_url=user.picture_url,
+        credits_remaining=round(user.credits_remaining, 2)
+    )
+
+
+@api_router.post("/auth/logout")
+async def logout():
+    """Logout user (client-side token deletion)."""
+    return {"message": "Logged out successfully"}
+
+
+@api_router.get("/auth/google-url")
+async def get_google_auth_url():
+    """Get Google OAuth authorization URL."""
+    try:
+        auth_url = auth_service.get_google_auth_url()
+        return {"auth_url": auth_url}
+    except Exception as e:
+        logger.error(f"Failed to generate Google auth URL: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ============== Planning Endpoints ==============
