@@ -1,13 +1,26 @@
 import axios from 'axios';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
 const API_BASE = `${BACKEND_URL}/api`;
+
+// Store auth token in memory
+let authToken = null;
 
 const api = axios.create({
   baseURL: API_BASE,
   headers: {
     'Content-Type': 'application/json',
   },
+});
+
+// Request interceptor to add auth token
+api.interceptors.request.use((config) => {
+  if (authToken) {
+    config.headers.Authorization = `Bearer ${authToken}`;
+  }
+  return config;
+}, (error) => {
+  return Promise.reject(error);
 });
 
 // Projects API
@@ -93,6 +106,62 @@ export const createWebSocketConnection = (projectId, onEvent, onError) => {
 export const createSSEConnection = (projectId, onEvent) => {
   console.warn('SSE is deprecated. Use createWebSocketConnection instead.');
   return createWebSocketConnection(projectId, onEvent);
+};
+
+// Auth API
+export const authApi = {
+  login: async (code) => {
+    const response = await api.post('/auth/login', { code });
+    return response.data;
+  },
+
+  logout: async () => {
+    const response = await api.post('/auth/logout');
+    return response.data;
+  },
+
+  getMe: async (token) => {
+    const response = await axios.get(`${API_BASE}/auth/me`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    return response.data;
+  },
+
+  getGoogleUrl: async () => {
+    const response = await api.get('/auth/google-url');
+    return response.data.auth_url;
+  },
+};
+
+// Token management helpers
+export const setAuthToken = (token) => {
+  authToken = token;
+};
+
+export const clearAuthToken = () => {
+  authToken = null;
+};
+
+export const getAuthToken = () => {
+  return authToken;
+};
+
+// Convenience functions for use in components
+export const login = async (code) => {
+  const data = await authApi.login(code);
+  setAuthToken(data.token);
+  return data;
+};
+
+export const logout = async () => {
+  await authApi.logout();
+  clearAuthToken();
+};
+
+export const getMe = async (token) => {
+  return await authApi.getMe(token);
 };
 
 export default api;
