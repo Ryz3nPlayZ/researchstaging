@@ -22,6 +22,7 @@ const VIEW_STATES = {
 };
 
 function AppContent() {
+  const { loading, user, logout } = useAuth();
   const { selectedProject, setSelectedProject } = useProject();
   const [viewState, setViewState] = useState(VIEW_STATES.DASHBOARD);
   const [navWidth, setNavWidth] = useState(260);
@@ -58,6 +59,45 @@ function AppContent() {
     setSelectedProject(null);
   }, [logout, setSelectedProject]);
 
+  // Resize handlers
+  const startResizeNav = useCallback((e) => {
+    e.preventDefault();
+    setIsResizingNav(true);
+
+    const handleMouseMove = (e) => {
+      const newWidth = Math.max(200, Math.min(400, e.clientX));
+      setNavWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingNav(false);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, []);
+
+  const startResizeInspector = useCallback((e) => {
+    e.preventDefault();
+    setIsResizingInspector(true);
+
+    const handleMouseMove = (e) => {
+      const newWidth = Math.max(250, Math.min(450, window.innerWidth - e.clientX));
+      setInspectorWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingInspector(false);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  }, []);
+
   // Show loading spinner while checking auth
   if (loading) {
     return (
@@ -68,6 +108,11 @@ function AppContent() {
         </div>
       </div>
     );
+  }
+
+  // Redirect to login if not authenticated
+  if (!loading && !user) {
+    return <LoginPage />;
   }
 
   // OAuth callback route
@@ -83,45 +128,6 @@ function AppContent() {
       </div>
     );
   }
-
-  // Resize handlers
-  const startResizeNav = useCallback((e) => {
-    e.preventDefault();
-    setIsResizingNav(true);
-    
-    const handleMouseMove = (e) => {
-      const newWidth = Math.max(200, Math.min(400, e.clientX));
-      setNavWidth(newWidth);
-    };
-    
-    const handleMouseUp = () => {
-      setIsResizingNav(false);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-    
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  }, []);
-
-  const startResizeInspector = useCallback((e) => {
-    e.preventDefault();
-    setIsResizingInspector(true);
-    
-    const handleMouseMove = (e) => {
-      const newWidth = Math.max(250, Math.min(450, window.innerWidth - e.clientX));
-      setInspectorWidth(newWidth);
-    };
-    
-    const handleMouseUp = () => {
-      setIsResizingInspector(false);
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-    
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  }, []);
 
   // Planning flow - full screen without sidebars
   if (viewState === VIEW_STATES.PLANNING) {
