@@ -3,9 +3,9 @@ import { useTheme } from '../../context/ThemeContext';
 import { useProject } from '../../context/ProjectContext';
 import { statsApi } from '../../lib/api';
 import { Button } from '../ui/button';
-import { Sun, Moon, Activity, CheckCircle, XCircle, Clock, Loader2 } from 'lucide-react';
+import { Sun, Moon, Activity, CheckCircle, XCircle, Clock, Loader2, LogOut } from 'lucide-react';
 
-export const StatusBar = ({ onLogoClick }) => {
+export const StatusBar = ({ onLogoClick, user, onLogout }) => {
   const { theme, toggleTheme } = useTheme();
   const { selectedProject, refreshTrigger } = useProject();
   const [stats, setStats] = useState({
@@ -123,6 +123,39 @@ export const StatusBar = ({ onLogoClick }) => {
             <Moon className="h-4 w-4" />
           )}
         </Button>
+
+        {/* User Info */}
+        {user && (
+          <>
+            <div className="hidden md:flex items-center gap-3 px-3 py-1.5 rounded-md bg-muted/50">
+              {user.picture_url && (
+                <img
+                  src={user.picture_url}
+                  alt={user.name}
+                  className="w-6 h-6 rounded-full"
+                  referrerPolicy="no-referrer"
+                />
+              )}
+              <div className="text-xs">
+                <div className="font-medium truncate max-w-[120px]">{user.name}</div>
+                <div className="text-muted-foreground text-[10px]">
+                  {user.credits_remaining?.toFixed(1) || 0} credits
+                </div>
+              </div>
+            </div>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onLogout}
+              className="h-8 px-3"
+              data-testid="logout-btn"
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Logout</span>
+            </Button>
+          </>
+        )}
       </div>
     </header>
   );

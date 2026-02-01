@@ -1,13 +1,11 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
 
 export function LoginPage() {
   const { login } = useAuth();
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -55,7 +53,7 @@ export function LoginPage() {
               window.removeEventListener('message', messageHandler);
 
               // Redirect to home
-              navigate('/');
+              window.location.href = '/';
             } catch (err) {
               console.error('Login failed:', err);
               setError('Authentication failed. Please try again.');

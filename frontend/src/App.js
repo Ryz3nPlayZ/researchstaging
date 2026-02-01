@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { ThemeProvider } from './context/ThemeContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { ProjectProvider, useProject } from './context/ProjectContext';
 import { StatusBar } from './components/layout/StatusBar';
 import { Navigator } from './components/layout/Navigator';
@@ -7,13 +8,17 @@ import { Workspace } from './components/layout/Workspace';
 import { Inspector } from './components/layout/Inspector';
 import { Dashboard } from './components/pages/Dashboard';
 import { PlanningFlow } from './components/pages/PlanningFlow';
+import { LoginPage } from './pages/LoginPage';
+import { OAuthCallback } from './pages/OAuthCallback';
 import { Toaster } from './components/ui/sonner';
 import './App.css';
 
 const VIEW_STATES = {
   DASHBOARD: 'dashboard',
   PLANNING: 'planning',
-  WORKSPACE: 'workspace'
+  WORKSPACE: 'workspace',
+  LOGIN: 'login',
+  CALLBACK: 'callback',
 };
 
 function AppContent() {
@@ -46,6 +51,38 @@ function AppContent() {
     setSelectedProject(null);
     setViewState(VIEW_STATES.DASHBOARD);
   }, [setSelectedProject]);
+
+  const handleLogout = useCallback(async () => {
+    await logout();
+    setViewState(VIEW_STATES.LOGIN);
+    setSelectedProject(null);
+  }, [logout, setSelectedProject]);
+
+  // Show loading spinner while checking auth
+  if (loading) {
+    return (
+      <div className="h-screen w-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // OAuth callback route
+  if (viewState === VIEW_STATES.CALLBACK) {
+    return <OAuthCallback />;
+  }
+
+  // Login route
+  if (viewState === VIEW_STATES.LOGIN) {
+    return (
+      <div className="h-screen w-screen">
+        <LoginPage />
+      </div>
+    );
+  }
 
   // Resize handlers
   const startResizeNav = useCallback((e) => {
@@ -90,7 +127,7 @@ function AppContent() {
   if (viewState === VIEW_STATES.PLANNING) {
     return (
       <div className="h-screen w-screen flex flex-col overflow-hidden bg-background text-foreground">
-        <StatusBar onLogoClick={handleBackToDashboard} />
+        <StatusBar onLogoClick={handleBackToDashboard} user={user} onLogout={handleLogout} />
         <PlanningFlow 
           onComplete={handlePlanningComplete}
           onCancel={handlePlanningCancel}
@@ -104,7 +141,7 @@ function AppContent() {
   if (viewState === VIEW_STATES.DASHBOARD) {
     return (
       <div className="h-screen w-screen flex flex-col overflow-hidden bg-background text-foreground">
-        <StatusBar onLogoClick={handleBackToDashboard} />
+        <StatusBar onLogoClick={handleBackToDashboard} user={user} onLogout={handleLogout} />
         <div className="flex-1 flex overflow-hidden">
           {/* Navigator - narrower on dashboard */}
           <aside 
@@ -177,9 +214,11 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider>
-      <ProjectProvider>
-        <AppContent />
-      </ProjectProvider>
+      <AuthProvider>
+        <ProjectProvider>
+          <AppContent />
+        </ProjectProvider>
+      </AuthProvider>
     </ThemeProvider>
   );
 }
