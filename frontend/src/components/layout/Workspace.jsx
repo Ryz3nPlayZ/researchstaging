@@ -10,10 +10,10 @@ import { RichTextEditor } from '../editor/RichTextEditor';
 import { TaskGraph, AgentGraph } from '../graphs/TaskGraph';
 import { FileExplorer } from '../explorer/FileExplorer';
 import { TaskErrorRecovery } from '../tasks/TaskErrorRecovery';
-import { 
-  Play, 
-  FileText, 
-  BookOpen, 
+import {
+  Play,
+  FileText,
+  BookOpen,
   Activity,
   Loader2,
   CheckCircle,
@@ -23,7 +23,8 @@ import {
   Bot,
   LayoutGrid,
   Network,
-  AlertTriangle
+  AlertTriangle,
+  Save
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -54,6 +55,9 @@ export const Workspace = () => {
   const [fileTree, setFileTree] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [saveTimeout, setSaveTimeout] = useState(null);
 
   const fetchGraphs = useCallback(async () => {
     if (!selectedProject) return;
@@ -215,18 +219,45 @@ export const Workspace = () => {
     }
   }, [selectedArtifact]);
 
-  const handleContentChange = useCallback(async (newContent) => {
-    setEditedContent(newContent);
-    
-    // Auto-save debounced
-    if (selectedArtifact) {
-      try {
-        await api.put(`/artifacts/${selectedArtifact.id}/content`, { content: newContent });
-      } catch (error) {
-        console.error('Failed to save content:', error);
-      }
+  const saveContent = useCallback(async (content) => {
+    if (!selectedArtifact) return;
+
+    setSaving(true);
+    try {
+      await api.put(`/artifacts/${selectedArtifact.id}/content`, { content });
+      setHasUnsavedChanges(false);
+      toast.success('Saved successfully');
+    } catch (error) {
+      console.error('Failed to save content:', error);
+      toast.error('Failed to save');
+    } finally {
+      setSaving(false);
     }
   }, [selectedArtifact]);
+
+  const handleContentChange = useCallback((newContent) => {
+    setEditedContent(newContent);
+    setHasUnsavedChanges(true);
+
+    // Clear existing timeout
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+    }
+
+    // Set new timeout for auto-save (2 seconds)
+    const timeout = setTimeout(() => {
+      saveContent(newContent);
+    }, 2000);
+
+    setSaveTimeout(timeout);
+  }, [saveTimeout, saveContent]);
+
+  const handleManualSave = useCallback(() => {
+    if (saveTimeout) {
+      clearTimeout(saveTimeout);
+    }
+    saveContent(editedContent || content?.content || '');
+  }, [saveTimeout, saveContent, editedContent, content]);
 
   // Determine what content to show
   const content = selectedPaper || selectedArtifact || selectedTask;
@@ -502,11 +533,44 @@ export const Workspace = () => {
 
         <TabsContent value="content" className="flex-1 m-0 p-0 overflow-hidden">
           {contentType === 'artifact' && content.artifact_type === 'draft' ? (
-            <RichTextEditor
-              content={editedContent || content.content || ''}
-              onChange={handleContentChange}
-              editable={true}
-            />
+            <div className="flex flex-col h-full">
+              {/* Save button toolbar */}
+              <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-muted/30">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">
+                    Editing: {content.title}
+                  </span>
+                  {hasUnsavedChanges && (
+                    <Badge variant="outline" className="text-xs">Unsaved changes</Badge>
+                  )}
+                </div>
+                <Button
+                  onClick={handleManualSave}
+                  disabled={saving || !hasUnsavedChanges}
+                  size="sm"
+                  className="gap-2"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      Save
+                    </>
+                  )}
+                </Button>
+              </div>
+              <div className="flex-1">
+                <RichTextEditor
+                  content={editedContent || content.content || ''}
+                  onChange={handleContentChange}
+                  editable={true}
+                />
+              </div>
+            </div>
           ) : (
             <ScrollArea className="h-full">
               <div className="p-6 max-w-4xl">
