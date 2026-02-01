@@ -171,8 +171,42 @@ export const TaskGraph = ({ nodes: initialNodes, edges: initialEdges, type = 'ta
     );
   }
 
+  // Count tasks by status for legend
+  const statusCounts = nodes.reduce((acc, node) => {
+    const status = node.data?.status || 'pending';
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
+
   return (
-    <div className="w-full h-full bg-background rounded-lg border border-border overflow-hidden" style={{ height: '500px' }}>
+    <div className="w-full h-full bg-background rounded-lg border border-border overflow-hidden" style={{ height: '600px' }}>
+      {/* Status Legend */}
+      <div className="absolute top-4 left-4 z-10 bg-card/95 backdrop-blur-sm border border-border rounded-lg p-3 shadow-sm">
+        <div className="text-xs font-medium text-muted-foreground mb-2">Task Status</div>
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-2 text-xs">
+            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            <span>Completed: {statusCounts.completed || 0}</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+            <span>Running: {statusCounts.running || 0}</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            <div className="w-3 h-3 rounded-full bg-cyan-500"></div>
+            <span>Ready: {statusCounts.ready || 0}</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            <div className="w-3 h-3 rounded-full bg-red-500"></div>
+            <span>Failed: {statusCounts.failed || 0}</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs">
+            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+            <span>Pending: {statusCounts.pending || 0}</span>
+          </div>
+        </div>
+      </div>
+
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -181,14 +215,15 @@ export const TaskGraph = ({ nodes: initialNodes, edges: initialEdges, type = 'ta
         nodeTypes={nodeTypes}
         proOptions={proOptions}
         fitView
-        fitViewOptions={{ padding: 0.2 }}
+        fitViewOptions={{ padding: 0.3, maxZoom: 1 }}
         defaultEdgeOptions={{
           type: 'smoothstep',
           style: { stroke: '#64748b', strokeWidth: 2 },
           animated: false,
         }}
-        minZoom={0.3}
+        minZoom={0.2}
         maxZoom={2}
+        attributionPosition="bottom-left"
       >
         <Background color="#e2e8f0" gap={20} size={1} />
         <Controls
@@ -201,6 +236,7 @@ export const TaskGraph = ({ nodes: initialNodes, edges: initialEdges, type = 'ta
             if (node.data?.status === 'running') return '#3b82f6';
             if (node.data?.status === 'completed') return '#22c55e';
             if (node.data?.status === 'failed') return '#ef4444';
+            if (node.data?.status === 'ready') return '#06b6d4';
             return '#94a3b8';
           }}
           maskColor="hsl(var(--background) / 0.8)"
