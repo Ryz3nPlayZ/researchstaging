@@ -41,7 +41,7 @@ class Folder(Base):
 
     # Relationships
     project = relationship("Project", backref="folders")
-    parent_folder = relationship("Folder", remote_side="folders", backref="subfolders")
+    parent_folder = relationship("Folder", remote_side="Folder.id", backref="subfolders")
     files = relationship("File", back_populates="folder", cascade="all, delete-orphan")
 
     def __repr__(self):
