@@ -31,10 +31,9 @@ export const AuthProvider = ({ children }) => {
             console.log('[AuthContext] Calling getMe...');
             const user = await getMe(savedToken);
             console.log('[AuthContext] getMe success:', user);
-            if (isMounted.current) {
-              setUser(user);
-              setToken(savedToken);
-            }
+            // Don't check isMounted here - just set state
+            setUser(user);
+            setToken(savedToken);
           } catch (apiError) {
             // Token is invalid or API error
             console.error('[AuthContext] Token invalid or API error:', apiError);
@@ -45,10 +44,9 @@ export const AuthProvider = ({ children }) => {
         console.error('[AuthContext] Auth check failed:', error);
         localStorage.removeItem('auth_token');
       } finally {
-        if (isMounted.current) {
-          console.log('[AuthContext] Setting loading to false');
-          setLoading(false);
-        }
+        // Always set loading to false, no matter what
+        console.log('[AuthContext] Setting loading to false');
+        setLoading(false);
         // Clear timeout since auth check completed
         if (loadingTimeoutRef.current) {
           clearTimeout(loadingTimeoutRef.current);
@@ -61,9 +59,7 @@ export const AuthProvider = ({ children }) => {
     // Set up emergency timeout to force loading state to false
     loadingTimeoutRef.current = setTimeout(() => {
       console.warn('[AuthContext] Auth check timeout - forcing loading to false');
-      if (isMounted.current) {
-        setLoading(false);
-      }
+      setLoading(false);
     }, 8000); // 8 second emergency timeout
 
     checkAuth();
