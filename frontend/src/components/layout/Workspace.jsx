@@ -219,6 +219,10 @@ export const Workspace = () => {
     }
   }, [selectedArtifact]);
 
+  // Determine what content to show (must be before callbacks that use it)
+  const content = selectedPaper || selectedArtifact || selectedTask;
+  const contentType = selectedPaper ? 'paper' : selectedArtifact ? 'artifact' : selectedTask ? 'task' : null;
+
   const saveContent = useCallback(async (content) => {
     if (!selectedArtifact) return;
 
@@ -258,10 +262,6 @@ export const Workspace = () => {
     }
     saveContent(editedContent || content?.content || '');
   }, [saveTimeout, saveContent, editedContent, content]);
-
-  // Determine what content to show
-  const content = selectedPaper || selectedArtifact || selectedTask;
-  const contentType = selectedPaper ? 'paper' : selectedArtifact ? 'artifact' : selectedTask ? 'task' : null;
 
   // Empty state - no project selected
   if (!selectedProject) {
