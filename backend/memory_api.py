@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
-from sqlalchemy import text
+from sqlalchemy import text, select
 
 from database import get_db
 from database.models import ClaimSourceType
@@ -393,3 +393,53 @@ async def delete_preference(
     deleted = await service.delete_preference(project_id, key)
     if not deleted:
         raise HTTPException(status_code=404, detail="Preference not found")
+
+
+# ============== Relevance Scoring ==============
+
+@router.post("/projects/{project_id}/claims/rescore")
+async def rescore_claims(
+    project_id: str,
+    session: AsyncSession = Depends(get_db),
+):
+    """
+    Re-calculate relevance scores for all claims in a project.
+
+    Useful after updating preferences or project goals.
+    Returns number of claims re-scored.
+    """
+    from relevance_service import RelevanceService
+
+    relevance_service = RelevanceService(session)
+    count = await relevance_service.recalculate_project_claims(project_id)
+
+    return {"project_id": project_id, "claims_rescored": count}
+
+
+@router.get("/projects/{project_id}/keywords/suggestions", response_model=List[str])
+async def get_keyword_suggestions(
+    project_id: str,
+    session: AsyncSession = Depends(get_db),
+):
+    """
+    Get keyword suggestions for a project based on research goal.
+
+    Returns extracted keywords that can be used to set topic_keywords preference.
+    """
+    from database.models import Project
+    from relevance_service import RelevanceService
+
+    # Get project
+    result = await session.execute(
+        select(Project).where(Project.id == project_id)
+    )
+    project = result.scalar_one_or_none()
+
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Extract keywords
+    relevance_service = RelevanceService(session)
+    keywords = await relevance_service._extract_project_keywords(project)
+
+    return sorted(list(keywords))
