@@ -19,7 +19,9 @@ import {
   Copy,
   Move,
   Home,
-  ArrowUp
+  ArrowUp,
+  List,
+  LayoutList
 } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 import { Button } from '../ui/button';
@@ -105,6 +107,8 @@ export const FileExplorer = ({ onFileSelect, selectedFile }) => {
   const [uploadingFiles, setUploadingFiles] = useState([]);
   const [selectedFolder, setSelectedFolder] = useState(null);
   const [breadcrumbPath, setBreadcrumbPath] = useState([{ id: null, name: 'Project Files', path: '' }]);
+  const [viewMode, setViewMode] = useState('tree'); // 'tree' or 'list'
+  const [listSort, setListSort] = useState({ field: 'name', order: 'asc' }); // for list view sorting
 
   // Dialog states
   const [newFolderDialog, setNewFolderDialog] = useState(false);
@@ -212,6 +216,51 @@ export const FileExplorer = ({ onFileSelect, selectedFile }) => {
       }
     }
   };
+
+  // Flatten file tree for list view
+  const flattenFileTree = (nodes, result = []) => {
+    nodes.forEach(node => {
+      result.push(node);
+      if (node.children && node.children.length > 0) {
+        flattenFileTree(node.children, result);
+      }
+    });
+    return result;
+  };
+
+  // Sort files for list view
+  const sortFiles = (files) => {
+    return [...files].sort((a, b) => {
+      const aValue = a[listSort.field];
+      const bValue = b[listSort.field];
+
+      if (aValue === bValue) return 0;
+
+      const comparison = aValue < bValue ? -1 : 1;
+      return listSort.order === 'asc' ? comparison : -comparison;
+    });
+  };
+
+  const handleSort = (field) => {
+    if (listSort.field === field) {
+      setListSort({ field, order: listSort.order === 'asc' ? 'desc' : 'asc' });
+    } else {
+      setListSort({ field, order: 'asc' });
+    }
+  };
+
+  // Load view mode preference from localStorage
+  useEffect(() => {
+    const savedViewMode = localStorage.getItem('fileExplorerViewMode');
+    if (savedViewMode) {
+      setViewMode(savedViewMode);
+    }
+  }, []);
+
+  // Save view mode preference to localStorage
+  useEffect(() => {
+    localStorage.setItem('fileExplorerViewMode', viewMode);
+  }, [viewMode]);
 
   // Drag and drop handlers
   const handleDragOver = (e) => {
@@ -442,6 +491,82 @@ export const FileExplorer = ({ onFileSelect, selectedFile }) => {
     }
   };
 
+  // Render list view (flat table)
+  const renderListView = () => {
+    const flatFiles = flattenFileTree(fileTree);
+    const sortedFiles = sortFiles(flatFiles);
+
+    return (
+      <div className="px-2">
+        {/* Table header */}
+        <div className="flex items-center gap-2 px-2 py-1 border-b border-border text-xs font-medium text-muted-foreground sticky top-0 bg-background">
+          <button
+            onClick={() => handleSort('name')}
+            className="flex items-center gap-1 hover:text-foreground flex-1 text-left"
+          >
+            Name
+            {listSort.field === 'name' && (
+              <span className="text-[10px]">{listSort.order === 'asc' ? '↑' : '↓'}</span>
+            )}
+          </button>
+          <button
+            onClick={() => handleSort('type')}
+            className="flex items-center gap-1 hover:text-foreground w-20 text-left"
+          >
+            Type
+            {listSort.field === 'type' && (
+              <span className="text-[10px]">{listSort.order === 'asc' ? '↑' : '↓'}</span>
+            )}
+          </button>
+          <button
+            onClick={() => handleSort('size_bytes')}
+            className="flex items-center gap-1 hover:text-foreground w-16 text-right"
+          >
+            Size
+            {listSort.field === 'size_bytes' && (
+              <span className="text-[10px]">{listSort.order === 'asc' ? '↑' : '↓'}</span>
+            )}
+          </button>
+          <button
+            onClick={() => handleSort('created_at')}
+            className="flex items-center gap-1 hover:text-foreground w-20 text-right"
+          >
+            Date
+            {listSort.field === 'created_at' && (
+              <span className="text-[10px]">{listSort.order === 'asc' ? '↑' : '↓'}</span>
+            )}
+          </button>
+        </div>
+
+        {/* Table rows */}
+        {sortedFiles.map(node => {
+          const Icon = getFileIcon(node.name, node.type);
+          const isSelected = selectedFile?.id === node.id;
+
+          return (
+            <div
+              key={node.path}
+              className={`flex items-center gap-2 px-2 py-1.5 hover:bg-muted rounded cursor-pointer text-xs ${
+                isSelected ? 'bg-accent' : ''
+              }`}
+              onClick={() => node.type !== 'folder' && onFileSelect && onFileSelect(node)}
+            >
+              <Icon className={`h-4 w-4 flex-shrink-0 ${node.type === 'folder' ? 'text-blue-500' : 'text-muted-foreground'}`} />
+              <span className="flex-1 truncate">{node.name}</span>
+              <span className="w-20 text-muted-foreground truncate">{node.mime_type || 'folder'}</span>
+              <span className="w-16 text-right text-muted-foreground">
+                {node.size_bytes ? formatFileSize(node.size_bytes) : '-'}
+              </span>
+              <span className="w-20 text-right text-muted-foreground">
+                {formatDate(node.created_at)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   // Render file tree node
   const renderFileNode = (node, level = 0) => {
     const isExpanded = expandedFolders.has(node.path);
@@ -578,6 +703,15 @@ export const FileExplorer = ({ onFileSelect, selectedFile }) => {
                 variant="ghost"
                 size="sm"
                 className="h-7 px-2"
+                onClick={() => setViewMode(viewMode === 'tree' ? 'list' : 'tree')}
+                title={viewMode === 'tree' ? 'Switch to list view' : 'Switch to tree view'}
+              >
+                {viewMode === 'tree' ? <LayoutList className="h-4 w-4" /> : <List className="h-4 w-4" />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2"
                 onClick={() => {
                   setNewFolderParent(null);
                   setNewFolderDialog(true);
@@ -668,6 +802,15 @@ export const FileExplorer = ({ onFileSelect, selectedFile }) => {
               variant="ghost"
               size="sm"
               className="h-7 px-2"
+              onClick={() => setViewMode(viewMode === 'tree' ? 'list' : 'tree')}
+              title={viewMode === 'tree' ? 'Switch to list view' : 'Switch to tree view'}
+            >
+              {viewMode === 'tree' ? <LayoutList className="h-4 w-4" /> : <List className="h-4 w-4" />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2"
               onClick={() => {
                 setNewFolderParent(null);
                 setNewFolderDialog(true);
@@ -746,16 +889,18 @@ export const FileExplorer = ({ onFileSelect, selectedFile }) => {
         </div>
       )}
 
-      {/* File tree */}
+      {/* File tree or list view */}
       <ScrollArea className="flex-1">
         {loading ? (
           <div className="p-4 text-center text-sm text-muted-foreground">
             Loading files...
           </div>
-        ) : (
+        ) : viewMode === 'tree' ? (
           <div className="p-2">
             {fileTree.map(node => renderFileNode(node))}
           </div>
+        ) : (
+          renderListView()
         )}
       </ScrollArea>
 
