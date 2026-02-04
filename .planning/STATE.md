@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2025-02-01)
 
 ## Current Position
 
-Phase: 3 of 8 (Memory & Information Graph Backend)
-Plan: 3 of 3 (Memory Query and Retrieval API)
-Status: Phase 1 complete, Phase 2 complete, Phase 3 complete
-Last activity: 2026-02-04 — Completed plan 03-03 (Memory Query and Retrieval API)
+Phase: 4 of 8 (Rich Text Document Editor)
+Plan: 1 of 4 (TipTap Editor Setup)
+Status: Phase 1 complete, Phase 2 complete, Phase 3 complete, Phase 4 in progress
+Last activity: 2026-02-04 — Completed plan 03-04 (User Preferences and Relevance Scoring)
 
-Progress: ████░░░░░ 50.0% (4/8 phases complete, 3/3 plans in phase 3)
+Progress: █████░░░░ 62.5% (5/8 phases complete, 0/1 plans in phase 4)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 9
+- Total plans completed: 10
 - Average duration: 6 min
-- Total execution time: 0.9 hours
+- Total execution time: 1.0 hours
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: ████░░░░░ 50.0% (4/8 phases complete, 3/3 plans in p
 |-------|----------------|-------------|----------|
 | 01-authentication | 2 | 2 | 10 min |
 | 02-file-management | 4 | 4 | 5 min |
-| 03-memory-backend | 3 | 3 | 3 min |
+| 03-memory-backend | 4 | 4 | 3 min |
 | 04-08 | — | — | — |
 
 **Recent Trend:**
-- Last 5 plans: 7 min, 2 min, 7 min, 2 min, 1 min (02-03, 02-04, 02-04 gap closure, 03-01, 03-02, 03-03)
+- Last 5 plans: 7 min, 2 min, 1 min, 4 min (03-01, 03-02, 03-03, 03-04)
 - Trend: Steady (consistent execution speed)
 
 *Updated after each plan completion*
@@ -106,6 +106,15 @@ Recent decisions affecting current work:
 42. **Field name mapping** — API response uses 'metadata' while database uses 'relationship_metadata' - mapped explicitly in endpoints.
 43. **Project ownership validation** — All memory endpoints verify claim/project ownership to prevent cross-project data access.
 
+**From 03-04 (User Preferences and Relevance Scoring):**
+44. **TF-IDF style keyword matching** — Simple, effective relevance scoring without external dependencies. Extract keywords from project goal and compare with claim text.
+45. **Multi-factor relevance scoring** — 4 factors with weighted importance: keyword overlap (0.6), domain preference (0.2), recency (0.1), citation count (0.1).
+46. **Automatic scoring on claim creation** — Claims automatically scored via RelevanceService during MemoryService.create_claim(). No manual step required.
+47. **Preference-driven boosts** — Users can set domain_preferences and topic_keywords to customize scoring for their research context.
+48. **Keyword suggestions endpoint** — GET /api/memory/projects/{id}/keywords/suggestions provides extracted keywords from project goal for easy preference setup.
+49. **Re-score endpoint** — POST /api/memory/projects/{id}/claims/rescore allows bulk re-scoring after preference changes.
+50. **Stop word filtering** — Standard NLP practice removes common words (the, and, for, etc.) from keyword extraction for better relevance.
+
 ### Pending Todos
 
 None yet.
@@ -135,6 +144,9 @@ None yet.
 
 **From 03-03:**
 - No blockers identified. Memory API complete with all CRUD, search, and graph traversal endpoints.
+
+**From 03-04:**
+- No blockers identified. Relevance scoring complete with automatic calculation and preference-driven boosts.
 
 ### Patterns Established
 
@@ -192,9 +204,17 @@ None yet.
 37. **Enum validation in endpoints** — Convert string query params to enums (ClaimSourceType, RelationshipType) with ValueError handling.
 38. **Explicit field mapping** — Map database column names (relationship_metadata) to API field names (metadata) in response construction.
 
+**From 03-04 (Relevance Scoring):**
+39. **Service layer separation** — RelevanceService separate from MemoryService following single responsibility principle.
+40. **Multi-source keyword aggregation** — Extract keywords from project goal, key_themes, search_terms, and user preferences for comprehensive coverage.
+41. **Stop word filtering** — Remove common English words (the, and, for, etc.) during keyword extraction for better relevance quality.
+42. **Multi-factor weighted scoring** — Combine multiple relevance signals with explicit weights (keywords 0.6, domain 0.2, recency 0.1, citations 0.1).
+43. **Double-flush pattern for dependent fields** — Flush to get ID, calculate dependent field (relevance_score), flush again to save.
+44. **Bulk operation support** — recalculate_project_claims() efficiently updates all claims for a project when preferences change.
+
 ## Session Continuity
 
 Last session: 2026-02-04
-Stopped at: Completed plan 03-03 (Memory Query and Retrieval API)
-Resume file: .planning/phases/03-memory-backend/03-03-SUMMARY.md
-Next: Execute plan 04-01 (Memory Frontend - Inspector Panel)
+Stopped at: Completed plan 03-04 (User Preferences and Relevance Scoring)
+Resume file: .planning/phases/03-memory-backend/03-04-SUMMARY.md
+Next: Execute plan 04-01 (TipTap Editor Setup)
