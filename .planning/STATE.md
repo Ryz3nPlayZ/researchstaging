@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2025-02-01)
 ## Current Position
 
 Phase: 2 of 8 (File & Project Management)
-Plan: 2 of 4 complete (02-02)
-Status: Phase 2 in progress. File Explorer UI component complete with drag-drop upload and file operations.
-Last activity: 2026-02-04 — Completed plan 02-02 (File Explorer Frontend Component)
+Plan: 3 of 4 complete (02-03)
+Status: Phase 2 in progress. Navigator integration with FileExplorer complete with view toggle, breadcrumbs, list view, and hover actions.
+Last activity: 2026-02-04 — Completed plan 02-03 (Navigator Integration and Routing)
 
-Progress: ███░░░░░░░ 31% (2.5/8 phases complete, 2/4 plans in Phase 2)
+Progress: ███░░░░░░░ 38% (3/8 phases complete, 3/4 plans in Phase 2)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 4
+- Total plans completed: 5
 - Average duration: 6 min
-- Total execution time: 0.67 hours
+- Total execution time: 0.5 hours
 
 **By Phase:**
 
 | Phase | Plans Complete | Total Plans | Avg/Plan |
 |-------|----------------|-------------|----------|
 | 01-authentication | 2 | 2 | 10 min |
-| 02-file-management | 2 | 4 | 4 min |
+| 02-file-management | 3 | 4 | 4 min |
 | 03-08 | — | — | — |
 
 **Recent Trend:**
-- Last 5 plans: 16 min, 4 min, 2 min, 5 min (01-01, 01-02, 02-01, 02-02)
+- Last 5 plans: 16 min, 4 min, 2 min, 5 min, 5 min (01-01, 01-02, 02-01, 02-02, 02-03)
 - Trend: Steady (consistent execution speed)
 
 *Updated after each plan completion*
@@ -65,6 +65,15 @@ Recent decisions affecting current work:
 12. **Drag-to-folder for file moves** — Intuitive file organization by dragging files onto folders to move them.
 13. **Toast notifications for user feedback** — All operations (success/error) provide feedback via toast notifications instead of alerts.
 
+**From 02-03 (Navigator Integration and Routing):**
+14. **View toggle with Tabs component** — Use Shadcn Tabs for switching between Tasks/Files view in Navigator. Cleaner UX than custom toggle buttons.
+15. **Global file selection state** — Add selectedFile to ProjectContext for cross-panel communication. File selection updates Inspector panel.
+16. **Breadcrumb navigation pattern** — Build path array with {id, name, path} objects. Show breadcrumbs only when navigating (not at root) to reduce clutter.
+17. **localStorage for view preferences** — Persist tree/list view mode across sessions. Load on mount, save on change.
+18. **Color-coded file type icons** — Visual differentiation for quick scanning (code=green, data=orange, pdf=red, default=gray).
+19. **Hover-triggered quick actions** — Show action buttons (open, download, copy, delete) only on file hover. Replace file size display when hovering to prevent UI overflow.
+20. **Sortable list view columns** — Click column headers to sort by name, type, size, or date. Toggle ascending/descending on same column. Show visual indicator (↑/↓).
+
 ### Pending Todos
 
 None yet.
@@ -79,6 +88,9 @@ None yet.
 
 **From 02-02:**
 - No blockers identified. File Explorer component complete and ready for Navigator panel integration.
+
+**From 02-03:**
+- No blockers identified. Navigator integration complete with multiple view modes and file selection working.
 
 ### Patterns Established
 
@@ -103,9 +115,15 @@ None yet.
 14. **Upload progress tracking** — Real-time progress indicators for file uploads with per-file status
 15. **Import hooks from /hooks** — React hooks (useToast) are in /hooks directory, not /ui directory
 
+**From 02-03 (Navigator Integration):**
+16. **View state management with Tabs** — Use Tabs component for clean toggle between related content views (Tasks vs Files)
+17. **Breadcrumb path building** — Incrementally build navigation path array. Each crumb has {id, name, path} for click navigation.
+18. **Flatten tree for list view** — Recursive function to convert hierarchical tree into flat list for table rendering.
+19. **Column sorting pattern** — Maintain {field, order} state. Toggle order on same field, switch to new field otherwise. Show arrow indicators.
+
 ## Session Continuity
 
 Last session: 2026-02-04
-Stopped at: Completed plan 02-02 (File Explorer Frontend Component)
-Resume file: .planning/phases/02-file-management/02-02-SUMMARY.md
-Next: Execute plan 02-03 or integrate FileExplorer into Navigator panel
+Stopped at: Completed plan 02-03 (Navigator Integration and Routing)
+Resume file: .planning/phases/02-file-management/02-03-SUMMARY.md
+Next: Execute plan 02-04 (File Upload & Integration enhancements)
