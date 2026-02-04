@@ -11,7 +11,7 @@ The Research Workspace delivers stateful research intelligence — a single work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 1: Authentication & User Management** - Secure access via mock authentication (Google OAuth code preserved for production)
-- [ ] **Phase 2: File & Project Management** - Upload and organize research files
+- [x] **Phase 2: File & Project Management** - Upload and organize research files
 - [ ] **Phase 3: Memory & Information Graph Backend** - Store research information and relationships
 - [ ] **Phase 4: Rich Text Document Editor** - Write papers with citations and version history
 - [ ] **Phase 5: Literature Search & Review** - AI-powered paper discovery and analysis
