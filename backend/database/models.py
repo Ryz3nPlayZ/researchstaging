@@ -587,7 +587,7 @@ class ClaimRelationship(Base):
     # Relationship type and metadata
     relationship_type = Column(SQLEnum(RelationshipType), nullable=False)
     strength = Column(Float, default=0.5)  # 0.0 to 1.0, confidence in relationship
-    metadata = Column(JSONB, default=dict)  # Additional context (e.g., "via paper X", "contradicts figure Y")
+    relationship_metadata = Column(JSONB, default=dict)  # Additional context (e.g., "via paper X", "contradicts figure Y")
 
     # Timestamps
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
