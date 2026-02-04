@@ -138,6 +138,25 @@ DATABASE_URL=postgresql+asyncpg://research_user:your_secure_password@localhost:5
 # Redis
 REDIS_URL=redis://localhost:6379/0
 
+# File Storage (choose one backend)
+# Option 1: Local storage (default - no additional configuration needed)
+STORAGE_BACKEND=local
+UPLOAD_DIR=uploads
+
+# Option 2: AWS S3
+# STORAGE_BACKEND=s3
+# S3_BUCKET_NAME=your-bucket-name
+# S3_REGION=us-east-1
+# S3_ACCESS_KEY_ID=your-aws-access-key-id
+# S3_SECRET_ACCESS_KEY=your-aws-secret-access-key
+
+# Option 3: Cloudflare R2 (recommended - zero egress fees)
+# STORAGE_BACKEND=r2
+# S3_BUCKET_NAME=your-bucket-name
+# S3_ENDPOINT_URL=https://<account-id>.r2.cloudflarestorage.com
+# S3_ACCESS_KEY_ID=your-r2-access-key-id
+# S3_SECRET_ACCESS_KEY=your-r2-secret-access-key
+
 # LLM API Keys (REQUIRED - add at least one)
 OPENAI_API_KEY=your_openai_api_key_here
 GEMINI_API_KEY=your_gemini_api_key_here
@@ -146,6 +165,56 @@ GROQ_API_KEY=your_groq_api_key_here
 
 # CORS (for development)
 CORS_ORIGINS=http://localhost:3000,http://localhost:3001
+```
+
+### File Storage Options
+
+The system supports three storage backends for uploaded files:
+
+#### Local Storage (Default)
+Files are stored on the server's disk in the `uploads/` directory. This is the simplest option and requires no additional configuration.
+
+**Pros:** No setup required, works offline
+**Cons:** Disk space limited to server capacity, no redundancy
+
+#### AWS S3
+Files are stored in Amazon S3 buckets.
+
+**Pros:** Highly reliable, scalable, integrates with AWS ecosystem
+**Cons:** Egress fees for downloads, requires AWS account
+
+**Setup:**
+1. Create an AWS account if you don't have one
+2. Create an S3 bucket (e.g., `research-workspace-files`)
+3. Create an IAM user with S3 permissions
+4. Generate access keys for the IAM user
+5. Configure environment variables (see above)
+
+#### Cloudflare R2 (Recommended)
+Files are stored in Cloudflare R2 with zero egress fees.
+
+**Pros:** Zero egress fees (perfect for research datasets), S3-compatible API, lower cost
+**Cons:** Requires Cloudflare account
+
+**Setup:**
+1. Create a Cloudflare account at https://dash.cloudflare.com/
+2. Navigate to R2 overview and enable R2
+3. Create a bucket (e.g., `research-workspace-files`)
+4. Create an R2 API token:
+   - Go to "Manage R2 API Tokens"
+   - Click "Create API Token"
+   - Give it a name and permissions to edit the bucket
+   - Copy the Access Key ID and Secret Access Key
+5. Find your Account ID in the Cloudflare dashboard URL
+6. Configure environment variables (see above)
+
+Example R2 configuration:
+```bash
+STORAGE_BACKEND=r2
+S3_BUCKET_NAME=research-workspace-files
+S3_ENDPOINT_URL=https://abc123def456.r2.cloudflarestorage.com
+S3_ACCESS_KEY_ID=your_r2_token_access_key
+S3_SECRET_ACCESS_KEY=your_r2_token_secret
 ```
 
 ### Get LLM API Keys
@@ -362,6 +431,56 @@ GRANT ALL PRIVILEGES ON DATABASE research_pilot TO research_user;
 ```
 
 Then restart backend server (tables will auto-create).
+
+---
+
+## Migrating Files to Cloud Storage
+
+If you started with local storage and want to migrate to S3 or R2:
+
+### Prerequisites
+1. Configure S3 or R2 environment variables in `.env`
+2. Ensure backend is stopped
+3. Run the migration script
+
+### Run Migration
+
+**Test migration (dry run):**
+```bash
+cd backend
+source venv/bin/activate
+python scripts/migrate_to_cloud.py --dry-run
+```
+
+**Perform migration:**
+```bash
+python scripts/migrate_to_cloud.py
+```
+
+**Migrate specific project only:**
+```bash
+python scripts/migrate_to_cloud.py --project-id <project-id>
+```
+
+### What the Script Does
+1. Reads all File records from the database
+2. Uploads each file to cloud storage
+3. Verifies successful upload
+4. Deletes local file after verification
+5. Reports statistics (files migrated, failed, skipped)
+
+### After Migration
+1. Update `STORAGE_BACKEND` in `.env` to `s3` or `r2`
+2. Restart backend server
+3. Test file uploads and downloads
+4. Keep the `uploads/` directory as backup until you verify everything works
+
+### Rollback (if needed)
+If you need to rollback to local storage:
+1. Stop backend
+2. Restore files from backup
+3. Change `STORAGE_BACKEND=local` in `.env`
+4. Restart backend
 
 ---
 
