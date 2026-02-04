@@ -21,7 +21,9 @@ import {
   Home,
   ArrowUp,
   List,
-  LayoutList
+  LayoutList,
+  ExternalLink,
+  Info
 } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 import { Button } from '../ui/button';
@@ -109,6 +111,7 @@ export const FileExplorer = ({ onFileSelect, selectedFile }) => {
   const [breadcrumbPath, setBreadcrumbPath] = useState([{ id: null, name: 'Project Files', path: '' }]);
   const [viewMode, setViewMode] = useState('tree'); // 'tree' or 'list'
   const [listSort, setListSort] = useState({ field: 'name', order: 'asc' }); // for list view sorting
+  const [hoveredFile, setHoveredFile] = useState(null);
 
   // Dialog states
   const [newFolderDialog, setNewFolderDialog] = useState(false);
@@ -542,6 +545,124 @@ export const FileExplorer = ({ onFileSelect, selectedFile }) => {
         {sortedFiles.map(node => {
           const Icon = getFileIcon(node.name, node.type);
           const isSelected = selectedFile?.id === node.id;
+          const canOpenInEditor = /\.(md|py|r|js|jsx|ts|tsx|html|css|json|csv)$/.test(node.name);
+
+          return (
+            <div
+              key={node.path}
+              className={`flex items-center gap-2 px-2 py-1.5 hover:bg-muted rounded cursor-pointer text-xs group ${
+                isSelected ? 'bg-accent' : ''
+              }`}
+              onClick={() => node.type !== 'folder' && onFileSelect && onFileSelect(node)}
+            >
+              <Icon className={`h-4 w-4 flex-shrink-0 ${node.type === 'folder' ? 'text-blue-500' : 'text-muted-foreground'}`} />
+              <span className="flex-1 truncate">{node.name}</span>
+              <span className="w-20 text-muted-foreground truncate">{node.mime_type || 'folder'}</span>
+              <span className="w-16 text-right text-muted-foreground">
+                {node.size_bytes ? formatFileSize(node.size_bytes) : '-'}
+              </span>
+              <span className="w-20 text-right text-muted-foreground">
+                {formatDate(node.created_at)}
+              </span>
+
+              {/* Quick actions on hover */}
+              {node.type !== 'folder' && (
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {canOpenInEditor && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 w-5 p-0"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onFileSelect(node);
+                      }}
+                      title="Open in Workspace"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 w-5 p-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDownload(node);
+                    }}
+                    title="Download"
+                  >
+                    <Download className="h-3 w-3" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 w-5 p-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCopyPath(node);
+                    }}
+                    title="Copy Path"
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+    const flatFiles = flattenFileTree(fileTree);
+    const sortedFiles = sortFiles(flatFiles);
+
+    return (
+      <div className="px-2">
+        {/* Table header */}
+        <div className="flex items-center gap-2 px-2 py-1 border-b border-border text-xs font-medium text-muted-foreground sticky top-0 bg-background">
+          <button
+            onClick={() => handleSort('name')}
+            className="flex items-center gap-1 hover:text-foreground flex-1 text-left"
+          >
+            Name
+            {listSort.field === 'name' && (
+              <span className="text-[10px]">{listSort.order === 'asc' ? '↑' : '↓'}</span>
+            )}
+          </button>
+          <button
+            onClick={() => handleSort('type')}
+            className="flex items-center gap-1 hover:text-foreground w-20 text-left"
+          >
+            Type
+            {listSort.field === 'type' && (
+              <span className="text-[10px]">{listSort.order === 'asc' ? '↑' : '↓'}</span>
+            )}
+          </button>
+          <button
+            onClick={() => handleSort('size_bytes')}
+            className="flex items-center gap-1 hover:text-foreground w-16 text-right"
+          >
+            Size
+            {listSort.field === 'size_bytes' && (
+              <span className="text-[10px]">{listSort.order === 'asc' ? '↑' : '↓'}</span>
+            )}
+          </button>
+          <button
+            onClick={() => handleSort('created_at')}
+            className="flex items-center gap-1 hover:text-foreground w-20 text-right"
+          >
+            Date
+            {listSort.field === 'created_at' && (
+              <span className="text-[10px]">{listSort.order === 'asc' ? '↑' : '↓'}</span>
+            )}
+          </button>
+        </div>
+
+        {/* Table rows */}
+        {sortedFiles.map(node => {
+          const Icon = getFileIcon(node.name, node.type);
+          const isSelected = selectedFile?.id === node.id;
 
           return (
             <div
@@ -625,14 +746,18 @@ export const FileExplorer = ({ onFileSelect, selectedFile }) => {
     }
 
     // File node
+    const canOpenInEditor = /\.(md|py|r|js|jsx|ts|tsx|html|css|json|csv)$/.test(node.name);
+
     return (
       <ContextMenu key={node.path}>
         <ContextMenuTrigger>
           <div
-            className={`flex items-center gap-2 py-1.5 px-2 hover:bg-muted rounded cursor-pointer ${
+            className={`flex items-center gap-2 py-1.5 px-2 hover:bg-muted rounded cursor-pointer group ${
               isSelected ? 'bg-accent' : ''
             }`}
             onClick={() => onFileSelect && onFileSelect(node)}
+            onMouseEnter={() => setHoveredFile(node.id)}
+            onMouseLeave={() => setHoveredFile(null)}
             draggable
             onDragStart={(e) => {
               e.dataTransfer.setData('fileId', node.id);
@@ -655,16 +780,84 @@ export const FileExplorer = ({ onFileSelect, selectedFile }) => {
             style={{ paddingLeft: `${level * 16 + 24}px` }}
             title={`Size: ${formatFileSize(node.size_bytes)}\nType: ${node.mime_type || 'Unknown'}\nModified: ${formatDate(node.created_at)}`}
           >
-            <Icon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+            <Icon className={`h-4 w-4 flex-shrink-0 ${
+              node.type === 'folder' ? 'text-blue-500' :
+              /\.(md|py|r|js|jsx|ts|tsx)$/.test(node.name) ? 'text-green-500' :
+              /\.(csv|json)$/.test(node.name) ? 'text-orange-500' :
+              /\.(pdf)$/.test(node.name) ? 'text-red-500' :
+              'text-muted-foreground'
+            }`} />
             <span className="text-sm truncate flex-1">{node.name}</span>
-            {node.size_bytes && (
+            {node.size_bytes && hoveredFile !== node.id && (
               <span className="text-[10px] text-muted-foreground flex-shrink-0">
                 {formatFileSize(node.size_bytes)}
               </span>
             )}
+
+            {/* Quick actions on hover */}
+            {hoveredFile === node.id && (
+              <div className="flex items-center gap-1 flex-shrink-0">
+                {canOpenInEditor && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 w-5 p-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onFileSelect(node);
+                    }}
+                    title="Open in Workspace"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 w-5 p-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDownload(node);
+                  }}
+                  title="Download"
+                >
+                  <Download className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 w-5 p-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCopyPath(node);
+                  }}
+                  title="Copy Path"
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 w-5 p-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openDeleteDialog(node, e);
+                  }}
+                  title="Delete"
+                >
+                  <Trash2 className="h-3 w-3 text-red-500" />
+                </Button>
+              </div>
+            )}
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent>
+          {canOpenInEditor && (
+            <ContextMenuItem onClick={() => onFileSelect(node)}>
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Open in Workspace
+            </ContextMenuItem>
+          )}
           <ContextMenuItem onClick={() => handleDownload(node)}>
             <Download className="h-4 w-4 mr-2" />
             Download
