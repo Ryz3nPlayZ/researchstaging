@@ -94,7 +94,7 @@ Plans:
 
 **Depends on**: Phase 3 (requires memory backend for citations)
 
-**Requirements**: EDIT-01, EDIT-02, EDIT-03, EDIT-04, EDIT-05, EDIT-06, EDIT-07, EDIT-08, EDIT-09, EDIT-10, EDIT-11, EDIT-12, EDIT-13
+**Requirements**: EDIT-01, EDIT-02, EDIT-03, EDIT-04, EDIT-05, EDIT-06, EDIT-07, EDIT-08, EDIT-09, EDIT-10, EDIT-11, EDIT-12, EDIT-13, EDIT-14, EDIT-15
 
 **Success Criteria** (what must be TRUE):
   1. User can write and format text with bold, italic, underline
@@ -103,6 +103,8 @@ Plans:
   4. System auto-formats citations in APA, MLA, or Chicago style
   5. System auto-generates bibliography from document citations
   6. User can view and restore previous document versions
+  7. System auto-saves document content every 2-5 seconds during typing
+  8. Editor typing response time is <100ms for keystrokes
 
 **Research**: Likely (TipTap editor setup, citation management patterns)
 **Research topics**: TipTap editor with React, citation management architecture, document versioning strategy
