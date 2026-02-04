@@ -46,9 +46,6 @@ from llm_service import llm_service
 from export_service import export_service
 from auth_service import auth_service
 
-# File management imports
-from file_api import router as file_router
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -65,6 +62,14 @@ app = FastAPI(
 
 # Create API router
 api_router = APIRouter(prefix="/api")
+
+# File management imports
+from file_api import router as file_router
+logger.info(f"Loaded file router with {len(file_router.routes)} routes")
+
+# Memory API imports
+from memory_api import router as memory_router
+logger.info(f"Loaded memory router with {len(memory_router.routes)} routes")
 
 
 # ============== Pydantic Models ==============
@@ -1162,8 +1167,12 @@ async def get_export_formats():
 
 
 # Include routers in app
-app.include_router(api_router)
 api_router.include_router(file_router)
+logger.info("Included file router in api_router")
+api_router.include_router(memory_router)
+logger.info("Included memory router in api_router")
+app.include_router(api_router)
+logger.info("Included api_router in app")
 
 # CORS middleware
 app.add_middleware(
