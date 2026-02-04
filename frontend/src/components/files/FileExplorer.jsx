@@ -48,7 +48,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '../ui/alert-dialog';
-import { useToast } from '../ui/use-toast';
+import { useToast } from '../../hooks/use-toast';
 import { filesApi } from '../../lib/api';
 import { useProject } from '../../context/ProjectContext';
 
