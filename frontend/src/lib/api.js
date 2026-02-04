@@ -85,10 +85,27 @@ export const filesApi = {
   listFiles: (projectId) => api.get(`/files/projects/${projectId}/files`),
   getFileTree: (projectId) => api.get(`/files/projects/${projectId}/files/tree`),
   getFile: (fileId) => api.get(`/files/files/${fileId}`),
-  downloadFile: (fileId) => {
+
+  // Download file - returns Promise that resolves to either:
+  // - { download_url: string, filename: string } for S3/R2 (presigned URL)
+  // - direct file download for local storage
+  downloadFile: async (fileId) => {
     const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
-    return `${BACKEND_URL}/api/files/files/${fileId}/download`;
+    const response = await api.get(`/files/files/${fileId}/download`);
+
+    // If response contains download_url, it's a presigned URL (S3/R2)
+    if (response.data && response.data.download_url) {
+      return response.data; // { download_url, filename, mime_type, expires_in }
+    }
+
+    // For local storage, the API streams the file directly
+    // Return the URL for direct browser download
+    return {
+      download_url: `${BACKEND_URL}/api/files/files/${fileId}/download`,
+      direct: true
+    };
   },
+
   deleteFile: (fileId) => api.delete(`/files/files/${fileId}`),
   moveFile: (fileId, folderId) => api.patch(`/files/files/${fileId}/move`, { folder_id: folderId }),
 };

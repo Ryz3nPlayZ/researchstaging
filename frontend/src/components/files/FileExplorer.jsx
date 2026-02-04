@@ -444,14 +444,30 @@ export const FileExplorer = ({ onFileSelect, selectedFile }) => {
     }
   };
 
-  const handleDownload = (file) => {
-    const downloadUrl = filesApi.downloadFile(file.id);
-    const link = document.createElement('a');
-    link.href = downloadUrl;
-    link.download = file.name;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleDownload = async (file) => {
+    try {
+      // Call the download API (async now for presigned URLs)
+      const downloadData = await filesApi.downloadFile(file.id);
+
+      // Create download link
+      const link = document.createElement('a');
+      link.href = downloadData.download_url;
+      link.download = downloadData.filename || file.name;
+
+      // For presigned URLs, we don't need auth header
+      // For local storage, browser handles the download directly
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Download failed:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Download failed',
+        description: error.response?.data?.detail || 'Could not download file'
+      });
+    }
   };
 
   const handleCopyPath = (file) => {
