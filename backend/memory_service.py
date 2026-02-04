@@ -9,9 +9,10 @@ import json
 
 from database.models import (
     Claim, Finding, Preference, ClaimRelationship,
-    ClaimSourceType, RelationshipType
+    ClaimSourceType, RelationshipType, Project, Paper
 )
 from llm_service import LLMService
+from relevance_service import RelevanceService
 
 
 class ClaimCreationError(Exception):
@@ -25,6 +26,7 @@ class MemoryService:
     def __init__(self, session: AsyncSession):
         self.session = session
         self.llm_service = LLMService()
+        self.relevance_service = RelevanceService(session)
 
     async def create_claim(
         self,
@@ -38,7 +40,7 @@ class MemoryService:
         extracted_by: Optional[str] = None,
     ) -> Claim:
         """
-        Create a new claim with provenance tracking.
+        Create a new claim with provenance tracking and automatic relevance scoring.
 
         Args:
             project_id: Project this claim belongs to
@@ -53,6 +55,21 @@ class MemoryService:
         Returns:
             Created Claim object
         """
+        # Get project
+        project_result = await self.session.execute(
+            select(Project).where(Project.id == project_id)
+        )
+        project = project_result.scalar_one()
+
+        # Get source paper if available
+        source_paper = None
+        if source_type == ClaimSourceType.PAPER:
+            paper_result = await self.session.execute(
+                select(Paper).where(Paper.id == source_id)
+            )
+            source_paper = paper_result.scalar_one_or_none()
+
+        # Create claim
         claim = Claim(
             project_id=project_id,
             claim_text=claim_text,
@@ -63,11 +80,18 @@ class MemoryService:
             confidence=confidence,
             extracted_at=datetime.now(timezone.utc),
             extracted_by=extracted_by,
+            relevance_score=0.0,  # Placeholder, will be set below
         )
 
         self.session.add(claim)
-        await self.session.flush()
+        await self.session.flush()  # Get claim.id
 
+        # Calculate relevance score
+        claim.relevance_score = await self.relevance_service.calculate_relevance(
+            claim, project, source_paper
+        )
+
+        await self.session.flush()
         return claim
 
     async def get_claim(self, claim_id: str) -> Optional[Claim]:
@@ -717,6 +741,39 @@ Papers to analyze:
             # Return empty dict if parsing fails
             return {"claims": [], "paper_claims": []}
         return {"claims": [], "paper_claims": []}
+
+    async def set_default_preferences(self, project_id: str, project: Project):
+        """
+        Set default preferences for a new project.
+
+        Extracts keywords from research goal as initial topic preferences.
+        """
+        # Extract keywords from project goal
+        keywords = self.relevance_service._extract_keywords(project.research_goal)
+
+        # Set as topic_keywords preference
+        await self.set_preference(
+            project_id=project_id,
+            key="topic_keywords",
+            value=list(keywords),
+            category="relevance",
+        )
+
+        # Set default domain preferences (empty, user can add)
+        await self.set_preference(
+            project_id=project_id,
+            key="domain_preferences",
+            value=[],
+            category="relevance",
+        )
+
+        # Set default recency weight
+        await self.set_preference(
+            project_id=project_id,
+            key="recency_weight",
+            value=0.1,
+            category="relevance",
+        )
 
     async def extract_findings_from_analysis(
         self,
