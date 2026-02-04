@@ -677,3 +677,109 @@ Papers to analyze:
             # Return empty dict if parsing fails
             return {"claims": [], "paper_claims": []}
         return {"claims": [], "paper_claims": []}
+
+    async def extract_findings_from_analysis(
+        self,
+        project_id: str,
+        source_analysis_id: str,
+        analysis_type: str,
+        analysis_output: Dict[str, Any],
+    ) -> List[Finding]:
+        """
+        Extract findings from analysis results.
+
+        Args:
+            project_id: Project to associate findings with
+            source_analysis_id: ID of the analysis task/artifact
+            analysis_type: Type of analysis (r_analysis, python_analysis)
+            analysis_output: Analysis output dict
+
+        Returns:
+            List of extracted Finding objects
+        """
+        findings = []
+
+        # Extract statistical findings
+        if "p_value" in analysis_output:
+            finding = await self.create_finding(
+                project_id=project_id,
+                finding_text=f"Statistical test result with p-value: {analysis_output['p_value']}",
+                finding_type="statistical",
+                source_analysis_id=source_analysis_id,
+                analysis_type=analysis_type,
+                finding_data={
+                    "p_value": analysis_output["p_value"],
+                    "test_statistic": analysis_output.get("test_statistic"),
+                    "test_type": analysis_output.get("test_type"),
+                },
+                significance=float(analysis_output["p_value"]) if analysis_output["p_value"] else None,
+            )
+            findings.append(finding)
+
+        # Extract pattern findings
+        if "patterns" in analysis_output:
+            for pattern in analysis_output["patterns"]:
+                finding = await self.create_finding(
+                    project_id=project_id,
+                    finding_text=pattern.get("description", str(pattern)),
+                    finding_type="pattern",
+                    source_analysis_id=source_analysis_id,
+                    analysis_type=analysis_type,
+                    finding_data=pattern,
+                    significance=pattern.get("confidence"),
+                )
+                findings.append(finding)
+
+        # Extract insight findings
+        if "insights" in analysis_output:
+            for insight in analysis_output["insights"]:
+                finding = await self.create_finding(
+                    project_id=project_id,
+                    finding_text=insight.get("text", str(insight)),
+                    finding_type="insight",
+                    source_analysis_id=source_analysis_id,
+                    analysis_type=analysis_type,
+                    finding_data=insight,
+                    significance=insight.get("confidence"),
+                )
+                findings.append(finding)
+
+        # Extract correlation findings
+        if "correlations" in analysis_output:
+            for corr in analysis_output["correlations"]:
+                var1 = corr.get("var1", "unknown")
+                var2 = corr.get("var2", "unknown")
+                coeff = corr.get("coefficient", 0)
+                p_val = corr.get("p_value")
+
+                finding_text = f"Correlation between {var1} and {var2}: {coeff:.3f}"
+                if p_val:
+                    finding_text += f" (p={p_val})"
+
+                finding = await self.create_finding(
+                    project_id=project_id,
+                    finding_text=finding_text,
+                    finding_type="correlation",
+                    source_analysis_id=source_analysis_id,
+                    analysis_type=analysis_type,
+                    finding_data=corr,
+                    significance=p_val,
+                )
+                findings.append(finding)
+
+        # Extract model performance findings
+        if "model_performance" in analysis_output:
+            perf = analysis_output["model_performance"]
+            metrics_text = ", ".join([f"{k}: {v}" for k, v in perf.items()])
+
+            finding = await self.create_finding(
+                project_id=project_id,
+                finding_text=f"Model performance metrics: {metrics_text}",
+                finding_type="model_performance",
+                source_analysis_id=source_analysis_id,
+                analysis_type=analysis_type,
+                finding_data=perf,
+            )
+            findings.append(finding)
+
+        return findings
