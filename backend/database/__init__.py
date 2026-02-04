@@ -4,7 +4,8 @@ from database.models import (
     Base, Project, Plan, Task, TaskDependency, TaskRun,
     Artifact, Paper, Reference, ExecutionLog,
     ProjectStatus, TaskState, TaskType, ArtifactType, OutputType,
-    generate_uuid
+    generate_uuid,
+    Claim, ClaimSourceType, Finding, Preference, ClaimRelationship, RelationshipType
 )
 from database.file_models import Folder, File
 from database.credit_models import (
@@ -18,6 +19,7 @@ __all__ = [
     "Artifact", "Paper", "Reference", "ExecutionLog",
     "ProjectStatus", "TaskState", "TaskType", "ArtifactType", "OutputType",
     "generate_uuid",
+    "Claim", "ClaimSourceType", "Finding", "Preference", "ClaimRelationship", "RelationshipType",
     "User", "CreditTransaction", "CreditPackage",
     "CREDIT_PACKAGES", "calculate_credit_cost", "get_optimal_provider",
     "Folder", "File"
