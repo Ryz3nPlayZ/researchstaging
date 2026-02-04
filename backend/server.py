@@ -1163,7 +1163,7 @@ async def get_export_formats():
 
 # Include routers in app
 app.include_router(api_router)
-app.include_router(file_router)
+api_router.include_router(file_router)
 
 # CORS middleware
 app.add_middleware(
