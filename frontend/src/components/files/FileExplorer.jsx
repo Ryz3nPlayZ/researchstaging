@@ -17,7 +17,9 @@ import {
   Trash2,
   Edit2,
   Copy,
-  Move
+  Move,
+  Home,
+  ArrowUp
 } from 'lucide-react';
 import { ScrollArea } from '../ui/scroll-area';
 import { Button } from '../ui/button';
@@ -102,6 +104,7 @@ export const FileExplorer = ({ onFileSelect, selectedFile }) => {
   const [dragOver, setDragOver] = useState(false);
   const [uploadingFiles, setUploadingFiles] = useState([]);
   const [selectedFolder, setSelectedFolder] = useState(null);
+  const [breadcrumbPath, setBreadcrumbPath] = useState([{ id: null, name: 'Project Files', path: '' }]);
 
   // Dialog states
   const [newFolderDialog, setNewFolderDialog] = useState(false);
@@ -154,6 +157,60 @@ export const FileExplorer = ({ onFileSelect, selectedFile }) => {
       newExpanded.add(path);
     }
     setExpandedFolders(newExpanded);
+  };
+
+  // Helper function to build breadcrumb path from folder
+  const buildBreadcrumbPath = (folder) => {
+    if (!folder) {
+      return [{ id: null, name: 'Project Files', path: '' }];
+    }
+    // Split path and build breadcrumb
+    const pathParts = folder.path.split('/').filter(Boolean);
+    const breadcrumbs = [{ id: null, name: 'Project Files', path: '' }];
+
+    // For now, we'll build a simplified path
+    // In a full implementation, we'd traverse the tree to build accurate breadcrumbs
+    pathParts.forEach((part, index) => {
+      const subPath = pathParts.slice(0, index + 1).join('/');
+      breadcrumbs.push({
+        id: folder.id,
+        name: part,
+        path: subPath
+      });
+    });
+
+    return breadcrumbs;
+  };
+
+  const handleFolderClick = (folder) => {
+    setSelectedFolder(folder);
+    setBreadcrumbPath(buildBreadcrumbPath(folder));
+    toggleFolder(folder.path);
+  };
+
+  const handleBreadcrumbClick = (index) => {
+    const targetBreadcrumb = breadcrumbPath[index];
+    if (index === 0) {
+      // Navigate to root
+      setSelectedFolder(null);
+      setBreadcrumbPath([{ id: null, name: 'Project Files', path: '' }]);
+    } else {
+      // Navigate to folder
+      setSelectedFolder(targetBreadcrumb);
+      setBreadcrumbPath(breadcrumbPath.slice(0, index + 1));
+    }
+  };
+
+  const handleNavigateUp = () => {
+    if (breadcrumbPath.length > 1) {
+      const newPath = breadcrumbPath.slice(0, -1);
+      setBreadcrumbPath(newPath);
+      if (newPath.length === 1) {
+        setSelectedFolder(null);
+      } else {
+        setSelectedFolder(newPath[newPath.length - 1]);
+      }
+    }
   };
 
   // Drag and drop handlers
@@ -399,13 +456,10 @@ export const FileExplorer = ({ onFileSelect, selectedFile }) => {
               className={`flex items-center gap-2 py-1.5 px-2 hover:bg-muted rounded cursor-pointer select-none ${
                 level > 0 ? '' : ''
               } ${selectedFolder?.id === node.id ? 'bg-accent' : ''}`}
-              onClick={() => {
-                toggleFolder(node.path);
-                setSelectedFolder(node);
-              }}
+              onClick={() => handleFolderClick(node)}
               onContextMenu={(e) => {
                 e.preventDefault();
-                setSelectedFolder(node);
+                handleFolderClick(node);
               }}
               style={{ paddingLeft: `${level * 16 + 8}px` }}
             >
@@ -655,6 +709,42 @@ export const FileExplorer = ({ onFileSelect, selectedFile }) => {
           accept=".pdf,.docx,.md,.py,.r,.js,.csv,.xlsx,.json"
         />
       </div>
+
+      {/* Breadcrumb Navigation */}
+      {breadcrumbPath.length > 1 && (
+        <div className="px-4 py-2 border-b border-border flex items-center gap-1 flex-shrink-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 px-1"
+            onClick={handleNavigateUp}
+            disabled={breadcrumbPath.length <= 1}
+            title="Navigate up"
+          >
+            <ArrowUp className="h-3.5 w-3.5" />
+          </Button>
+          <div className="flex items-center gap-1 text-xs overflow-hidden">
+            {breadcrumbPath.map((crumb, index) => (
+              <React.Fragment key={index}>
+                {index > 0 && (
+                  <ChevronRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                )}
+                <button
+                  onClick={() => handleBreadcrumbClick(index)}
+                  className={`hover:text-foreground transition-colors flex items-center gap-1 ${
+                    index === breadcrumbPath.length - 1
+                      ? 'text-foreground font-medium'
+                      : 'text-muted-foreground'
+                  }`}
+                >
+                  {index === 0 && <Home className="h-3 w-3 flex-shrink-0" />}
+                  <span className="truncate max-w-[100px]">{crumb.name}</span>
+                </button>
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* File tree */}
       <ScrollArea className="flex-1">
