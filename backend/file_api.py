@@ -246,10 +246,14 @@ async def get_file_details(
 @router.get("/files/{file_id}/download")
 async def download_file(
     file_id: str,
+    disposition: str = "attachment",
     db: AsyncSession = Depends(get_db)
 ):
     """
     Download a file by ID.
+
+    Query parameters:
+    - disposition: "attachment" (default, forces download) or "inline" (for viewing in browser)
 
     For S3/R2 storage: Returns a JSON response with a presigned URL
     For local storage: Streams the file directly
@@ -295,7 +299,8 @@ async def download_file(
             return FileResponse(
                 path=file.storage_path,
                 filename=file.name,
-                media_type=file.mime_type or "application/octet-stream"
+                media_type=file.mime_type or "application/octet-stream",
+                content_disposition_type=disposition
             )
         else:
             # Unknown storage backend

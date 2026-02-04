@@ -16,9 +16,12 @@ import {
   Loader2,
   FileText,
   HardDrive,
-  Eye
+  Eye,
+  Download
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { filesApi } from '../../lib/api';
+import { useState, useEffect } from 'react';
 
 const MetadataItem = ({ icon: Icon, label, value, mono = false }) => (
   <div className="flex items-start gap-2 py-1.5">
@@ -60,6 +63,56 @@ export const Inspector = () => {
     selectedPaper,
     selectedFile
   } = useProject();
+
+  // File preview state
+  const [fileContent, setFileContent] = useState(null);
+  const [fileContentLoading, setFileContentLoading] = useState(false);
+  const [fileContentError, setFileContentError] = useState(null);
+
+  // Fetch file content when a file is selected
+  useEffect(() => {
+    const fetchFileContent = async () => {
+      if (!selectedFile) {
+        setFileContent(null);
+        setFileContentError(null);
+        return;
+      }
+
+      // Only fetch content for text-based files
+      const textExtensions = ['.md', '.py', '.r', '.js', '.jsx', '.ts', '.tsx', '.html', '.css', '.json', '.csv', '.txt'];
+      const isTextFile = textExtensions.some(ext => selectedFile.name.toLowerCase().endsWith(ext));
+
+      if (!isTextFile) {
+        setFileContent(null);
+        setFileContentError(null);
+        return;
+      }
+
+      setFileContentLoading(true);
+      setFileContentError(null);
+
+      try {
+        const result = await filesApi.downloadFile(selectedFile.id);
+
+        // Fetch the actual file content from the download URL
+        const response = await fetch(result.download_url);
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch file: ${response.statusText}`);
+        }
+
+        const content = await response.text();
+        setFileContent(content);
+      } catch (error) {
+        console.error('Error fetching file content:', error);
+        setFileContentError(error.message);
+      } finally {
+        setFileContentLoading(false);
+      }
+    };
+
+    fetchFileContent();
+  }, [selectedFile]);
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
@@ -140,35 +193,82 @@ export const Inspector = () => {
           <Separator />
 
           {/* Type-specific Metadata */}
-          {itemType === 'file' && (
-            <div className="space-y-0.5">
-              <MetadataItem icon={FileType} label="File Type" value={item.mime_type || 'Unknown'} />
-              <MetadataItem icon={HardDrive} label="Size" value={item.size_bytes ? `${(item.size_bytes / 1024).toFixed(1)} KB` : 'Unknown'} />
-              {item.path && (
-                <MetadataItem icon={Hash} label="Path" value={item.path} mono />
-              )}
-              {item.tags && Object.keys(item.tags).length > 0 && (
-                <div className="mt-2 p-2 bg-muted/50 rounded-md">
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">Metadata</span>
-                  <pre className="text-[10px] font-mono overflow-x-auto">
-                    {JSON.stringify(item.tags, null, 2)}
-                  </pre>
-                </div>
-              )}
-              {item.mime_type?.includes('pdf') && item.tags?.page_count && (
-                <MetadataItem icon={FileText} label="Pages" value={item.tags.page_count} />
-              )}
-              {item.mime_type?.includes('text') && (
-                <div className="py-1.5">
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">Preview</span>
-                  <div className="text-xs bg-muted/50 p-2 rounded max-h-32 overflow-y-auto font-mono">
-                    <Eye className="h-3 w-3 inline mr-1 text-muted-foreground" />
-                    <span className="text-muted-foreground">Preview not available in Inspector</span>
+          {itemType === 'file' && (() => {
+            const textExtensions = ['.md', '.py', '.r', '.js', '.jsx', '.ts', '.tsx', '.html', '.css', '.json', '.csv', '.txt'];
+            const isTextFile = textExtensions.some(ext => item.name?.toLowerCase().endsWith(ext));
+
+            return (
+              <div className="space-y-0.5">
+                <MetadataItem icon={FileType} label="File Type" value={item.mime_type || 'Unknown'} />
+                <MetadataItem icon={HardDrive} label="Size" value={item.size_bytes ? `${(item.size_bytes / 1024).toFixed(1)} KB` : 'Unknown'} />
+                {item.path && (
+                  <MetadataItem icon={Hash} label="Path" value={item.path} mono />
+                )}
+                {item.tags && Object.keys(item.tags).length > 0 && (
+                  <div className="mt-2 p-2 bg-muted/50 rounded-md">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">Metadata</span>
+                    <pre className="text-[10px] font-mono overflow-x-auto">
+                      {JSON.stringify(item.tags, null, 2)}
+                    </pre>
                   </div>
+                )}
+                {item.mime_type?.includes('pdf') && item.tags?.page_count && (
+                  <MetadataItem icon={FileText} label="Pages" value={item.tags.page_count} />
+                )}
+
+                {/* File preview for text files */}
+                {isTextFile && (
+                  <div className="py-1.5">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">Preview</span>
+
+                    {/* File content preview */}
+                    <div className="bg-muted/50 p-2 rounded max-h-64 overflow-y-auto">
+                      {fileContentLoading && (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          <span className="text-xs">Loading preview...</span>
+                        </div>
+                      )}
+
+                      {fileContentError && (
+                        <div className="text-xs text-red-400">
+                          <Eye className="h-3 w-3 inline mr-1" />
+                          Failed to load preview: {fileContentError}
+                        </div>
+                      )}
+
+                      {!fileContentLoading && !fileContentError && fileContent && (
+                        <pre className="text-[10px] font-mono whitespace-pre-wrap break-words">
+                          {fileContent}
+                        </pre>
+                      )}
+
+                      {!fileContentLoading && !fileContentError && !fileContent && (
+                        <div className="text-xs text-muted-foreground">
+                          <Eye className="h-3 w-3 inline mr-1" />
+                          Preview not available for this file type
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Download button for all file types */}
+                <div className="py-1.5">
+                  <a
+                    href={`/api/files/files/${item.id}/download`}
+                    download={item.name}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-blue-500 hover:underline flex items-center gap-1"
+                  >
+                    <Download className="h-3 w-3" />
+                    Download {item.name}
+                  </a>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            );
+          })()}
 
           {itemType === 'project' && (
             <div className="space-y-0.5">

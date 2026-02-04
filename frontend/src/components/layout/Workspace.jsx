@@ -10,6 +10,7 @@ import { RichTextEditor } from '../editor/RichTextEditor';
 import { TaskGraph, AgentGraph } from '../graphs/TaskGraph';
 import { FileExplorer } from '../explorer/FileExplorer';
 import { TaskErrorRecovery } from '../tasks/TaskErrorRecovery';
+import { FileViewer } from '../files/FileViewer';
 import {
   Play,
   FileText,
@@ -42,7 +43,9 @@ export const Workspace = () => {
     selectedArtifact, 
     selectedPaper,
     setSelectedArtifact,
-    triggerRefresh 
+    selectedFile,
+    setSelectedFile,
+    triggerRefresh
   } = useProject();
   
   const [executing, setExecuting] = useState(false);
@@ -53,7 +56,6 @@ export const Workspace = () => {
   const [exporting, setExporting] = useState(false);
   const [tasks, setTasks] = useState([]);
   const [fileTree, setFileTree] = useState(null);
-  const [selectedFile, setSelectedFile] = useState(null);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [saving, setSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -176,6 +178,13 @@ export const Workspace = () => {
       ws.close();
     };
   }, [selectedProject, triggerRefresh, fetchGraphs, fetchTasks]);
+
+  // Switch to files tab when a file is selected in Navigator
+  useEffect(() => {
+    if (selectedFile && activeTab !== 'files') {
+      setActiveTab('files');
+    }
+  }, [selectedFile, activeTab]);
 
   const handleExecuteAll = useCallback(async () => {
     if (!selectedProject) return;
@@ -415,30 +424,8 @@ export const Workspace = () => {
               </div>
 
               {/* File Preview - Main Area */}
-              <div className="flex-1 p-4">
-                {selectedFile ? (
-                  <div className="h-full flex flex-col">
-                    <div className="mb-4 pb-2 border-b">
-                      <h3 className="text-lg font-semibold">{selectedFile.name}</h3>
-                      <p className="text-sm text-muted-foreground">{selectedFile.path}</p>
-                    </div>
-                    <div className="flex-1 flex items-center justify-center border-2 border-dashed border-border rounded-lg">
-                      <div className="text-center">
-                        <FileText className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground">File preview coming soon</p>
-                        <p className="text-xs text-muted-foreground mt-1">Type: {selectedFile.fileType || 'unknown'}</p>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-full flex items-center justify-center border-2 border-dashed border-border rounded-lg">
-                    <div className="text-center">
-                      <FileText className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground">Select a file to preview</p>
-                      <p className="text-xs text-muted-foreground mt-1">Supports PDF, MD, JSON, CSV, code files</p>
-                    </div>
-                  </div>
-                )}
+              <div className="flex-1 min-h-0 overflow-hidden">
+                <FileViewer file={selectedFile} />
               </div>
             </div>
           </TabsContent>
