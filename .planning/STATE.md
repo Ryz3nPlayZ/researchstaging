@@ -10,29 +10,30 @@ See: .planning/PROJECT.md (updated 2025-02-01)
 ## Current Position
 
 Phase: 2 of 8 (File & Project Management)
-Plan: Not started
-Status: Phase 1 complete, verified (4/4 truths). Ready to plan Phase 2.
-Last activity: 2025-02-01 — Completed Phase 1 (Authentication & User Management)
+Plan: 1 of 4 complete (02-01)
+Status: Phase 2 in progress. File validation and metadata extraction complete.
+Last activity: 2026-02-03 — Completed plan 02-01 (File Management API Enhancement)
 
-Progress: ██░░░░░░░░ 12.5% (1/8 phases complete)
+Progress: ███░░░░░░░ 25% (2/8 phases complete, 1/4 plans in Phase 2)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
-- Average duration: 10 min
-- Total execution time: 0.33 hours
+- Total plans completed: 3
+- Average duration: 7 min
+- Total execution time: 0.58 hours
 
 **By Phase:**
 
 | Phase | Plans Complete | Total Plans | Avg/Plan |
 |-------|----------------|-------------|----------|
 | 01-authentication | 2 | 2 | 10 min |
-| 02-08 | — | — | — |
+| 02-file-management | 1 | 4 | 2 min |
+| 03-08 | — | — | — |
 
 **Recent Trend:**
-- Last 5 plans: 16 min, 4 min (01-01, 01-02)
-- Trend: Insufficient data
+- Last 5 plans: 16 min, 4 min, 2 min (01-01, 01-02, 02-01)
+- Trend: Accelerating (simpler plans, faster execution)
 
 *Updated after each plan completion*
 
@@ -51,6 +52,12 @@ Recent decisions affecting current work:
 **From 01-02 (Gap Closure):**
 4. **React Hooks compliance** — All React hooks must be called before any conditional returns or early returns. This required reorganizing AppContent to move useCallback hooks before loading checks.
 
+**From 02-01 (File Management API Enhancement):**
+5. **Store metadata in File.tags JSONB field** — Reused existing column instead of adding new metadata column to File model. This avoids schema migration and leverages existing JSONB storage.
+6. **Auto-rename duplicate files** — Better UX to auto-rename duplicates with "filename (N).ext" pattern instead of rejecting uploads.
+7. **Configurable MAX_FILE_SIZE via env var** — Default 50MB but operators can increase without code changes for large research datasets.
+8. **Custom exception hierarchy for file errors** — FileServiceError → UnsupportedFileTypeError, FileTooLargeError for structured error handling.
+
 ### Pending Todos
 
 None yet.
@@ -59,6 +66,9 @@ None yet.
 
 **From 01-01:**
 - **OAuth domain requirement** — Real Google OAuth requires production domain. Plan to restore OAuth code once domain is acquired. Current mock auth is sufficient for local development and testing.
+
+**From 02-01:**
+- No blockers identified. File validation, duplicate handling, and metadata extraction operational.
 
 ### Patterns Established
 
@@ -70,9 +80,15 @@ None yet.
 5. **Comment-out pattern** — When deferring features, comment out code (not delete) with clear restoration instructions
 6. **React Hooks ordering** — All hooks must be called before any early returns to comply with Rules of Hooks
 
+**From 02-01 (File Management):**
+7. **Custom exception hierarchy** — FileServiceError base class with specific subclasses (UnsupportedFileTypeError, FileTooLargeError) for structured error handling
+8. **Metadata extraction pattern** — Type-specific extractor functions with fallback to empty dict on failure
+9. **Transaction safety** — All DB operations wrapped in try/except with rollback on errors
+10. **Async validation pipeline** — File type → size → duplicates → metadata → storage in async sequence
+
 ## Session Continuity
 
-Last session: 2025-02-01
-Stopped at: Completed Phase 1 (Authentication & User Management)
-Resume file: .planning/phases/01-authentication/01-authentication-VERIFICATION.md
-Next: Plan Phase 2 (File & Project Management)
+Last session: 2026-02-03
+Stopped at: Completed plan 02-01 (File Management API Enhancement)
+Resume file: .planning/phases/02-file-management/02-01-SUMMARY.md
+Next: Execute plan 02-02 (File Listing Operations)
