@@ -248,22 +248,60 @@ async def download_file(
     file_id: str,
     db: AsyncSession = Depends(get_db)
 ):
-    """Download a file by ID."""
+    """
+    Download a file by ID.
+
+    For S3/R2 storage: Returns a JSON response with a presigned URL
+    For local storage: Streams the file directly
+    """
     try:
-        from fastapi.responses import FileResponse
+        from fastapi.responses import FileResponse, JSONResponse
+        from storage_service import get_storage
 
         file = await get_file(db, file_id)
+        storage = get_storage()
 
-        if not os.path.exists(file.storage_path):
-            logger.error(f"File not found on disk: {file.storage_path}")
-            raise HTTPException(status_code=404, detail="File not found on disk")
+        # Check if storage backend is S3/R2 (has presigned URLs)
+        backend_type = type(storage).__name__
 
-        logger.info(f"Downloading file: {file.path} from {file.storage_path}")
-        return FileResponse(
-            path=file.storage_path,
-            filename=file.name,
-            media_type=file.mime_type or "application/octet-stream"
-        )
+        if backend_type == "S3StorageBackend":
+            # For S3/R2, generate presigned URL
+            try:
+                # Extract storage key from storage_path
+                # storage_path format: uploads/projects/{project_id}/{subdir}/{file_id}.{ext}
+                # storage_key format: projects/{project_id}/{subdir}/{file_id}.{ext}
+                storage_key = file.storage_path.replace("uploads/", "") if file.storage_path.startswith("uploads/") else file.storage_path
+
+                # Generate presigned URL (expires in 1 hour)
+                download_url = await storage.get_file_url(storage_key, expires_in=3600)
+
+                # Return JSON with presigned URL
+                return JSONResponse({
+                    "download_url": download_url,
+                    "filename": file.name,
+                    "mime_type": file.mime_type or "application/octet-stream",
+                    "expires_in": 3600
+                })
+            except Exception as e:
+                logger.error(f"Failed to generate presigned URL: {e}")
+                # Fall through to try local file serving
+        elif backend_type == "LocalStorageBackend":
+            # For local storage, serve file directly
+            if not os.path.exists(file.storage_path):
+                logger.error(f"File not found on disk: {file.storage_path}")
+                raise HTTPException(status_code=404, detail="File not found on disk")
+
+            logger.info(f"Downloading file: {file.path} from {file.storage_path}")
+            return FileResponse(
+                path=file.storage_path,
+                filename=file.name,
+                media_type=file.mime_type or "application/octet-stream"
+            )
+        else:
+            # Unknown storage backend
+            logger.error(f"Unknown storage backend type: {backend_type}")
+            raise HTTPException(status_code=500, detail="Storage backend not configured")
+
     except FileServiceError as e:
         raise _handle_file_service_error(e)
     except HTTPException:

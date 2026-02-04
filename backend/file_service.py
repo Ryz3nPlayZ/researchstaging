@@ -3,6 +3,7 @@ File Service
 
 Handles file and folder operations for project workspaces.
 Supports upload, download, CRUD operations, and organization.
+Uses storage abstraction layer for backend-agnostic file operations.
 """
 import os
 import hashlib
@@ -17,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import Folder, File, Project
 from database.models import utc_now
+from storage_service import get_storage
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +27,7 @@ UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "uploads")
 PROJECTS_DIR = os.path.join(UPLOAD_DIR, "projects")
 MAX_FILE_SIZE = int(os.environ.get("MAX_FILE_SIZE", str(50 * 1024 * 1024)))  # 50MB default
 
-# Ensure upload directory exists
+# Ensure upload directory exists (for local storage fallback)
 os.makedirs(PROJECTS_DIR, exist_ok=True)
 
 # Supported file types and their mime types
@@ -99,10 +101,19 @@ def _get_project_storage_path(project_id: str) -> str:
     return os.path.join(PROJECTS_DIR, project_id)
 
 
+def _get_file_storage_key(project_id: str, file_id: str, extension: str) -> str:
+    """
+    Get the storage key for a specific file.
+    This key is used by the storage backend (local, S3, or R2).
+    Format: projects/{project_id}/{subdir}/{file_id}.{extension}
+    """
+    subdir = file_id[:2]
+    return f"projects/{project_id}/{subdir}/{file_id}.{extension}"
+
+
 def _get_file_storage_path(project_id: str, file_id: str, extension: str) -> str:
-    """Get the storage path for a specific file."""
+    """Get the local storage path for a specific file (legacy, for compatibility)."""
     project_path = _get_project_storage_path(project_id)
-    # Organize by first 2 chars of file ID for distribution
     subdir = file_id[:2]
     return os.path.join(project_path, subdir, f"{file_id}.{extension}")
 
@@ -505,16 +516,32 @@ async def upload_file(
         # Generate path
         path = f"{folder_path}/{storage_name}".replace("//", "/").strip("/")
 
-        # Store file on disk
+        # Get storage backend
+        storage = get_storage()
+
+        # Store file using storage backend
+        storage_key = _get_file_storage_key(project_id, file_id, extension)
+        await storage.upload_file(storage_key, content, metadata={"filename": filename})
+
+        # For local storage, also maintain legacy storage_path for compatibility
         storage_path = _get_file_storage_path(project_id, file_id, extension)
-        os.makedirs(os.path.dirname(storage_path), exist_ok=True)
 
-        with open(storage_path, "wb") as f:
-            f.write(content)
-
-        # Extract metadata
+        # Extract metadata (save to temp file for metadata extraction)
         try:
-            metadata = _extract_file_metadata(storage_path, extension)
+            # For metadata extraction, save to temp file
+            import tempfile
+            with tempfile.NamedTemporaryFile(delete=False, suffix=extension) as tmp_file:
+                tmp_file.write(content)
+                tmp_path = tmp_file.name
+
+            metadata = _extract_file_metadata(tmp_path, extension)
+
+            # Clean up temp file
+            try:
+                os.unlink(tmp_path)
+            except Exception as cleanup_error:
+                logger.warning(f"Failed to clean up temp file {tmp_path}: {cleanup_error}")
+
         except Exception as e:
             logger.warning(f"Metadata extraction failed for {filename}: {e}")
             metadata = {}
@@ -642,12 +669,25 @@ async def delete_file(
     if not file:
         raise FileServiceError(status_code=404, detail="File not found")
 
-    # Delete from disk
+    # Delete from storage backend
+    storage = get_storage()
+    try:
+        # Extract storage key from storage_path
+        # storage_path format: uploads/projects/{project_id}/{subdir}/{file_id}.{ext}
+        # storage_key format: projects/{project_id}/{subdir}/{file_id}.{ext}
+        if file.storage_path:
+            # Convert local path to storage key
+            storage_key = file.storage_path.replace(UPLOAD_DIR + "/", "").replace(UPLOAD_DIR, "")
+            await storage.delete_file(storage_key)
+    except Exception as e:
+        logger.error(f"Failed to delete file from storage: {e}")
+
+    # Also try to delete from local disk if it exists (for migration compatibility)
     if os.path.exists(file.storage_path):
         try:
             os.remove(file.storage_path)
         except Exception as e:
-            logger.error(f"Failed to delete file from disk: {e}")
+            logger.debug(f"Local file not found or already deleted: {e}")
 
     # Delete from database
     await db.delete(file)
@@ -898,31 +938,56 @@ async def move_file(
     else:
         file.path = f"project_{file.project_id}/{file.name}"
 
-    # Move physical file
-    old_storage_path = file.storage_path
-    if target_folder:
-        new_storage_path = os.path.join(
-            _get_project_storage_path(file.project_id),
-            target_folder.path.replace(f"project_{file.project_id}/", ''),
-            file.storage_filename
-        )
-    else:
-        new_storage_path = os.path.join(
-            _get_project_storage_path(file.project_id),
-            file.storage_filename
-        )
-
-    # Create target directory if needed
-    os.makedirs(os.path.dirname(new_storage_path), exist_ok=True)
-
-    # Move file
-    if os.path.exists(old_storage_path):
-        import shutil
-        shutil.move(old_storage_path, new_storage_path)
-        file.storage_path = new_storage_path
+    # Note: For cloud storage, moving files between folders would require
+    # re-uploading with new storage key. For now, we only update the database path.
+    # The storage_path remains the same - this is a limitation we can address later.
 
     await db.commit()
     await db.refresh(file)
 
     logger.info(f"Moved file: {old_path} -> {file.path}")
     return file
+
+
+async def get_file_download_url(
+    db: AsyncSession,
+    file_id: str,
+    expires_in: int = 3600
+) -> dict:
+    """
+    Get download URL for a file.
+
+    For S3/R2: Returns presigned URL
+    For local: Returns None (caller should use direct file serving)
+
+    Args:
+        db: Database session
+        file_id: File ID
+        expires_in: URL expiration time in seconds (default 3600)
+
+    Returns:
+        Dict with 'url' and 'expires_in' keys, or None for local storage
+    """
+    from storage_service import get_storage
+
+    file = await db.get(File, file_id)
+    if not file:
+        raise FileServiceError(status_code=404, detail=f"File {file_id} not found")
+
+    storage = get_storage()
+    backend_type = type(storage).__name__
+
+    if backend_type == "S3StorageBackend":
+        # Extract storage key from storage_path
+        storage_key = file.storage_path.replace("uploads/", "") if file.storage_path.startswith("uploads/") else file.storage_path
+
+        # Generate presigned URL
+        url = await storage.get_file_url(storage_key, expires_in=expires_in)
+        return {
+            "url": url,
+            "expires_in": expires_in,
+            "filename": file.name
+        }
+    else:
+        # Local storage - return None to indicate direct file serving
+        return None
