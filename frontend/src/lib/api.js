@@ -63,6 +63,10 @@ export const statsApi = {
 export const filesApi = {
   // Folders
   createFolder: (projectId, data) => api.post(`/files/projects/${projectId}/folders`, data),
+  renameFolder: (folderId, name) => api.patch(`/files/folders/${folderId}/rename`, { name }),
+  deleteFolder: (folderId, recursive = false) => api.delete(`/files/folders/${folderId}`, {
+    params: { recursive }
+  }),
 
   // Files
   uploadFile: (projectId, file, folderId = null, description = null) => {
@@ -86,6 +90,7 @@ export const filesApi = {
     return `${BACKEND_URL}/api/files/files/${fileId}/download`;
   },
   deleteFile: (fileId) => api.delete(`/files/files/${fileId}`),
+  moveFile: (fileId, folderId) => api.patch(`/files/files/${fileId}/move`, { folder_id: folderId }),
 };
 
 // WebSocket connection for real-time updates

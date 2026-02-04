@@ -18,6 +18,9 @@ from file_service import (
     get_file,
     delete_file,
     get_project_file_tree,
+    rename_folder,
+    delete_folder,
+    move_file,
     FileServiceError,
     UnsupportedFileTypeError,
     FileTooLargeError,
@@ -283,4 +286,88 @@ async def delete_project_file(
         raise _handle_file_service_error(e)
     except Exception as e:
         logger.error(f"Failed to delete file: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch(
+    "/folders/{folder_id}/rename",
+    response_model=FolderResponse,
+    responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}}
+)
+async def rename_project_folder(
+    folder_id: str,
+    data: dict,
+    db: AsyncSession = Depends(get_db)
+):
+    """Rename a folder."""
+    try:
+        new_name = data.get("name")
+        if not new_name:
+            raise HTTPException(status_code=400, detail="Name is required")
+
+        folder = await rename_folder(db, folder_id, new_name)
+        return FolderResponse(
+            id=folder.id,
+            name=folder.name,
+            path=folder.path,
+            description=folder.description,
+            file_count=folder.file_count,
+            created_at=folder.created_at.isoformat()
+        )
+    except FileServiceError as e:
+        raise _handle_file_service_error(e)
+    except Exception as e:
+        logger.error(f"Failed to rename folder: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete(
+    "/folders/{folder_id}",
+    responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}}
+)
+async def delete_project_folder(
+    folder_id: str,
+    recursive: bool = Query(False, description="Delete folder and all contents"),
+    db: AsyncSession = Depends(get_db)
+):
+    """Delete a folder."""
+    try:
+        await delete_folder(db, folder_id, recursive=recursive)
+        return {"message": "Folder deleted successfully"}
+    except FileServiceError as e:
+        raise _handle_file_service_error(e)
+    except Exception as e:
+        logger.error(f"Failed to delete folder: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch(
+    "/files/{file_id}/move",
+    response_model=FileResponse,
+    responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}}
+)
+async def move_project_file(
+    file_id: str,
+    data: dict,
+    db: AsyncSession = Depends(get_db)
+):
+    """Move a file to a different folder."""
+    try:
+        target_folder_id = data.get("folder_id")
+        file = await move_file(db, file_id, target_folder_id)
+        return FileResponse(
+            id=file.id,
+            name=file.name,
+            file_type=file.file_type,
+            path=file.path,
+            description=file.description,
+            size_bytes=file.size_bytes,
+            mime_type=file.mime_type,
+            created_at=file.created_at.isoformat(),
+            metadata=file.tags if file.tags else None
+        )
+    except FileServiceError as e:
+        raise _handle_file_service_error(e)
+    except Exception as e:
+        logger.error(f"Failed to move file: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

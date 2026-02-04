@@ -764,3 +764,165 @@ async def get_project_file_tree(
         tree["children"].append(file_node)
 
     return tree
+
+
+async def rename_folder(
+    db: AsyncSession,
+    folder_id: str,
+    new_name: str
+) -> Folder:
+    """Rename a folder."""
+    if not new_name or not new_name.strip():
+        raise FileServiceError(status_code=400, detail="Folder name cannot be empty")
+
+    folder = await db.get(Folder, folder_id)
+    if not folder:
+        raise FileServiceError(status_code=404, detail=f"Folder {folder_id} not found")
+
+    # Check if name already exists in same parent
+    parent_id = folder.parent_folder_id
+    existing = await db.execute(
+        select(Folder).where(
+            Folder.parent_folder_id == parent_id,
+            Folder.name == new_name.strip(),
+            Folder.id != folder_id
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise FileServiceError(
+            status_code=400,
+            detail=f"Folder '{new_name}' already exists in this location"
+        )
+
+    old_path = folder.path
+    folder.name = new_name.strip()
+
+    # Update path (rebuild from parent or project root)
+    if parent_id:
+        parent = await db.get(Folder, parent_id)
+        folder.path = f"{parent.path}/{folder.name}"
+    else:
+        folder.path = f"project_{folder.project_id}/{folder.name}"
+
+    await db.commit()
+    await db.refresh(folder)
+
+    logger.info(f"Renamed folder: {old_path} -> {folder.path}")
+    return folder
+
+
+async def delete_folder(
+    db: AsyncSession,
+    folder_id: str,
+    recursive: bool = False
+) -> None:
+    """Delete a folder.
+
+    If recursive=True, delete all contents. Otherwise, only delete if empty.
+    """
+    folder = await db.get(Folder, folder_id)
+    if not folder:
+        raise FileServiceError(status_code=404, detail=f"Folder {folder_id} not found")
+
+    # Check if folder has contents
+    subfolder_result = await db.execute(
+        select(Folder).where(Folder.parent_folder_id == folder_id)
+    )
+    subfolder_count = len(subfolder_result.scalars().all())
+
+    file_result = await db.execute(
+        select(File).where(File.folder_id == folder_id)
+    )
+    file_count = len(file_result.scalars().all())
+
+    if not recursive and (subfolder_count > 0 or file_count > 0):
+        raise FileServiceError(
+            status_code=400,
+            detail=f"Folder is not empty ({subfolder_count} subfolders, {file_count} files). Use recursive=True to delete."
+        )
+
+    # Recursively delete contents
+    if recursive:
+        # Delete subfolders
+        subfolders = await db.execute(
+            select(Folder).where(Folder.parent_folder_id == folder_id)
+        )
+        for subfolder in subfolders.scalars().all():
+            await delete_folder(db, subfolder.id, recursive=True)
+
+        # Delete files
+        files = await db.execute(
+            select(File).where(File.folder_id == folder_id)
+        )
+        for file in files.scalars().all():
+            await delete_file(db, file.id)
+
+    # Delete the folder
+    await db.delete(folder)
+    await db.commit()
+
+    logger.info(f"Deleted folder: {folder.path}")
+
+
+async def move_file(
+    db: AsyncSession,
+    file_id: str,
+    target_folder_id: Optional[str] = None
+) -> File:
+    """Move a file to a different folder (or to root)."""
+    file = await db.get(File, file_id)
+    if not file:
+        raise FileServiceError(status_code=404, detail=f"File {file_id} not found")
+
+    # If target folder specified, verify it exists
+    if target_folder_id:
+        target_folder = await db.get(Folder, target_folder_id)
+        if not target_folder:
+            raise FileServiceError(status_code=404, detail=f"Target folder {target_folder_id} not found")
+
+        # Verify folder belongs to same project
+        if target_folder.project_id != file.project_id:
+            raise FileServiceError(
+                status_code=400,
+                detail="Cannot move file to a different project"
+            )
+    else:
+        target_folder = None
+
+    old_path = file.path
+    file.folder_id = target_folder_id
+
+    # Update file path
+    if target_folder:
+        file.path = f"{target_folder.path}/{file.name}"
+    else:
+        file.path = f"project_{file.project_id}/{file.name}"
+
+    # Move physical file
+    old_storage_path = file.storage_path
+    if target_folder:
+        new_storage_path = os.path.join(
+            _get_project_storage_path(file.project_id),
+            target_folder.path.replace(f"project_{file.project_id}/", ''),
+            file.storage_filename
+        )
+    else:
+        new_storage_path = os.path.join(
+            _get_project_storage_path(file.project_id),
+            file.storage_filename
+        )
+
+    # Create target directory if needed
+    os.makedirs(os.path.dirname(new_storage_path), exist_ok=True)
+
+    # Move file
+    if os.path.exists(old_storage_path):
+        import shutil
+        shutil.move(old_storage_path, new_storage_path)
+        file.storage_path = new_storage_path
+
+    await db.commit()
+    await db.refresh(file)
+
+    logger.info(f"Moved file: {old_path} -> {file.path}")
+    return file
