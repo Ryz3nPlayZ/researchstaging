@@ -5,6 +5,7 @@ REST API for file and folder operations.
 """
 import os
 import logging
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
@@ -16,7 +17,10 @@ from file_service import (
     list_project_files,
     get_file,
     delete_file,
-    get_project_file_tree
+    get_project_file_tree,
+    FileServiceError,
+    UnsupportedFileTypeError,
+    FileTooLargeError,
 )
 
 logger = logging.getLogger(__name__)
@@ -24,18 +28,19 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/files", tags=["files"])
 
 
-# Request/Response Models
+# ============== Request/Response Models ==============
+
 class FolderCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
-    parent_folder_id: str = Field(None)
-    description: str = Field(None)
+    parent_folder_id: Optional[str] = Field(None)
+    description: Optional[str] = Field(None)
 
 
 class FolderResponse(BaseModel):
     id: str
     name: str
     path: str
-    description: str | None
+    description: Optional[str]
     file_count: int
     created_at: str
 
@@ -45,9 +50,11 @@ class FileResponse(BaseModel):
     name: str
     file_type: str
     path: str
-    description: str | None
+    description: Optional[str]
     size_bytes: int
+    mime_type: Optional[str]
     created_at: str
+    metadata: Optional[dict] = Field(None)
 
 
 class FileTreeResponse(BaseModel):
@@ -55,13 +62,47 @@ class FileTreeResponse(BaseModel):
     name: str
     type: str
     path: str
-    description: str | None
-    fileType: str | None
-    children: list = []
+    description: Optional[str]
+    fileType: Optional[str] = Field(None)
+    size_bytes: Optional[int] = Field(None)
+    mime_type: Optional[str] = Field(None)
+    metadata: Optional[dict] = Field(None)
+    children: list = Field(default_factory=list)
 
 
-# Endpoints
-@router.post("/projects/{project_id}/folders", response_model=FolderResponse)
+class ErrorResponse(BaseModel):
+    detail: str
+    error_type: Optional[str] = Field(None)
+
+
+# ============== Helper Functions ==============
+
+def _handle_file_service_error(e: FileServiceError) -> HTTPException:
+    """Convert FileServiceError to appropriate HTTP response."""
+    if isinstance(e, UnsupportedFileTypeError):
+        return HTTPException(
+            status_code=400,
+            detail={"error_type": "unsupported_file_type", "detail": e.detail}
+        )
+    elif isinstance(e, FileTooLargeError):
+        return HTTPException(
+            status_code=413,
+            detail={"error_type": "file_too_large", "detail": e.detail}
+        )
+    else:
+        return HTTPException(
+            status_code=e.status_code,
+            detail={"error_type": "file_service_error", "detail": e.detail}
+        )
+
+
+# ============== Endpoints ==============
+
+@router.post(
+    "/projects/{project_id}/folders",
+    response_model=FolderResponse,
+    responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}}
+)
 async def create_project_folder(
     project_id: str,
     data: FolderCreate,
@@ -84,22 +125,37 @@ async def create_project_folder(
             file_count=folder.file_count,
             created_at=folder.created_at.isoformat()
         )
-    except HTTPException:
-        raise
+    except FileServiceError as e:
+        raise _handle_file_service_error(e)
     except Exception as e:
         logger.error(f"Failed to create folder: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.post("/projects/{project_id}/files/upload", response_model=FileResponse)
+@router.post(
+    "/projects/{project_id}/files/upload",
+    response_model=FileResponse,
+    responses={
+        400: {"model": ErrorResponse},
+        404: {"model": ErrorResponse},
+        413: {"model": ErrorResponse}
+    }
+)
 async def upload_project_file(
     project_id: str,
     file: UploadFile,
-    folder_id: str = Query(None),
-    description: str = Query(None),
+    folder_id: Optional[str] = Query(None),
+    description: Optional[str] = Query(None),
     db: AsyncSession = Depends(get_db)
 ):
-    """Upload a file to a project."""
+    """
+    Upload a file to a project.
+
+    Supported file types: PDF, DOCX, MD, PY, R, JS, CSV, XLSX
+    Maximum file size: 50MB (configurable via MAX_FILE_SIZE env var)
+
+    Duplicate files are automatically renamed with a counter: file (1).ext
+    """
     try:
         file_record = await upload_file(
             db=db,
@@ -108,6 +164,7 @@ async def upload_project_file(
             folder_id=folder_id,
             description=description
         )
+
         return FileResponse(
             id=file_record.id,
             name=file_record.name,
@@ -115,17 +172,22 @@ async def upload_project_file(
             path=file_record.path,
             description=file_record.description,
             size_bytes=file_record.size_bytes,
-            created_at=file_record.created_at.isoformat()
+            mime_type=file_record.mime_type,
+            created_at=file_record.created_at.isoformat(),
+            metadata=file_record.tags if file_record.tags else None
         )
-    except HTTPException:
-        raise
+    except FileServiceError as e:
+        raise _handle_file_service_error(e)
     except Exception as e:
         logger.error(f"Failed to upload file: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail={"error_type": "internal_error", "detail": str(e)}
+        )
 
 
 @router.get("/projects/{project_id}/files", response_model=list[dict])
-async def list_project_files(
+async def list_project_files_endpoint(
     project_id: str,
     db: AsyncSession = Depends(get_db)
 ):
@@ -139,7 +201,7 @@ async def list_project_files(
 
 
 @router.get("/projects/{project_id}/files/tree", response_model=FileTreeResponse)
-async def get_project_file_tree(
+async def get_project_file_tree_endpoint(
     project_id: str,
     db: AsyncSession = Depends(get_db)
 ):
@@ -157,7 +219,7 @@ async def get_file_details(
     file_id: str,
     db: AsyncSession = Depends(get_db)
 ):
-    """Get file details by ID."""
+    """Get file details by ID including metadata."""
     try:
         file = await get_file(db, file_id)
         return FileResponse(
@@ -167,10 +229,12 @@ async def get_file_details(
             path=file.path,
             description=file.description,
             size_bytes=file.size_bytes,
-            created_at=file.created_at.isoformat()
+            mime_type=file.mime_type,
+            created_at=file.created_at.isoformat(),
+            metadata=file.tags if file.tags else None
         )
-    except HTTPException:
-        raise
+    except FileServiceError as e:
+        raise _handle_file_service_error(e)
     except Exception as e:
         logger.error(f"Failed to get file: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -188,13 +252,17 @@ async def download_file(
         file = await get_file(db, file_id)
 
         if not os.path.exists(file.storage_path):
+            logger.error(f"File not found on disk: {file.storage_path}")
             raise HTTPException(status_code=404, detail="File not found on disk")
 
+        logger.info(f"Downloading file: {file.path} from {file.storage_path}")
         return FileResponse(
             path=file.storage_path,
             filename=file.name,
             media_type=file.mime_type or "application/octet-stream"
         )
+    except FileServiceError as e:
+        raise _handle_file_service_error(e)
     except HTTPException:
         raise
     except Exception as e:
@@ -202,7 +270,7 @@ async def download_file(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.delete("/files/{file_id}")
+@router.delete("/files/{file_id}", responses={404: {"model": ErrorResponse}})
 async def delete_project_file(
     file_id: str,
     db: AsyncSession = Depends(get_db)
@@ -211,8 +279,8 @@ async def delete_project_file(
     try:
         await delete_file(db, file_id)
         return {"message": "File deleted successfully"}
-    except HTTPException:
-        raise
+    except FileServiceError as e:
+        raise _handle_file_service_error(e)
     except Exception as e:
         logger.error(f"Failed to delete file: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

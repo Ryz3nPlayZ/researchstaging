@@ -7,7 +7,9 @@ Supports upload, download, CRUD operations, and organization.
 import os
 import hashlib
 import logging
-from typing import Optional, List
+import mmap
+import re
+from typing import Optional, List, Dict, Any
 from pathlib import Path
 from fastapi import UploadFile, HTTPException
 from sqlalchemy import select
@@ -21,10 +23,76 @@ logger = logging.getLogger(__name__)
 # Configuration
 UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "uploads")
 PROJECTS_DIR = os.path.join(UPLOAD_DIR, "projects")
+MAX_FILE_SIZE = int(os.environ.get("MAX_FILE_SIZE", str(50 * 1024 * 1024)))  # 50MB default
 
 # Ensure upload directory exists
 os.makedirs(PROJECTS_DIR, exist_ok=True)
 
+# Supported file types and their mime types
+SUPPORTED_FILE_TYPES = {
+    # Documents
+    ".pdf": ["application/pdf"],
+    ".docx": ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+    ".md": ["text/markdown", "text/plain"],
+
+    # Code files
+    ".py": ["text/x-python", "text/plain"],
+    ".r": ["text/x-r", "text/plain"],
+    ".js": ["text/javascript", "application/javascript", "text/plain"],
+
+    # Data files
+    ".csv": ["text/csv", "application/csv", "text/plain"],
+    ".xlsx": ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              "application/vnd.ms-excel",
+              "application/octet-stream"],
+}
+
+# Extensions for validation
+SUPPORTED_EXTENSIONS = set(SUPPORTED_FILE_TYPES.keys())
+
+
+# ============== Custom Exceptions ==============
+
+class FileServiceError(HTTPException):
+    """Base exception for file service errors."""
+    def __init__(self, status_code: int, detail: str):
+        super().__init__(status_code=status_code, detail=detail)
+        logger.error(f"FileServiceError: {detail}")
+
+
+class UnsupportedFileTypeError(FileServiceError):
+    """Raised when file type is not supported."""
+    def __init__(self, filename: str, file_type: str):
+        super().__init__(
+            status_code=400,
+            detail=f"Unsupported file type: {file_type}. Supported types: {', '.join(SUPPORTED_EXTENSIONS)}"
+        )
+        logger.warning(f"Unsupported file type: {filename} ({file_type})")
+
+
+class FileTooLargeError(FileServiceError):
+    """Raised when file exceeds size limit."""
+    def __init__(self, filename: str, size: int, max_size: int):
+        size_mb = size / (1024 * 1024)
+        max_mb = max_size / (1024 * 1024)
+        super().__init__(
+            status_code=413,
+            detail=f"File '{filename}' ({size_mb:.2f}MB) exceeds maximum size ({max_mb:.2f}MB)"
+        )
+        logger.warning(f"File too large: {filename} ({size} bytes)")
+
+
+class FileMetadataExtractionError(FileServiceError):
+    """Raised when metadata extraction fails."""
+    def __init__(self, filename: str, reason: str):
+        super().__init__(
+            status_code=500,
+            detail=f"Failed to extract metadata from '{filename}': {reason}"
+        )
+        logger.error(f"Metadata extraction failed: {filename} - {reason}")
+
+
+# ============== Path Utilities ==============
 
 def _get_project_storage_path(project_id: str) -> str:
     """Get the storage path for a project."""
@@ -39,6 +107,279 @@ def _get_file_storage_path(project_id: str, file_id: str, extension: str) -> str
     return os.path.join(project_path, subdir, f"{file_id}.{extension}")
 
 
+# ============== File Type Validation ==============
+
+def _get_file_extension(filename: str) -> str:
+    """Extract file extension from filename."""
+    _, ext = os.path.splitext(filename.lower())
+    return ext
+
+
+def _is_supported_file_type(extension: str) -> bool:
+    """Check if file extension is supported."""
+    return extension in SUPPORTED_EXTENSIONS
+
+
+def _normalize_mime_type(mime_type: Optional[str]) -> str:
+    """Normalize mime type for consistency."""
+    if not mime_type:
+        return "application/octet-stream"
+    return mime_type.lower().strip()
+
+
+def _validate_file_type(filename: str, declared_mime: Optional[str] = None) -> tuple[str, List[str]]:
+    """
+    Validate file type and return extension with allowed mime types.
+
+    Args:
+        filename: Name of the file
+        declared_mime: Declared mime type from upload
+
+    Returns:
+        Tuple of (extension, allowed_mime_types)
+
+    Raises:
+        UnsupportedFileTypeError: If file type is not supported
+    """
+    extension = _get_file_extension(filename)
+
+    if not _is_supported_file_type(extension):
+        raise UnsupportedFileTypeError(filename, extension)
+
+    allowed_mimes = SUPPORTED_FILE_TYPES[extension]
+    return extension, allowed_mimes
+
+
+def _validate_file_size(content: bytes, filename: str) -> None:
+    """
+    Validate file size against maximum limit.
+
+    Args:
+        content: File content
+        filename: Name of the file
+
+    Raises:
+        FileTooLargeError: If file exceeds size limit
+    """
+    size = len(content)
+    if size > MAX_FILE_SIZE:
+        raise FileTooLargeError(filename, size, MAX_FILE_SIZE)
+
+
+# ============== Duplicate Handling ==============
+
+async def _generate_unique_filename(
+    db: AsyncSession,
+    project_id: str,
+    folder_id: Optional[str],
+    filename: str,
+    folder_path: str = ""
+) -> tuple[str, str]:
+    """
+    Generate a unique filename by appending counter if duplicate exists.
+
+    Args:
+        db: Database session
+        project_id: Project ID
+        folder_id: Folder ID (if any)
+        filename: Original filename
+        folder_path: Path to folder
+
+    Returns:
+        Tuple of (display_name, storage_name)
+    """
+    name, ext = os.path.splitext(filename)
+    counter = 0
+    display_name = filename
+    storage_name = filename
+
+    # Check for duplicates
+    while True:
+        # Build path for checking
+        test_path = f"{folder_path}/{storage_name}".replace("//", "/").strip("/")
+
+        # Check if file with this path exists
+        existing = await db.execute(
+            select(File).where(
+                File.project_id == project_id,
+                File.path == test_path
+            )
+        )
+        exists = existing.first()
+
+        if not exists:
+            # No duplicate found
+            break
+
+        # Duplicate found, increment counter
+        counter += 1
+        storage_name = f"{name} ({counter}){ext}"
+        display_name = storage_name
+
+    return display_name, storage_name
+
+
+# ============== Metadata Extraction ==============
+
+def _extract_pdf_metadata(filepath: str) -> Dict[str, Any]:
+    """Extract metadata from PDF file."""
+    try:
+        import fitz  # PyMuPDF
+        doc = fitz.open(filepath)
+        metadata = {
+            "page_count": doc.page_count,
+            "title": doc.metadata.get("title", ""),
+            "author": doc.metadata.get("author", ""),
+            "subject": doc.metadata.get("subject", ""),
+            "creator": doc.metadata.get("creator", ""),
+        }
+        doc.close()
+        return metadata
+    except Exception as e:
+        logger.warning(f"PDF metadata extraction failed: {e}")
+        return {"page_count": 0}
+
+
+def _extract_csv_metadata(filepath: str) -> Dict[str, Any]:
+    """Extract metadata from CSV file."""
+    try:
+        import pandas as pd
+        df = pd.read_csv(filepath, nrows=0)
+        # Count rows efficiently
+        with open(filepath, 'rb') as f:
+            # Use mmap for large files
+            mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
+            row_count = sum(1 for line in iter(mm.readline, b'')) - 1  # Subtract header
+            mm.close()
+
+        return {
+            "row_count": max(0, row_count),
+            "columns": list(df.columns),
+            "column_count": len(df.columns)
+        }
+    except Exception as e:
+        logger.warning(f"CSV metadata extraction failed: {e}")
+        return {"row_count": 0, "column_count": 0, "columns": []}
+
+
+def _extract_excel_metadata(filepath: str) -> Dict[str, Any]:
+    """Extract metadata from Excel file."""
+    try:
+        import openpyxl
+        wb = openpyxl.load_workbook(filepath, read_only=True, data_only=True)
+
+        sheets_info = {}
+        total_rows = 0
+
+        for sheet_name in wb.sheetnames:
+            sheet = wb[sheet_name]
+            row_count = sheet.max_row
+            col_count = sheet.max_column
+            sheets_info[sheet_name] = {
+                "row_count": row_count,
+                "column_count": col_count
+            }
+            total_rows = max(total_rows, row_count)
+
+        wb.close()
+        return {
+            "sheet_names": wb.sheetnames,
+            "sheet_count": len(wb.sheetnames),
+            "total_rows": total_rows,
+            "sheets": sheets_info
+        }
+    except Exception as e:
+        logger.warning(f"Excel metadata extraction failed: {e}")
+        return {"sheet_count": 0, "sheet_names": [], "sheets": {}}
+
+
+def _extract_code_metadata(filepath: str, extension: str) -> Dict[str, Any]:
+    """Extract metadata from code files."""
+    try:
+        with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+            line_count = sum(1 for _ in f)
+
+        language_map = {
+            ".py": "python",
+            ".r": "r",
+            ".js": "javascript"
+        }
+
+        return {
+            "line_count": line_count,
+            "language": language_map.get(extension, "unknown")
+        }
+    except Exception as e:
+        logger.warning(f"Code metadata extraction failed: {e}")
+        return {"line_count": 0, "language": "unknown"}
+
+
+def _extract_markdown_metadata(filepath: str) -> Dict[str, Any]:
+    """Extract metadata from Markdown file."""
+    try:
+        with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
+            content = f.read()
+            line_count = len(content.splitlines())
+            word_count = len(content.split())
+            char_count = len(content)
+
+            # Extract front matter if present
+            title = None
+            frontmatter_match = re.match(r'^---\n(.*?)\n---', content, re.DOTALL)
+            if frontmatter_match:
+                frontmatter = frontmatter_match.group(1)
+                title_match = re.search(r'title:\s*(.+)', frontmatter)
+                if title_match:
+                    title = title_match.group(1).strip('"\'')
+
+            return {
+                "line_count": line_count,
+                "word_count": word_count,
+                "char_count": char_count,
+                "title": title
+            }
+    except Exception as e:
+        logger.warning(f"Markdown metadata extraction failed: {e}")
+        return {"line_count": 0, "word_count": 0, "char_count": 0}
+
+
+def _extract_file_metadata(filepath: str, extension: str) -> Dict[str, Any]:
+    """
+    Extract metadata from file based on type.
+
+    Args:
+        filepath: Path to file
+        extension: File extension
+
+    Returns:
+        Dictionary with extracted metadata
+    """
+    metadata = {}
+
+    try:
+        if extension == ".pdf":
+            metadata = _extract_pdf_metadata(filepath)
+        elif extension == ".csv":
+            metadata = _extract_csv_metadata(filepath)
+        elif extension == ".xlsx":
+            metadata = _extract_excel_metadata(filepath)
+        elif extension in [".py", ".r", ".js"]:
+            metadata = _extract_code_metadata(filepath, extension)
+        elif extension == ".md":
+            metadata = _extract_markdown_metadata(filepath)
+        else:
+            # For other types, just return basic info
+            metadata = {}
+
+    except Exception as e:
+        logger.error(f"Unexpected error extracting metadata: {e}")
+        metadata = {}
+
+    return metadata
+
+
+# ============== CRUD Operations ==============
+
 async def create_folder(
     db: AsyncSession,
     project_id: str,
@@ -51,14 +392,14 @@ async def create_folder(
     result = await db.execute(select(Project).where(Project.id == project_id))
     project = result.scalar_one_or_none()
     if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+        raise FileServiceError(status_code=404, detail="Project not found")
 
     # Generate unique path
     parent_path = ""
     if parent_folder_id:
         parent = await db.get(Folder, parent_folder_id)
         if not parent or parent.project_id != project_id:
-            raise HTTPException(status_code=400, detail="Invalid parent folder")
+            raise FileServiceError(status_code=400, detail="Invalid parent folder")
         parent_path = parent.path
 
     path = f"{parent_path}/{name}".replace("//", "/").strip("/")
@@ -68,7 +409,7 @@ async def create_folder(
         select(Folder).where(Folder.path == path)
     )
     if existing.first():
-        raise HTTPException(status_code=400, detail=f"Folder '{path}' already exists")
+        raise FileServiceError(status_code=400, detail=f"Folder '{path}' already exists")
 
     folder = Folder(
         project_id=project_id,
@@ -92,65 +433,128 @@ async def upload_file(
     folder_id: Optional[str] = None,
     description: Optional[str] = None
 ) -> File:
-    """Upload a file to a project."""
-    # Verify project exists
-    result = await db.execute(select(Project).where(Project.id == project_id))
-    project = result.scalar_one_or_none()
-    if not project:
-        raise HTTPException(status_code=404, detail="Project not found")
+    """
+    Upload a file to a project with validation, duplicate handling, and metadata extraction.
 
-    # Determine folder path
-    folder_path = ""
-    if folder_id:
-        folder = await db.get(Folder, folder_id)
-        if not folder or folder.project_id != project_id:
-            raise HTTPException(status_code=400, detail="Invalid folder")
-        folder_path = folder.path
+    Args:
+        db: Database session
+        project_id: Project ID
+        file: UploadFile object
+        folder_id: Optional folder ID
+        description: Optional file description
 
-    # Generate file ID and storage path
-    from database import generate_uuid
-    file_id = generate_uuid()
+    Returns:
+        Created File record
 
-    # Get file extension
-    filename = file.filename
-    _, extension = os.path.splitext(filename)
-    extension = extension.lstrip(".")
+    Raises:
+        FileServiceError: On various error conditions
+    """
+    try:
+        # Verify project exists
+        result = await db.execute(select(Project).where(Project.id == project_id))
+        project = result.scalar_one_or_none()
+        if not project:
+            raise FileServiceError(status_code=404, detail="Project not found")
 
-    # Generate unique path
-    file_name = f"{filename}"  # TODO: Handle duplicates
-    path = f"{folder_path}/{file_name}".replace("//", "/").strip("/")
+        # Determine folder path
+        folder_path = ""
+        if folder_id:
+            folder = await db.get(Folder, folder_id)
+            if not folder or folder.project_id != project_id:
+                raise FileServiceError(status_code=400, detail="Invalid folder")
+            folder_path = folder.path
 
-    # Calculate content hash
-    content = await file.read()
-    content_hash = hashlib.sha256(content).hexdigest()
+        # Get filename and extension
+        filename = file.filename
+        if not filename:
+            raise FileServiceError(status_code=400, detail="Filename is required")
 
-    # Store file
-    storage_path = _get_file_storage_path(project_id, file_id, extension)
-    os.makedirs(os.path.dirname(storage_path), exist_ok=True)
+        # Validate file type
+        try:
+            extension, allowed_mimes = _validate_file_type(filename, file.content_type)
+        except UnsupportedFileTypeError:
+            raise
+        except Exception as e:
+            logger.error(f"File type validation error: {e}")
+            raise FileServiceError(status_code=400, detail=f"Invalid filename: {filename}")
 
-    with open(storage_path, "wb") as f:
-        f.write(content)
+        # Read file content
+        content = await file.read()
 
-    # Create file record
-    file_record = File(
-        id=file_id,
-        project_id=project_id,
-        folder_id=folder_id,
-        name=filename,
-        file_type=extension,
-        mime_type=file.content_type,
-        size_bytes=len(content),
-        path=path,
-        description=description,
-        storage_path=storage_path,
-        content_hash=content_hash
-    )
-    db.add(file_record)
-    await db.commit()
-    await db.refresh(file_record)
+        # Validate file size
+        try:
+            _validate_file_size(content, filename)
+        except FileTooLargeError:
+            raise
 
-    logger.info(f"Uploaded file: {path} ({len(content)} bytes)")
-    return file_record
+        # Reset file pointer for potential re-reading
+        await file.seek(0)
+
+        # Calculate content hash
+        content_hash = hashlib.sha256(content).hexdigest()
+
+        # Generate file ID
+        from database import generate_uuid
+        file_id = generate_uuid()
+
+        # Handle duplicate filenames
+        display_name, storage_name = await _generate_unique_filename(
+            db, project_id, folder_id, filename, folder_path
+        )
+
+        # Generate path
+        path = f"{folder_path}/{storage_name}".replace("//", "/").strip("/")
+
+        # Store file on disk
+        storage_path = _get_file_storage_path(project_id, file_id, extension)
+        os.makedirs(os.path.dirname(storage_path), exist_ok=True)
+
+        with open(storage_path, "wb") as f:
+            f.write(content)
+
+        # Extract metadata
+        try:
+            metadata = _extract_file_metadata(storage_path, extension)
+        except Exception as e:
+            logger.warning(f"Metadata extraction failed for {filename}: {e}")
+            metadata = {}
+
+        # Normalize mime type
+        mime_type = _normalize_mime_type(file.content_type)
+
+        # Create file record
+        file_record = File(
+            id=file_id,
+            project_id=project_id,
+            folder_id=folder_id,
+            name=display_name,
+            file_type=extension.lstrip("."),
+            mime_type=mime_type,
+            size_bytes=len(content),
+            path=path,
+            description=description,
+            storage_path=storage_path,
+            content_hash=content_hash,
+            tags=metadata  # Store metadata in tags field for now
+        )
+        db.add(file_record)
+        await db.commit()
+        await db.refresh(file_record)
+
+        logger.info(
+            f"Uploaded file: {path} ({len(content)} bytes, {extension}, "
+            f"metadata: {list(metadata.keys())})"
+        )
+        return file_record
+
+    except (UnsupportedFileTypeError, FileTooLargeError, FileServiceError):
+        # Re-raise known exceptions
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error uploading file: {e}", exc_info=True)
+        # Rollback transaction
+        await db.rollback()
+        raise FileServiceError(status_code=500, detail=f"Failed to upload file: {str(e)}")
 
 
 async def list_project_files(
@@ -186,7 +590,7 @@ async def list_project_files(
         })
 
     for file in files:
-        file_list.append({
+        file_dict = {
             "id": file.id,
             "name": file.name,
             "type": "file",
@@ -194,8 +598,13 @@ async def list_project_files(
             "path": file.path,
             "description": file.description,
             "size_bytes": file.size_bytes,
-            "created_at": file.created_at.isoformat()
-        })
+            "created_at": file.created_at.isoformat(),
+            "mime_type": file.mime_type
+        }
+        # Add metadata if present
+        if file.tags:
+            file_dict["metadata"] = file.tags
+        file_list.append(file_dict)
 
     # Organize into tree structure
     def build_tree(parent_path=""):
@@ -220,7 +629,7 @@ async def get_file(
     """Get a file by ID."""
     file = await db.get(File, file_id)
     if not file:
-        raise HTTPException(status_code=404, detail="File not found")
+        raise FileServiceError(status_code=404, detail="File not found")
     return file
 
 
@@ -231,11 +640,14 @@ async def delete_file(
     """Delete a file."""
     file = await db.get(File, file_id)
     if not file:
-        raise HTTPException(status_code=404, detail="File not found")
+        raise FileServiceError(status_code=404, detail="File not found")
 
     # Delete from disk
     if os.path.exists(file.storage_path):
-        os.remove(file.storage_path)
+        try:
+            os.remove(file.storage_path)
+        except Exception as e:
+            logger.error(f"Failed to delete file from disk: {e}")
 
     # Delete from database
     await db.delete(file)
@@ -289,14 +701,20 @@ async def get_project_file_tree(
 
         # Add files
         for file in files:
-            children.append({
+            file_node = {
                 "id": file.id,
                 "name": file.name,
                 "type": "file",
                 "fileType": file.file_type,
                 "path": file.path,
-                "description": file.description
-            })
+                "description": file.description,
+                "size_bytes": file.size_bytes,
+                "mime_type": file.mime_type
+            }
+            # Add metadata if present
+            if file.tags:
+                file_node["metadata"] = file.tags
+            children.append(file_node)
 
         return {
             "id": folder.id,
@@ -331,13 +749,18 @@ async def get_project_file_tree(
     root_files = files_result.scalars().all()
 
     for file in root_files:
-        tree["children"].append({
+        file_node = {
             "id": file.id,
             "name": file.name,
             "type": "file",
             "fileType": file.file_type,
             "path": file.path,
-            "description": file.description
-        })
+            "description": file.description,
+            "size_bytes": file.size_bytes,
+            "mime_type": file.mime_type
+        }
+        if file.tags:
+            file_node["metadata"] = file.tags
+        tree["children"].append(file_node)
 
     return tree
