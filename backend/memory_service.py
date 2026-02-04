@@ -462,3 +462,218 @@ class MemoryService:
             }
             for row in rows
         ]
+
+    async def extract_claims_from_paper(
+        self,
+        project_id: str,
+        paper_id: str,
+        title: str,
+        abstract: Optional[str] = None,
+        full_text: Optional[str] = None,
+        model: str = "gpt-4",
+    ) -> List[Claim]:
+        """
+        Extract research claims from a paper using LLM.
+
+        Args:
+            project_id: Project to associate claims with
+            paper_id: ID of the paper
+            title: Paper title
+            abstract: Paper abstract
+            full_text: Full paper text (optional, more claims if provided)
+            model: LLM model to use for extraction
+
+        Returns:
+            List of extracted Claim objects
+        """
+        # Load extraction prompt
+        prompt = self._load_claim_extraction_prompt()
+
+        # Prepare input text
+        paper_content = f"Title: {title}\n"
+        if abstract:
+            paper_content += f"Abstract: {abstract}\n"
+        if full_text:
+            # Truncate full text if too long
+            paper_content += f"Full Text: {full_text[:10000]}\n"
+
+        # Extract claims using LLM
+        response = await self.llm_service.generate(
+            prompt=prompt.format(paper_content=paper_content),
+            system_message="You are a research assistant extracting testable claims from academic papers.",
+            provider="openai" if "openai" in self.llm_service.available_providers else None,
+        )
+
+        # Parse JSON response
+        claims_data = self._parse_json_response(response)
+
+        # Create Claim objects
+        claims = []
+        for claim_data in claims_data.get("claims", []):
+            claim = await self.create_claim(
+                project_id=project_id,
+                claim_text=claim_data["claim_text"],
+                claim_type=claim_data.get("claim_type"),
+                claim_data=claim_data.get("metadata", {}),
+                source_type=ClaimSourceType.PAPER,
+                source_id=paper_id,
+                confidence=claim_data.get("confidence", 0.8),
+            )
+            claims.append(claim)
+
+        return claims
+
+    async def extract_claims_from_papers(
+        self,
+        project_id: str,
+        papers: List[Dict[str, Any]],
+        model: str = "gpt-4",
+    ) -> Dict[str, List[Claim]]:
+        """
+        Batch extract claims from multiple papers.
+
+        Args:
+            project_id: Project to associate claims with
+            papers: List of paper dicts with id, title, abstract, full_text
+            model: LLM model to use
+
+        Returns:
+            Dict mapping paper_id to list of extracted Claims
+        """
+        results = {}
+
+        # Process in batches of 5 papers to avoid token limits
+        batch_size = 5
+        for i in range(0, len(papers), batch_size):
+            batch = papers[i:i + batch_size]
+
+            # Format batch for LLM
+            batch_content = ""
+            for paper in batch:
+                batch_content += f"\n--- Paper ID: {paper['id']} ---\n"
+                batch_content += f"Title: {paper['title']}\n"
+                if paper.get("abstract"):
+                    batch_content += f"Abstract: {paper['abstract']}\n"
+
+            # Extract claims for batch
+            prompt = self._load_batch_claim_extraction_prompt()
+            response = await self.llm_service.generate(
+                prompt=prompt.format(papers_batch=batch_content),
+                system_message="You are a research assistant extracting testable claims from academic papers.",
+                provider="openai" if "openai" in self.llm_service.available_providers else None,
+            )
+
+            # Parse JSON response
+            claims_data = self._parse_json_response(response)
+
+            # Organize claims by paper
+            for claim_item in claims_data.get("paper_claims", []):
+                paper_id = claim_item["paper_id"]
+                claims = []
+
+                for claim_data in claim_item.get("claims", []):
+                    claim = await self.create_claim(
+                        project_id=project_id,
+                        claim_text=claim_data["claim_text"],
+                        claim_type=claim_data.get("claim_type"),
+                        claim_data=claim_data.get("metadata", {}),
+                        source_type=ClaimSourceType.PAPER,
+                        source_id=paper_id,
+                        confidence=claim_data.get("confidence", 0.8),
+                    )
+                    claims.append(claim)
+
+                results[paper_id] = claims
+
+        return results
+
+    def _load_claim_extraction_prompt(self) -> str:
+        """Load claim extraction prompt template."""
+        try:
+            with open("backend/prompts/extract_claims.txt", "r") as f:
+                return f.read()
+        except FileNotFoundError:
+            # Return default prompt if file doesn't exist yet
+            return """Extract the most important, testable claims from the following paper. Focus on:
+- Primary hypotheses or research questions
+- Key findings that contribute new knowledge
+- Assertions about causal relationships or correlations
+- Claims about methodology effectiveness
+- Conclusions supported by evidence
+
+For each claim, provide:
+1. claim_text: The exact claim statement (1-2 sentences)
+2. claim_type: One of: assertion, fact, finding, hypothesis
+3. confidence: How confident you are this is a core claim (0.5-1.0)
+4. metadata: Additional context (methodology, sample_size, p_value if applicable)
+
+Return only significant claims (5-10 max). Format as JSON:
+
+{{
+  "claims": [
+    {{
+      "claim_text": "Regular exercise reduces risk of cardiovascular disease by 30%",
+      "claim_type": "finding",
+      "confidence": 0.95,
+      "metadata": {{
+        "methodology": "meta-analysis",
+        "sample_size": 50000,
+        "p_value": "<0.001"
+      }}
+    }}
+  ]
+}}
+
+Paper to analyze:
+{paper_content}
+"""
+
+    def _load_batch_claim_extraction_prompt(self) -> str:
+        """Load batch claim extraction prompt template."""
+        try:
+            with open("backend/prompts/extract_claims_batch.txt", "r") as f:
+                return f.read()
+        except FileNotFoundError:
+            # Return default prompt if file doesn't exist yet
+            return """Extract the most important claim from each paper (1-2 claims per paper max).
+
+For each claim, provide:
+1. paper_id: The ID of the paper
+2. claim_text: The claim statement
+3. claim_type: One of: assertion, fact, finding, hypothesis
+4. confidence: 0.5-1.0
+
+Format as JSON:
+
+{{
+  "paper_claims": [
+    {{
+      "paper_id": "{paper_id}",
+      "claims": [
+        {{
+          "claim_text": "...",
+          "claim_type": "finding",
+          "confidence": 0.9
+        }}
+      ]
+    }}
+  ]
+}}
+
+Papers to analyze:
+{papers_batch}
+"""
+
+    def _parse_json_response(self, response: str) -> Dict[str, Any]:
+        """Parse JSON from LLM response with fallback."""
+        import json
+        try:
+            # Try to extract JSON from response
+            start = response.find("{")
+            end = response.rfind("}") + 1
+            if start != -1 and end > start:
+                return json.loads(response[start:end])
+        except (json.JSONDecodeError, ValueError) as e:
+            # Return empty dict if parsing fails
+            return {"claims": [], "paper_claims": []}
+        return {"claims": [], "paper_claims": []}
