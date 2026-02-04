@@ -391,8 +391,8 @@ export const Workspace = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="files" className="flex-1 m-0 p-0 data-[state=active]:flex">
-            <div className="h-full flex">
+          <TabsContent value="files" className="flex-1 m-0 p-0 data-[state=active]:flex data-[state=active]:flex-col overflow-hidden">
+            <div className="flex-1 flex overflow-hidden">
               {/* File Explorer - Left Sidebar */}
               <div className="w-64 border-r border-border bg-muted/30">
                 <div className="p-3 border-b border-border flex justify-between items-center">
