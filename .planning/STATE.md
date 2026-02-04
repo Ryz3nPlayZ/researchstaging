@@ -10,29 +10,29 @@ See: .planning/PROJECT.md (updated 2025-02-01)
 ## Current Position
 
 Phase: 2 of 8 (File & Project Management)
-Plan: 3 of 4 complete (02-03)
-Status: Phase 2 in progress. Navigator integration with FileExplorer complete with view toggle, breadcrumbs, list view, and hover actions.
-Last activity: 2026-02-04 — Completed plan 02-03 (Navigator Integration and Routing)
+Plan: 4 of 4 complete (02-04)
+Status: Phase 2 complete. Cloud storage integration with S3/R2 support and migration utility.
+Last activity: 2026-02-04 — Completed plan 02-04 (Cloud Storage Integration)
 
-Progress: ███░░░░░░░ 38% (3/8 phases complete, 3/4 plans in Phase 2)
+Progress: ███░░░░░░░ 38% (3/8 phases complete, 4/4 plans in Phase 2)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 5
-- Average duration: 6 min
-- Total execution time: 0.5 hours
+- Total plans completed: 6
+- Average duration: 7 min
+- Total execution time: 0.7 hours
 
 **By Phase:**
 
 | Phase | Plans Complete | Total Plans | Avg/Plan |
 |-------|----------------|-------------|----------|
 | 01-authentication | 2 | 2 | 10 min |
-| 02-file-management | 3 | 4 | 4 min |
+| 02-file-management | 4 | 4 | 5 min |
 | 03-08 | — | — | — |
 
 **Recent Trend:**
-- Last 5 plans: 16 min, 4 min, 2 min, 5 min, 5 min (01-01, 01-02, 02-01, 02-02, 02-03)
+- Last 5 plans: 4 min, 2 min, 5 min, 5 min, 6 min (01-02, 02-01, 02-02, 02-03, 02-04)
 - Trend: Steady (consistent execution speed)
 
 *Updated after each plan completion*
@@ -74,6 +74,13 @@ Recent decisions affecting current work:
 19. **Hover-triggered quick actions** — Show action buttons (open, download, copy, delete) only on file hover. Replace file size display when hovering to prevent UI overflow.
 20. **Sortable list view columns** — Click column headers to sort by name, type, size, or date. Toggle ascending/descending on same column. Show visual indicator (↑/↓).
 
+**From 02-04 (Cloud Storage Integration):**
+21. **Storage backend abstraction** — Unified interface (upload_file, download_file, delete_file, get_file_url) supporting local, S3, and R2 backends.
+22. **Environment-driven storage selection** — STORAGE_BACKEND env var determines backend at runtime with automatic fallback to local if cloud credentials incomplete.
+23. **Presigned URL pattern for cloud storage** — S3/R2 returns { download_url, expires_in } JSON; local storage streams file directly. Frontend handles both transparently.
+24. **Cloudflare R2 recommended** — Zero egress fees critical for research datasets. S3-compatible API makes drop-in replacement trivial.
+25. **Migration with verification** — Upload to cloud, verify via file_exists(), then delete local. Prevents data loss from failed uploads.
+
 ### Pending Todos
 
 None yet.
@@ -91,6 +98,9 @@ None yet.
 
 **From 02-03:**
 - No blockers identified. Navigator integration complete with multiple view modes and file selection working.
+
+**From 02-04:**
+- No blockers identified. Cloud storage integration complete with migration utility and full documentation.
 
 ### Patterns Established
 
@@ -121,9 +131,14 @@ None yet.
 18. **Flatten tree for list view** — Recursive function to convert hierarchical tree into flat list for table rendering.
 19. **Column sorting pattern** — Maintain {field, order} state. Toggle order on same field, switch to new field otherwise. Show arrow indicators.
 
+**From 02-04 (Cloud Storage):**
+20. **Storage backend factory pattern** — get_storage_backend() creates appropriate backend based on env vars. Graceful fallback to local on configuration errors.
+21. **Presigned URL generation** — S3/R2: use boto3 generate_presigned_url() with expiration. Local: return storage key for direct serving.
+22. **Async file operations** — All storage operations async for consistency. upload_file(), download_file(), delete_file() return awaitable futures.
+
 ## Session Continuity
 
 Last session: 2026-02-04
-Stopped at: Completed plan 02-03 (Navigator Integration and Routing)
-Resume file: .planning/phases/02-file-management/02-03-SUMMARY.md
-Next: Execute plan 02-04 (File Upload & Integration enhancements)
+Stopped at: Completed plan 02-04 (Cloud Storage Integration)
+Resume file: .planning/phases/02-file-management/02-04-SUMMARY.md
+Next: Execute Phase 3 (Search & Retrieval)
