@@ -426,16 +426,16 @@ class ExecutionLog(Base):
     project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     task_id = Column(String(36), nullable=True)
     run_id = Column(String(36), nullable=True)
-    
+
     # Event details
     event_type = Column(String(100), nullable=False)
     level = Column(String(20), default="info")  # debug, info, warning, error
     message = Column(Text, nullable=False)
     data = Column(JSONB, nullable=True)
-    
+
     # Timestamp
     timestamp = Column(DateTime(timezone=True), default=utc_now, nullable=False)
-    
+
     # Relationships
     project = relationship("Project", back_populates="execution_logs")
 
@@ -443,4 +443,163 @@ class ExecutionLog(Base):
         Index("idx_exec_logs_project_id", "project_id"),
         Index("idx_exec_logs_task_id", "task_id"),
         Index("idx_exec_logs_timestamp", "timestamp"),
+    )
+
+
+# ============== Memory & Information Graph Models ==============
+
+class ClaimSourceType(str, enum.Enum):
+    """Types of sources that can produce claims."""
+    PAPER = "paper"
+    FILE = "file"
+    ANALYSIS = "analysis"
+    USER = "user"
+
+
+class RelationshipType(str, enum.Enum):
+    """Types of relationships between claims."""
+    ASSOCIATION = "association"
+    CORRELATION = "correlation"
+    CAUSALITY = "causality"
+    PREREQUISITE = "prerequisite"
+    CONTRADICTION = "contradiction"
+    SUPPORT = "support"
+    ELABORATION = "elaboration"
+
+
+class Claim(Base):
+    """
+    Research claim extracted from literature, files, or analyses.
+    Claims represent assertions, facts, or findings that can be cited and related.
+    """
+    __tablename__ = "claims"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+
+    # Claim content
+    claim_text = Column(Text, nullable=False, index=True)
+    claim_type = Column(String(50), nullable=True)  # assertion, fact, finding, hypothesis
+
+    # Flexible metadata (e.g., methodology, sample_size, p_value for scientific claims)
+    claim_data = Column(JSONB, default=dict)
+
+    # Provenance tracking
+    source_type = Column(SQLEnum(ClaimSourceType), nullable=False)
+    source_id = Column(String(36), nullable=False)  # ID of paper/file/analysis/user
+    confidence = Column(Float, default=0.0)  # 0.0 to 1.0
+
+    # Relevance prioritization
+    relevance_score = Column(Float, nullable=True)  # Calculated based on project context
+
+    # Extraction metadata
+    extracted_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    extracted_by = Column(String(36), nullable=True)  # User or system ID
+
+    # Relationships
+    relationships_as_source = relationship("ClaimRelationship", foreign_keys="ClaimRelationship.from_claim_id", back_populates="from_claim")
+    relationships_as_target = relationship("ClaimRelationship", foreign_keys="ClaimRelationship.to_claim_id", back_populates="to_claim")
+
+    __table_args__ = (
+        Index("idx_claims_project_id", "project_id"),
+        Index("idx_claims_source", "source_type", "source_id"),
+        Index("idx_claims_relevance", "relevance_score"),  # For prioritization
+        Index("idx_claims_claim_text_gin", "claim_text", postgresql_using="gin", postgresql_ops={"claim_text": "gin_trgm_ops"}),  # Full-text search
+    )
+
+
+class Finding(Base):
+    """
+    Finding or result extracted from data analysis.
+    Findings represent statistical results, patterns, or insights from analyzing datasets.
+    """
+    __tablename__ = "findings"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+
+    # Finding content
+    finding_text = Column(Text, nullable=False, index=True)
+    finding_type = Column(String(50), nullable=True)  # statistical, pattern, anomaly, insight
+
+    # Flexible metadata (e.g., test_statistic, p_value, effect_size, confidence_interval)
+    finding_data = Column(JSONB, default=dict)
+
+    # Source analysis
+    source_analysis_id = Column(String(36), nullable=False)  # Task or Artifact ID that produced this
+    analysis_type = Column(String(50), nullable=True)  # r_analysis, python_analysis, custom
+
+    # Significance
+    significance = Column(Float, nullable=True)  # p-value, confidence score, or custom metric
+    relevance_score = Column(Float, nullable=True)
+
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+    __table_args__ = (
+        Index("idx_findings_project_id", "project_id"),
+        Index("idx_findings_source_analysis", "source_analysis_id"),
+        Index("idx_findings_significance", "significance"),
+        Index("idx_findings_finding_text_gin", "finding_text", postgresql_using="gin", postgresql_ops={"finding_text": "gin_trgm_ops"}),
+    )
+
+
+class Preference(Base):
+    """
+    User preference stored at project level.
+    Preferences include citation style, domain filters, research priorities, etc.
+    """
+    __tablename__ = "preferences"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+
+    # Preference key-value
+    key = Column(String(255), nullable=False)
+    value = Column(JSONB, nullable=False)  # Flexible value (string, number, boolean, object, array)
+    category = Column(String(50), nullable=True)  # citation, domain, priority, display
+
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint("project_id", "key", name="uq_preferences_project_key"),
+        Index("idx_preferences_project_id", "project_id"),
+        Index("idx_preferences_category", "category"),
+    )
+
+
+class ClaimRelationship(Base):
+    """
+    Relationship between two claims.
+    Forms a graph structure enabling traversal of connected claims.
+    """
+    __tablename__ = "claim_relationships"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+
+    # Edge endpoints
+    from_claim_id = Column(String(36), ForeignKey("claims.id", ondelete="CASCADE"), nullable=False)
+    to_claim_id = Column(String(36), ForeignKey("claims.id", ondelete="CASCADE"), nullable=False)
+
+    # Relationship type and metadata
+    relationship_type = Column(SQLEnum(RelationshipType), nullable=False)
+    strength = Column(Float, default=0.5)  # 0.0 to 1.0, confidence in relationship
+    metadata = Column(JSONB, default=dict)  # Additional context (e.g., "via paper X", "contradicts figure Y")
+
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+    # Relationships
+    from_claim = relationship("Claim", foreign_keys=[from_claim_id], back_populates="relationships_as_source")
+    to_claim = relationship("Claim", foreign_keys=[to_claim_id], back_populates="relationships_as_target")
+
+    __table_args__ = (
+        UniqueConstraint("from_claim_id", "to_claim_id", "relationship_type", name="uq_claim_relationships_edge"),
+        Index("idx_claim_relationships_project_id", "project_id"),
+        Index("idx_claim_relationships_from_claim", "from_claim_id"),
+        Index("idx_claim_relationships_to_claim", "to_claim_id"),
+        Index("idx_claim_relationships_type", "relationship_type"),
     )
