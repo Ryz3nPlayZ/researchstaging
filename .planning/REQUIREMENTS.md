@@ -29,6 +29,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **EDIT-11**: System auto-generates bibliography from document citations
 - [ ] **EDIT-12**: User can view previous versions of document
 - [ ] **EDIT-13**: User can restore document to previous version
+- [ ] **EDIT-14**: System auto-saves document content every 2-5 seconds during typing with debouncing to reduce server load
+- [ ] **EDIT-15**: Editor typing response time is <100ms for keystrokes (performance optimized to target <16ms for optimal user experience)
 
 ### AI Agent & Sidebar Chat
 
@@ -184,6 +186,8 @@ Which phases cover which requirements. Updated by create-roadmap.
 | EDIT-11 | Phase 4 | Pending |
 | EDIT-12 | Phase 4 | Pending |
 | EDIT-13 | Phase 4 | Pending |
+| EDIT-14 | Phase 4 | Pending |
+| EDIT-15 | Phase 4 | Pending |
 | LIT-01 | Phase 5 | Pending |
 | LIT-02 | Phase 5 | Pending |
 | LIT-03 | Phase 5 | Pending |
@@ -214,8 +218,8 @@ Which phases cover which requirements. Updated by create-roadmap.
 | EXP-02 | Phase 8 | Pending |
 
 **Coverage:**
-- v1 requirements: 62 total
-- Mapped to phases: 62
+- v1 requirements: 64 total
+- Mapped to phases: 64
 - Unmapped: 0 ✓
 
 ---
