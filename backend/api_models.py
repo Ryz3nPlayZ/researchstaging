@@ -1,0 +1,97 @@
+"""
+Pydantic models for Memory API requests and responses.
+"""
+from pydantic import BaseModel, Field
+from typing import Optional, Dict, Any, List
+from datetime import datetime
+
+
+class ClaimRequest(BaseModel):
+    """Request model for creating a claim."""
+    claim_text: str = Field(..., description="The claim statement")
+    claim_type: Optional[str] = Field(None, description="Type of claim")
+    claim_data: Optional[Dict[str, Any]] = Field(None, description="Additional metadata")
+    source_type: str = Field(..., description="Type of source (paper, file, analysis, user)")
+    source_id: str = Field(..., description="ID of the source")
+    confidence: float = Field(0.0, ge=0.0, le=1.0, description="Extraction confidence")
+
+
+class ClaimResponse(BaseModel):
+    """Response model for a claim."""
+    id: str
+    project_id: str
+    claim_text: str
+    claim_type: Optional[str]
+    claim_data: Dict[str, Any]
+    source_type: str
+    source_id: str
+    confidence: float
+    relevance_score: Optional[float]
+    extracted_at: datetime
+    extracted_by: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+
+class FindingRequest(BaseModel):
+    """Request model for creating a finding."""
+    finding_text: str = Field(..., description="The finding statement")
+    finding_type: Optional[str] = Field(None, description="Type of finding")
+    finding_data: Optional[Dict[str, Any]] = Field(None, description="Additional metadata")
+    source_analysis_id: str = Field(..., description="ID of the analysis")
+    analysis_type: str = Field(..., description="Type of analysis")
+    significance: Optional[float] = Field(None, description="Significance metric")
+
+
+class FindingResponse(BaseModel):
+    """Response model for a finding."""
+    id: str
+    project_id: str
+    finding_text: str
+    finding_type: Optional[str]
+    finding_data: Dict[str, Any]
+    source_analysis_id: str
+    analysis_type: str
+    significance: Optional[float]
+    relevance_score: Optional[float]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class PreferenceRequest(BaseModel):
+    """Request model for setting a preference."""
+    key: str = Field(..., description="Preference key")
+    value: Any = Field(..., description="Preference value (JSON)")
+    category: Optional[str] = Field(None, description="Preference category")
+
+
+class PreferenceResponse(BaseModel):
+    """Response model for a preference."""
+    id: str
+    project_id: str
+    key: str
+    value: Any
+    category: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class ClaimRelationshipResponse(BaseModel):
+    """Response model for a claim relationship."""
+    id: str
+    project_id: str
+    from_claim_id: str
+    to_claim_id: str
+    relationship_type: str
+    strength: float
+    metadata: Dict[str, Any]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
