@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2025-02-01)
 
 ## Current Position
 
-Phase: 2 of 8 (File & Project Management)
-Plan: Complete (4/4 plans executed)
-Status: Phase 1 complete, Phase 2 complete and verified. Ready for Phase 3 planning.
-Last activity: 2025-02-03 — Completed Phase 2 (File & Project Management), verified goal achievement
+Phase: 3 of 8 (Memory & Information Graph Backend)
+Plan: 1 of 3 (Memory Backend Data Model)
+Status: Phase 1 complete, Phase 2 complete, Phase 3 in progress (1/3 plans complete)
+Last activity: 2026-02-04 — Completed plan 03-01 (Memory Backend Data Model)
 
-Progress: ██░░░░░░░░ 25% (2/8 phases complete)
+Progress: ███░░░░░░ 37.5% (3/8 phases complete, 1/3 plans in phase 3)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 6
+- Total plans completed: 7
 - Average duration: 7 min
-- Total execution time: 0.7 hours
+- Total execution time: 0.8 hours
 
 **By Phase:**
 
@@ -29,10 +29,11 @@ Progress: ██░░░░░░░░ 25% (2/8 phases complete)
 |-------|----------------|-------------|----------|
 | 01-authentication | 2 | 2 | 10 min |
 | 02-file-management | 4 | 4 | 5 min |
-| 03-08 | — | — | — |
+| 03-memory-backend | 1 | 3 | 7 min |
+| 04-08 | — | — | — |
 
 **Recent Trend:**
-- Last 5 plans: 4 min, 2 min, 5 min, 5 min, 6 min (01-02, 02-01, 02-02, 02-03, 02-04)
+- Last 5 plans: 5 min, 6 min, 7 min, 2 min, 7 min (02-02, 02-03, 02-04, 02-04 gap closure, 03-01)
 - Trend: Steady (consistent execution speed)
 
 *Updated after each plan completion*
@@ -81,6 +82,14 @@ Recent decisions affecting current work:
 24. **Cloudflare R2 recommended** — Zero egress fees critical for research datasets. S3-compatible API makes drop-in replacement trivial.
 25. **Migration with verification** — Upload to cloud, verify via file_exists(), then delete local. Prevents data loss from failed uploads.
 
+**From 03-01 (Memory Backend Data Model):**
+26. **Adjacency list for claim relationships** — Simpler schema than closure table, recursive CTEs perform well for moderate graphs (<100K nodes), easier to maintain.
+27. **JSONB for flexible metadata** — Claim/finding structure may evolve by domain (medical vs CS), GIN indexes enable efficient full-text search, type enforcement at application layer.
+28. **Polymorphic source associations** — source_type enum (PAPER, FILE, ANALYSIS, USER) + source_id pattern allows claims to link to any source without separate foreign keys.
+29. **Project-scoped memory data** — All memory models have project_id FK with CASCADE delete for data isolation and automatic cleanup.
+30. **Relevance scoring for prioritization** — relevance_score column on Claim and Finding models enables sorting and filtering by importance.
+31. **Avoid SQLAlchemy reserved words** — Cannot use 'metadata' as column name (conflicts with Base.metadata), renamed to 'relationship_metadata'.
+
 ### Pending Todos
 
 None yet.
@@ -101,6 +110,9 @@ None yet.
 
 **From 02-04:**
 - No blockers identified. Cloud storage integration complete with migration utility and full documentation.
+
+**From 03-01:**
+- No blockers identified. Memory backend data model complete with all tables, indexes, and helper functions created.
 
 ### Patterns Established
 
@@ -136,9 +148,16 @@ None yet.
 21. **Presigned URL generation** — S3/R2: use boto3 generate_presigned_url() with expiration. Local: return storage key for direct serving.
 22. **Async file operations** — All storage operations async for consistency. upload_file(), download_file(), delete_file() return awaitable futures.
 
+**From 03-01 (Memory Backend):**
+23. **Graph adjacency list pattern** — ClaimRelationship with from_claim_id, to_claim_id, relationship_type. Simpler than closure table, uses recursive CTEs for traversal.
+24. **Polymorphic associations** — source_type enum + source_id allows linking to any entity type without separate FKs. Consistent pattern used throughout codebase.
+25. **JSONB metadata flexibility** — Store evolving structured data (claim_data, finding_data) in JSONB with GIN indexes for search. Type safety enforced at application layer.
+26. **Recursive graph traversal** — get_related_claims() function using WITH RECURSIVE CTE with depth limit and cycle prevention.
+27. **Relevance prioritization** — Float relevance_score column for sorting/filtering. Can be calculated based on project context and user feedback.
+
 ## Session Continuity
 
 Last session: 2026-02-04
-Stopped at: Completed plan 02-04 (Cloud Storage Integration)
-Resume file: .planning/phases/02-file-management/02-04-SUMMARY.md
-Next: Execute Phase 3 (Search & Retrieval)
+Stopped at: Completed plan 03-01 (Memory Backend Data Model)
+Resume file: .planning/phases/03-memory-backend/03-01-SUMMARY.md
+Next: Execute plan 03-02 (Claim Extraction and Storage) or 03-03 (Memory Query API)
