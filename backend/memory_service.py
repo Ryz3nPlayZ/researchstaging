@@ -247,6 +247,46 @@ class MemoryService:
         await self.session.flush()
         return True
 
+    async def search_claims(
+        self,
+        project_id: str,
+        query: str,
+        limit: int = 20,
+    ) -> List[Claim]:
+        """Full-text search on claim_text."""
+        from sqlalchemy import or_
+
+        search_pattern = f"%{query}%"
+        q = select(Claim).where(
+            and_(
+                Claim.project_id == project_id,
+                or_(
+                    Claim.claim_text.ilike(search_pattern),
+                    Claim.claim_type.ilike(search_pattern),
+                )
+            )
+        )
+        q = q.order_by(Claim.relevance_score.desc().nulls_last())
+        q = q.limit(limit)
+
+        result = await self.session.execute(q)
+        return list(result.scalars().all())
+
+    async def get_claim_relationships(
+        self,
+        claim_id: str,
+    ) -> List[ClaimRelationship]:
+        """Get all relationships for a claim."""
+        result = await self.session.execute(
+            select(ClaimRelationship).where(
+                or_(
+                    ClaimRelationship.from_claim_id == claim_id,
+                    ClaimRelationship.to_claim_id == claim_id
+                )
+            )
+        )
+        return list(result.scalars().all())
+
     async def get_claims_by_source(
         self,
         source_type: ClaimSourceType,
