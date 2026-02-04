@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2025-02-01)
 ## Current Position
 
 Phase: 3 of 8 (Memory & Information Graph Backend)
-Plan: 2 of 3 (Claim Extraction and Storage Service)
-Status: Phase 1 complete, Phase 2 complete, Phase 3 in progress (2/3 plans complete)
-Last activity: 2026-02-04 — Completed plan 03-02 (Claim Extraction and Storage Service)
+Plan: 3 of 3 (Memory Query and Retrieval API)
+Status: Phase 1 complete, Phase 2 complete, Phase 3 complete
+Last activity: 2026-02-04 — Completed plan 03-03 (Memory Query and Retrieval API)
 
-Progress: ███░░░░░░ 37.5% (3/8 phases complete, 2/3 plans in phase 3)
+Progress: ████░░░░░ 50.0% (4/8 phases complete, 3/3 plans in phase 3)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 8
-- Average duration: 7 min
+- Total plans completed: 9
+- Average duration: 6 min
 - Total execution time: 0.9 hours
 
 **By Phase:**
@@ -29,11 +29,11 @@ Progress: ███░░░░░░ 37.5% (3/8 phases complete, 2/3 plans in p
 |-------|----------------|-------------|----------|
 | 01-authentication | 2 | 2 | 10 min |
 | 02-file-management | 4 | 4 | 5 min |
-| 03-memory-backend | 2 | 3 | 5 min |
+| 03-memory-backend | 3 | 3 | 3 min |
 | 04-08 | — | — | — |
 
 **Recent Trend:**
-- Last 5 plans: 6 min, 7 min, 2 min, 7 min, 2 min (02-03, 02-04, 02-04 gap closure, 03-01, 03-02)
+- Last 5 plans: 7 min, 2 min, 7 min, 2 min, 1 min (02-03, 02-04, 02-04 gap closure, 03-01, 03-02, 03-03)
 - Trend: Steady (consistent execution speed)
 
 *Updated after each plan completion*
@@ -98,6 +98,14 @@ Recent decisions affecting current work:
 36. **Recursive CTE for graph traversal** — get_related_claims() uses WITH RECURSIVE with depth limit and cycle prevention for efficient graph queries.
 37. **Service layer pattern** — MemoryService follows established async service pattern with full CRUD operations and type hints.
 
+**From 03-03 (Memory Query and Retrieval API):**
+38. **Separate /api/memory prefix** — All memory endpoints use /api/memory prefix for clear namespacing and to avoid conflicts.
+39. **Query parameter filtering** — Optional filtering via query params (source_type, source_id, claim_type, min_confidence) following REST conventions.
+40. **Full-text search with ILIKE** — PostgreSQL case-insensitive pattern matching for search. Can upgrade to GIN indexes if performance becomes an issue.
+41. **Graph traversal via service method** — Reused existing get_related_claims() from MemoryService which uses recursive CTE.
+42. **Field name mapping** — API response uses 'metadata' while database uses 'relationship_metadata' - mapped explicitly in endpoints.
+43. **Project ownership validation** — All memory endpoints verify claim/project ownership to prevent cross-project data access.
+
 ### Pending Todos
 
 None yet.
@@ -124,6 +132,9 @@ None yet.
 
 **From 03-02:**
 - No blockers identified. Memory service complete with CRUD operations, claim extraction, and finding extraction.
+
+**From 03-03:**
+- No blockers identified. Memory API complete with all CRUD, search, and graph traversal endpoints.
 
 ### Patterns Established
 
@@ -173,9 +184,17 @@ None yet.
 31. **Batch processing pattern** — Process items in fixed-size batches (5 papers) to optimize token usage while maintaining quality.
 32. **Finding type polymorphism** — Extract different finding types (statistical, pattern, insight, correlation, model_performance) from flexible analysis output dict.
 
+**From 03-03 (Memory API):**
+33. **REST API router pattern** — FastAPI router with prefix, tags, and organized endpoint groups (claims, findings, preferences).
+34. **Pydantic request/response models** — Separate models for validation (Request) and serialization (Response) with from_attributes Config.
+35. **Query parameter filtering** — Optional Query() parameters in endpoint signatures with Field validation (ge, le, min_length).
+36. **Project ownership validation** — All endpoints verify resource belongs to project_id from path before returning data.
+37. **Enum validation in endpoints** — Convert string query params to enums (ClaimSourceType, RelationshipType) with ValueError handling.
+38. **Explicit field mapping** — Map database column names (relationship_metadata) to API field names (metadata) in response construction.
+
 ## Session Continuity
 
 Last session: 2026-02-04
-Stopped at: Completed plan 03-02 (Claim Extraction and Storage Service)
-Resume file: .planning/phases/03-memory-backend/03-02-SUMMARY.md
-Next: Execute plan 03-03 (Memory Query API)
+Stopped at: Completed plan 03-03 (Memory Query and Retrieval API)
+Resume file: .planning/phases/03-memory-backend/03-03-SUMMARY.md
+Next: Execute plan 04-01 (Memory Frontend - Inspector Panel)
