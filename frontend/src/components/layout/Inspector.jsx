@@ -2,18 +2,21 @@ import { useProject } from '../../context/ProjectContext';
 import { ScrollArea } from '../ui/scroll-area';
 import { Badge } from '../ui/badge';
 import { Separator } from '../ui/separator';
-import { 
-  Info, 
-  Calendar, 
-  Hash, 
-  FileType, 
-  Link2, 
-  Users, 
+import {
+  Info,
+  Calendar,
+  Hash,
+  FileType,
+  Link2,
+  Users,
   BookOpen,
   Clock,
   CheckCircle,
   XCircle,
-  Loader2
+  Loader2,
+  FileText,
+  HardDrive,
+  Eye
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -50,11 +53,12 @@ const StatusBadge = ({ status }) => {
 };
 
 export const Inspector = () => {
-  const { 
+  const {
     selectedProject,
-    selectedTask, 
-    selectedArtifact, 
-    selectedPaper 
+    selectedTask,
+    selectedArtifact,
+    selectedPaper,
+    selectedFile
   } = useProject();
 
   const formatDate = (dateStr) => {
@@ -68,8 +72,8 @@ export const Inspector = () => {
   };
 
   // Determine what to show
-  const item = selectedPaper || selectedArtifact || selectedTask || selectedProject;
-  const itemType = selectedPaper ? 'paper' : selectedArtifact ? 'artifact' : selectedTask ? 'task' : selectedProject ? 'project' : null;
+  const item = selectedFile || selectedPaper || selectedArtifact || selectedTask || selectedProject;
+  const itemType = selectedFile ? 'file' : selectedPaper ? 'paper' : selectedArtifact ? 'artifact' : selectedTask ? 'task' : selectedProject ? 'project' : null;
 
   if (!item) {
     return (
@@ -106,7 +110,8 @@ export const Inspector = () => {
           <div>
             <Badge variant="secondary" className="text-[10px] mb-2 capitalize">{itemType}</Badge>
             <h3 className="font-semibold text-sm tracking-tight font-['IBM_Plex_Sans'] leading-tight">
-              {itemType === 'paper' ? item.title : 
+              {itemType === 'file' ? item.name :
+               itemType === 'paper' ? item.title :
                itemType === 'artifact' ? item.title :
                itemType === 'task' ? item.name :
                itemType === 'project' ? item.research_goal?.slice(0, 60) : 'Unknown'}
@@ -135,6 +140,36 @@ export const Inspector = () => {
           <Separator />
 
           {/* Type-specific Metadata */}
+          {itemType === 'file' && (
+            <div className="space-y-0.5">
+              <MetadataItem icon={FileType} label="File Type" value={item.mime_type || 'Unknown'} />
+              <MetadataItem icon={HardDrive} label="Size" value={item.size_bytes ? `${(item.size_bytes / 1024).toFixed(1)} KB` : 'Unknown'} />
+              {item.path && (
+                <MetadataItem icon={Hash} label="Path" value={item.path} mono />
+              )}
+              {item.tags && Object.keys(item.tags).length > 0 && (
+                <div className="mt-2 p-2 bg-muted/50 rounded-md">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">Metadata</span>
+                  <pre className="text-[10px] font-mono overflow-x-auto">
+                    {JSON.stringify(item.tags, null, 2)}
+                  </pre>
+                </div>
+              )}
+              {item.mime_type?.includes('pdf') && item.tags?.page_count && (
+                <MetadataItem icon={FileText} label="Pages" value={item.tags.page_count} />
+              )}
+              {item.mime_type?.includes('text') && (
+                <div className="py-1.5">
+                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider block mb-1">Preview</span>
+                  <div className="text-xs bg-muted/50 p-2 rounded max-h-32 overflow-y-auto font-mono">
+                    <Eye className="h-3 w-3 inline mr-1 text-muted-foreground" />
+                    <span className="text-muted-foreground">Preview not available in Inspector</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {itemType === 'project' && (
             <div className="space-y-0.5">
               <MetadataItem icon={FileType} label="Output Type" value={item.output_type?.replace('_', ' ')} />
