@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2025-02-01)
 ## Current Position
 
 Phase: 3 of 8 (Memory & Information Graph Backend)
-Plan: 1 of 3 (Memory Backend Data Model)
-Status: Phase 1 complete, Phase 2 complete, Phase 3 in progress (1/3 plans complete)
-Last activity: 2026-02-04 — Completed plan 03-01 (Memory Backend Data Model)
+Plan: 2 of 3 (Claim Extraction and Storage Service)
+Status: Phase 1 complete, Phase 2 complete, Phase 3 in progress (2/3 plans complete)
+Last activity: 2026-02-04 — Completed plan 03-02 (Claim Extraction and Storage Service)
 
-Progress: ███░░░░░░ 37.5% (3/8 phases complete, 1/3 plans in phase 3)
+Progress: ███░░░░░░ 37.5% (3/8 phases complete, 2/3 plans in phase 3)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 7
+- Total plans completed: 8
 - Average duration: 7 min
-- Total execution time: 0.8 hours
+- Total execution time: 0.9 hours
 
 **By Phase:**
 
@@ -29,11 +29,11 @@ Progress: ███░░░░░░ 37.5% (3/8 phases complete, 1/3 plans in p
 |-------|----------------|-------------|----------|
 | 01-authentication | 2 | 2 | 10 min |
 | 02-file-management | 4 | 4 | 5 min |
-| 03-memory-backend | 1 | 3 | 7 min |
+| 03-memory-backend | 2 | 3 | 5 min |
 | 04-08 | — | — | — |
 
 **Recent Trend:**
-- Last 5 plans: 5 min, 6 min, 7 min, 2 min, 7 min (02-02, 02-03, 02-04, 02-04 gap closure, 03-01)
+- Last 5 plans: 6 min, 7 min, 2 min, 7 min, 2 min (02-03, 02-04, 02-04 gap closure, 03-01, 03-02)
 - Trend: Steady (consistent execution speed)
 
 *Updated after each plan completion*
@@ -90,6 +90,14 @@ Recent decisions affecting current work:
 30. **Relevance scoring for prioritization** — relevance_score column on Claim and Finding models enables sorting and filtering by importance.
 31. **Avoid SQLAlchemy reserved words** — Cannot use 'metadata' as column name (conflicts with Base.metadata), renamed to 'relationship_metadata'.
 
+**From 03-02 (Claim Extraction and Storage Service):**
+32. **LLM-based claim extraction** — Use OpenAI GPT-4 for high-quality claim extraction from research papers, with structured JSON output parsing.
+33. **Batch extraction optimization** — Process 5 papers per LLM call to optimize token usage while maintaining extraction quality.
+34. **Multi-type finding extraction** — Extract statistical, pattern, insight, correlation, and model performance findings from analysis outputs.
+35. **Provenance tracking on extraction** — All extracted claims include source_type, source_id, confidence, extracted_at for full audit trail.
+36. **Recursive CTE for graph traversal** — get_related_claims() uses WITH RECURSIVE with depth limit and cycle prevention for efficient graph queries.
+37. **Service layer pattern** — MemoryService follows established async service pattern with full CRUD operations and type hints.
+
 ### Pending Todos
 
 None yet.
@@ -113,6 +121,9 @@ None yet.
 
 **From 03-01:**
 - No blockers identified. Memory backend data model complete with all tables, indexes, and helper functions created.
+
+**From 03-02:**
+- No blockers identified. Memory service complete with CRUD operations, claim extraction, and finding extraction.
 
 ### Patterns Established
 
@@ -155,9 +166,16 @@ None yet.
 26. **Recursive graph traversal** — get_related_claims() function using WITH RECURSIVE CTE with depth limit and cycle prevention.
 27. **Relevance prioritization** — Float relevance_score column for sorting/filtering. Can be calculated based on project context and user feedback.
 
+**From 03-02 (Memory Service):**
+28. **Service async pattern** — All MemoryService methods use AsyncSession for database operations with proper flush/commit handling.
+29. **Prompt file loading with fallback** — Load prompts from files with default inline prompts as fallback for robustness.
+30. **Structured JSON parsing from LLM** — Extract JSON from LLM responses with error handling and empty dict fallback.
+31. **Batch processing pattern** — Process items in fixed-size batches (5 papers) to optimize token usage while maintaining quality.
+32. **Finding type polymorphism** — Extract different finding types (statistical, pattern, insight, correlation, model_performance) from flexible analysis output dict.
+
 ## Session Continuity
 
 Last session: 2026-02-04
-Stopped at: Completed plan 03-01 (Memory Backend Data Model)
-Resume file: .planning/phases/03-memory-backend/03-01-SUMMARY.md
-Next: Execute plan 03-02 (Claim Extraction and Storage) or 03-03 (Memory Query API)
+Stopped at: Completed plan 03-02 (Claim Extraction and Storage Service)
+Resume file: .planning/phases/03-memory-backend/03-02-SUMMARY.md
+Next: Execute plan 03-03 (Memory Query API)
