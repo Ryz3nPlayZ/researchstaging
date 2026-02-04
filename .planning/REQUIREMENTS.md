@@ -47,12 +47,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Memory & Information Graph
 
-- [ ] **MEM-01**: System stores claims extracted from literature
-- [ ] **MEM-02**: System stores findings from data analyses
-- [ ] **MEM-03**: System stores user preferences
-- [ ] **MEM-04**: System prioritizes storage of claims relevant to user's research project
-- [ ] **MEM-05**: System tracks relationships between claims (association, correlation, causality, prerequisite)
-- [ ] **MEM-06**: Backend provides graph data model for papers, data sources, and information
+- [x] **MEM-01**: System stores claims extracted from literature
+- [x] **MEM-02**: System stores findings from data analyses
+- [x] **MEM-03**: System stores user preferences
+- [x] **MEM-04**: System prioritizes storage of claims relevant to user's research project
+- [x] **MEM-05**: System tracks relationships between claims (association, correlation, causality, prerequisite)
+- [x] **MEM-06**: Backend provides graph data model for papers, data sources, and information
 
 ### Literature Review & Search
 

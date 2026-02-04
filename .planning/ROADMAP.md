@@ -12,7 +12,7 @@ The Research Workspace delivers stateful research intelligence — a single work
 
 - [x] **Phase 1: Authentication & User Management** - Secure access via mock authentication (Google OAuth code preserved for production)
 - [x] **Phase 2: File & Project Management** - Upload and organize research files
-- [ ] **Phase 3: Memory & Information Graph Backend** - Store research information and relationships
+- [x] **Phase 3: Memory & Information Graph Backend** - Store research information and relationships
 - [ ] **Phase 4: Rich Text Document Editor** - Write papers with citations and version history
 - [ ] **Phase 5: Literature Search & Review** - AI-powered paper discovery and analysis
 - [ ] **Phase 6: AI Agent & Sidebar Chat** - Interactive AI research assistant
@@ -86,10 +86,13 @@ The Research Workspace delivers stateful research intelligence — a single work
 **Research**: Likely (graph data model design, PostgreSQL graph patterns)
 **Research topics**: PostgreSQL graph extensions, claim relationship schema design, relevance prioritization algorithms
 
-**Plans**: TBD
+**Completed**: 2026-02-04
 
-Plans:
-- [ ] 03-01: [Brief description]
+**Plans**:
+- [x] 03-01: Memory Backend Data Model — Claim, Finding, Preference, ClaimRelationship tables with adjacency list graph pattern
+- [x] 03-02: Claim Extraction and Storage Service — LLM-powered extraction with provenance tracking
+- [x] 03-03: Memory Query and Retrieval API — REST API with search, filtering, graph traversal
+- [x] 03-04: User Preferences and Relevance Scoring — TF-IDF keyword matching with 4-factor algorithm
 
 ### Phase 4: Rich Text Document Editor
 
@@ -224,8 +227,8 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Authentication & User Management | 2/2 | ✓ Complete | 2025-02-01 |
-| 2. File & Project Management | 0/0 | Not started | - |
-| 3. Memory & Information Graph Backend | 0/0 | Not started | - |
+| 2. File & Project Management | 4/4 | ✓ Complete | 2025-02-03 |
+| 3. Memory & Information Graph Backend | 4/4 | ✓ Complete | 2026-02-04 |
 | 4. Rich Text Document Editor | 0/0 | Not started | - |
 | 5. Literature Search & Review | 0/0 | Not started | - |
 | 6. AI Agent & Sidebar Chat | 0/0 | Not started | - |
