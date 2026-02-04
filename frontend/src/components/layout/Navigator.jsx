@@ -3,22 +3,25 @@ import { useProject } from '../../context/ProjectContext';
 import { projectsApi, tasksApi, artifactsApi, papersApi } from '../../lib/api';
 import { ScrollArea } from '../ui/scroll-area';
 import { Button } from '../ui/button';
-import { 
+import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
+import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '../ui/collapsible';
-import { 
-  ChevronDown, 
-  ChevronRight, 
-  FolderOpen, 
-  ListTodo, 
-  FileText, 
+import {
+  ChevronDown,
+  ChevronRight,
+  FolderOpen,
+  ListTodo,
+  FileText,
   BookOpen,
   Plus,
-  RefreshCw
+  RefreshCw,
+  Files
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { FileExplorer } from '../files/FileExplorer';
 
 const NavSection = ({ title, icon: Icon, children, defaultOpen = true, count = 0 }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -57,8 +60,8 @@ const NavItem = ({ children, active, onClick, className }) => (
 );
 
 export const Navigator = ({ onCreateProject, onSelectProject, collapsed = false }) => {
-  const { 
-    selectedProject, 
+  const {
+    selectedProject,
     setSelectedProject,
     selectedTask,
     setSelectedTask,
@@ -66,6 +69,8 @@ export const Navigator = ({ onCreateProject, onSelectProject, collapsed = false 
     setSelectedArtifact,
     selectedPaper,
     setSelectedPaper,
+    selectedFile,
+    setSelectedFile,
     refreshTrigger,
     triggerRefresh
   } = useProject();
@@ -75,6 +80,7 @@ export const Navigator = ({ onCreateProject, onSelectProject, collapsed = false 
   const [artifacts, setArtifacts] = useState([]);
   const [papers, setPapers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [navigatorView, setNavigatorView] = useState('tasks'); // 'tasks' or 'files'
 
   const fetchProjects = useCallback(async () => {
     try {
@@ -128,7 +134,15 @@ export const Navigator = ({ onCreateProject, onSelectProject, collapsed = false 
     setSelectedTask(null);
     setSelectedArtifact(null);
     setSelectedPaper(null);
+    setSelectedFile(null);
     onSelectProject?.(project);
+  };
+
+  const handleFileSelect = (file) => {
+    setSelectedFile(file);
+    setSelectedTask(null);
+    setSelectedArtifact(null);
+    setSelectedPaper(null);
   };
 
   const getStatusColor = (status) => {
@@ -170,109 +184,142 @@ export const Navigator = ({ onCreateProject, onSelectProject, collapsed = false 
           </Button>
         </div>
       </div>
+
+      {/* View Toggle - Only show when project is selected */}
+      {selectedProject && (
+        <div className="px-2 py-1 border-b border-border flex-shrink-0">
+          <Tabs
+            value={navigatorView}
+            onValueChange={setNavigatorView}
+            className="w-full"
+          >
+            <TabsList className="w-full h-7 grid grid-cols-2">
+              <TabsTrigger value="tasks" className="text-xs h-6">
+                <ListTodo className="h-3 w-3 mr-1" />
+                Tasks
+              </TabsTrigger>
+              <TabsTrigger value="files" className="text-xs h-6">
+                <Files className="h-3 w-3 mr-1" />
+                Files
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+      )}
       
-      <ScrollArea className="flex-1 p-2">
-        {/* Projects Section */}
-        <NavSection title="Projects" icon={FolderOpen} count={projects.length}>
-          {loading ? (
-            <div className="text-xs text-muted-foreground px-2 py-1">Loading...</div>
-          ) : projects.length === 0 ? (
-            <div className="text-xs text-muted-foreground px-2 py-1">No projects yet</div>
-          ) : (
-            projects.map(project => (
-              <NavItem
-                key={project.id}
-                active={selectedProject?.id === project.id}
-                onClick={() => handleSelectProject(project)}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="truncate text-xs">{project.research_goal.slice(0, 30)}...</span>
-                  <span className={cn("text-[10px]", getStatusColor(project.status))}>
-                    {project.status}
-                  </span>
+      <ScrollArea className="flex-1">
+        {/* No project selected - show projects list */}
+        {!selectedProject && (
+          <div className="p-2">
+            <NavSection title="Projects" icon={FolderOpen} count={projects.length}>
+              {loading ? (
+                <div className="text-xs text-muted-foreground px-2 py-1">Loading...</div>
+              ) : projects.length === 0 ? (
+                <div className="text-xs text-muted-foreground px-2 py-1">No projects yet</div>
+              ) : (
+                projects.map(project => (
+                  <NavItem
+                    key={project.id}
+                    active={selectedProject?.id === project.id}
+                    onClick={() => handleSelectProject(project)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="truncate text-xs">{project.research_goal.slice(0, 30)}...</span>
+                      <span className={cn("text-[10px]", getStatusColor(project.status))}>
+                        {project.status}
+                      </span>
+                    </div>
+                  </NavItem>
+                ))
+              )}
+            </NavSection>
+          </div>
+        )}
+
+        {/* Project selected - show either tasks or files view */}
+        {selectedProject && navigatorView === 'tasks' && (
+          <div className="p-2">
+            {/* Tasks Section */}
+            <NavSection title="Tasks" icon={ListTodo} count={tasks.length}>
+              {tasks.length === 0 ? (
+                <div className="text-xs text-muted-foreground px-2 py-1">No tasks</div>
+              ) : (
+                tasks.map(task => (
+                  <NavItem
+                    key={task.id}
+                    active={selectedTask?.id === task.id}
+                    onClick={() => {
+                      setSelectedTask(task);
+                      setSelectedArtifact(null);
+                      setSelectedPaper(null);
+                      setSelectedFile(null);
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="truncate text-xs">{task.name}</span>
+                      <span className={cn("text-[10px] capitalize", getStatusColor(task.state || task.status))}>
+                        {task.state || task.status}
+                      </span>
+                    </div>
+                  </NavItem>
+                ))
+              )}
+            </NavSection>
+
+            {/* Documents Section */}
+            <NavSection title="Documents" icon={FileText} count={artifacts.length}>
+              {artifacts.length === 0 ? (
+                <div className="text-xs text-muted-foreground px-2 py-1">No documents yet</div>
+              ) : (
+                artifacts.map(artifact => (
+                  <NavItem
+                    key={artifact.id}
+                    active={selectedArtifact?.id === artifact.id}
+                    onClick={() => {
+                      setSelectedArtifact(artifact);
+                      setSelectedTask(null);
+                      setSelectedPaper(null);
+                      setSelectedFile(null);
+                    }}
+                  >
+                    <span className="truncate text-xs">{artifact.title}</span>
+                  </NavItem>
+                ))
+              )}
+            </NavSection>
+
+            {/* Literature Section */}
+            <NavSection title="Literature" icon={BookOpen} count={papers.length}>
+              {papers.length === 0 ? (
+                <div className="text-xs text-muted-foreground px-2 py-1">No papers yet</div>
+              ) : (
+                papers.slice(0, 20).map(paper => (
+                  <NavItem
+                    key={paper.id}
+                    active={selectedPaper?.id === paper.id}
+                    onClick={() => {
+                      setSelectedPaper(paper);
+                      setSelectedTask(null);
+                      setSelectedArtifact(null);
+                      setSelectedFile(null);
+                    }}
+                  >
+                    <span className="truncate text-xs">{paper.title.slice(0, 35)}...</span>
+                  </NavItem>
+                ))
+              )}
+              {papers.length > 20 && (
+                <div className="text-[10px] text-muted-foreground px-2 py-1">
+                  +{papers.length - 20} more papers
                 </div>
-              </NavItem>
-            ))
-          )}
-        </NavSection>
-
-        {/* Tasks Section - Only show when project is selected */}
-        {selectedProject && (
-          <NavSection title="Tasks" icon={ListTodo} count={tasks.length}>
-            {tasks.length === 0 ? (
-              <div className="text-xs text-muted-foreground px-2 py-1">No tasks</div>
-            ) : (
-              tasks.map(task => (
-                <NavItem
-                  key={task.id}
-                  active={selectedTask?.id === task.id}
-                  onClick={() => {
-                    setSelectedTask(task);
-                    setSelectedArtifact(null);
-                    setSelectedPaper(null);
-                  }}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="truncate text-xs">{task.name}</span>
-                    <span className={cn("text-[10px] capitalize", getStatusColor(task.state || task.status))}>
-                      {task.state || task.status}
-                    </span>
-                  </div>
-                </NavItem>
-              ))
-            )}
-          </NavSection>
+              )}
+            </NavSection>
+          </div>
         )}
 
-        {/* Documents Section - Only show when project is selected */}
-        {selectedProject && (
-          <NavSection title="Documents" icon={FileText} count={artifacts.length}>
-            {artifacts.length === 0 ? (
-              <div className="text-xs text-muted-foreground px-2 py-1">No documents yet</div>
-            ) : (
-              artifacts.map(artifact => (
-                <NavItem
-                  key={artifact.id}
-                  active={selectedArtifact?.id === artifact.id}
-                  onClick={() => {
-                    setSelectedArtifact(artifact);
-                    setSelectedTask(null);
-                    setSelectedPaper(null);
-                  }}
-                >
-                  <span className="truncate text-xs">{artifact.title}</span>
-                </NavItem>
-              ))
-            )}
-          </NavSection>
-        )}
-
-        {/* Literature Section - Only show when project is selected */}
-        {selectedProject && (
-          <NavSection title="Literature" icon={BookOpen} count={papers.length}>
-            {papers.length === 0 ? (
-              <div className="text-xs text-muted-foreground px-2 py-1">No papers yet</div>
-            ) : (
-              papers.slice(0, 20).map(paper => (
-                <NavItem
-                  key={paper.id}
-                  active={selectedPaper?.id === paper.id}
-                  onClick={() => {
-                    setSelectedPaper(paper);
-                    setSelectedTask(null);
-                    setSelectedArtifact(null);
-                  }}
-                >
-                  <span className="truncate text-xs">{paper.title.slice(0, 35)}...</span>
-                </NavItem>
-              ))
-            )}
-            {papers.length > 20 && (
-              <div className="text-[10px] text-muted-foreground px-2 py-1">
-                +{papers.length - 20} more papers
-              </div>
-            )}
-          </NavSection>
+        {/* Files view - show FileExplorer */}
+        {selectedProject && navigatorView === 'files' && (
+          <FileExplorer onFileSelect={handleFileSelect} selectedFile={selectedFile} />
         )}
       </ScrollArea>
     </div>
