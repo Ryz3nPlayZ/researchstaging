@@ -71,6 +71,10 @@ logger.info(f"Loaded file router with {len(file_router.routes)} routes")
 from memory_api import router as memory_router
 logger.info(f"Loaded memory router with {len(memory_router.routes)} routes")
 
+# Document API imports
+from document_api import router as document_router
+logger.info(f"Loaded document router with {len(document_router.routes)} routes")
+
 
 # ============== Pydantic Models ==============
 
@@ -1171,6 +1175,8 @@ api_router.include_router(file_router)
 logger.info("Included file router in api_router")
 api_router.include_router(memory_router)
 logger.info("Included memory router in api_router")
+api_router.include_router(document_router)
+logger.info("Included document router in api_router")
 app.include_router(api_router)
 logger.info("Included api_router in app")
 
