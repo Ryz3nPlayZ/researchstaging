@@ -11,7 +11,6 @@ import { TableRow } from '@tiptap/extension-table-row';
 import { TableCell } from '@tiptap/extension-table-cell';
 import { TableHeader } from '@tiptap/extension-table-header';
 import TextAlign from '@tiptap/extension-text-align';
-import History from '@tiptap/extension-history';
 import debounce from 'lodash.debounce';
 import { Button } from '../ui/button';
 import { Separator } from '../ui/separator';
@@ -343,7 +342,6 @@ export const DocumentEditor = ({ documentId, projectId, initialContent, onSave, 
       TextAlign.configure({
         types: ['heading', 'paragraph'],
       }),
-      History,
     ],
     content: initialContent || '<p>Start writing your document...</p>',
     editorProps: {
