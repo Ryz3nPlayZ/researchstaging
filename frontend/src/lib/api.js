@@ -170,6 +170,21 @@ export const documentsApi = {
     api.post(`/documents/${documentId}/restore/${versionId}`),
 };
 
+// Chat API
+export const chatApi = {
+  getHistory: (projectId, limit = 50, offset = 0) =>
+    api.get(`/chat/projects/${projectId}/history`, {
+      params: { limit, offset }
+    }),
+  sendMessage: (projectId, message, context = null) =>
+    api.post(`/chat/projects/${projectId}/send`, {
+      message,
+      context
+    }),
+  clearHistory: (projectId) =>
+    api.delete(`/chat/projects/${projectId}/history`),
+};
+
 // WebSocket connection for real-time updates
 export const createWebSocketConnection = (projectId, onEvent, onError) => {
   const wsUrl = BACKEND_URL.replace('http', 'ws').replace('https', 'wss');
