@@ -114,6 +114,111 @@ export const LiteratureSearch = ({ onAddToProject, onInsertCitation, currentStyl
     }
   };
 
+  /**
+   * Handle citation insertion
+   */
+  const handleInsertCitation = async (paper, e) => {
+    e.stopPropagation(); // Prevent opening modal
+
+    // Check if document is open
+    if (!documentId) {
+      toast({
+        variant: 'destructive',
+        title: 'No document open',
+        description: 'Please open a document in the workspace to insert citations.',
+      });
+      return;
+    }
+
+    // Check if callback provided
+    if (!onInsertCitation) {
+      toast({
+        variant: 'destructive',
+        title: 'Citation insertion not available',
+        description: 'This feature is not available in the current context.',
+      });
+      return;
+    }
+
+    // Add to processing set
+    const paperKey = paper.external_id || paper.doi || paper.url || JSON.stringify(paper);
+    setInsertingPaperIds(prev => new Set([...prev, paperKey]));
+
+    try {
+      // Format citation in current style using backend API
+      const apiUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/citations/format-paper`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+        body: JSON.stringify({
+          paper: {
+            title: paper.title,
+            authors: paper.authors || [],
+            year: paper.year,
+            venue: paper.venue || '',
+            doi: paper.doi || '',
+            url: paper.url || '',
+            source: paper.source,
+          },
+          styles: [currentStyle?.toLowerCase() || 'apa'],
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to format citation');
+      }
+
+      const data = await response.json();
+
+      // Get formatted citation for current style
+      const style = currentStyle?.toLowerCase() || 'apa';
+      const formattedCitation = data[style];
+
+      if (!formattedCitation) {
+        throw new Error(`Citation not formatted for ${style} style`);
+      }
+
+      // Call parent callback with citation data
+      onInsertCitation({
+        text: formattedCitation,
+        source_type: 'literature',
+        source_id: paper.external_id || paper.doi || paper.url,
+        metadata: {
+          title: paper.title,
+          authors: paper.authors,
+          year: paper.year,
+          venue: paper.venue,
+          doi: paper.doi,
+          url: paper.url,
+          source: paper.source,
+        },
+      });
+
+      toast({
+        title: 'Citation inserted',
+        description: `"${paper.title.substring(0, 50)}..." has been cited in your document.`,
+      });
+
+    } catch (error) {
+      console.error('Insert citation error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Insert failed',
+        description: error.response?.data?.detail || error.message || 'Failed to insert citation',
+      });
+    } finally {
+      // Remove from processing set
+      setInsertingPaperIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(paperKey);
+        return newSet;
+      });
+    }
+  };
+
   const handleExtractClaims = async (paper, e) => {
     e.stopPropagation(); // Prevent opening modal
 
@@ -394,18 +499,44 @@ export const LiteratureSearch = ({ onAddToProject, onInsertCitation, currentStyl
                         </Button>
                       )}
 
-                      {/* Add to project button */}
-                      {onAddToProject && !extractedClaimCounts[paper.external_id] && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          className="h-7 px-2 text-xs hover:bg-blue-50 hover:text-blue-600"
-                          onClick={(e) => handleAddToProject(paper, e)}
-                        >
-                          <Plus className="w-3 h-3 mr-1" />
-                          Add to Project
-                        </Button>
-                      )}
+                      {/* Action buttons */}
+                      <div className="flex items-center gap-2">
+                        {/* Insert citation button */}
+                        {onInsertCitation && documentId && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-xs hover:bg-green-50 hover:text-green-600"
+                            onClick={(e) => handleInsertCitation(paper, e)}
+                            disabled={insertingPaperIds.has(paper.external_id || paper.doi || paper.url || JSON.stringify(paper))}
+                          >
+                            {insertingPaperIds.has(paper.external_id || paper.doi || paper.url || JSON.stringify(paper)) ? (
+                              <>
+                                <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                Inserting...
+                              </>
+                            ) : (
+                              <>
+                                <Quote className="w-3 h-3 mr-1" />
+                                Insert Citation
+                              </>
+                            )}
+                          </Button>
+                        )}
+
+                        {/* Add to project button */}
+                        {onAddToProject && !extractedClaimCounts[paper.external_id] && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-xs hover:bg-blue-50 hover:text-blue-600"
+                            onClick={(e) => handleAddToProject(paper, e)}
+                          >
+                            <Plus className="w-3 h-3 mr-1" />
+                            Add to Project
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
