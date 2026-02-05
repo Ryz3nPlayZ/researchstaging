@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useRef } from 'react';
 
 const ProjectContext = createContext({
   selectedProject: null,
@@ -15,6 +15,8 @@ const ProjectContext = createContext({
   setSelectedDocument: () => {},
   refreshTrigger: 0,
   triggerRefresh: () => {},
+  editorRef: { current: null },
+  applyAISuggestion: () => {},
 });
 
 export const ProjectProvider = ({ children }) => {
@@ -26,8 +28,19 @@ export const ProjectProvider = ({ children }) => {
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+  // Editor ref for AI text suggestions
+  const editorRef = useRef(null);
+
   const triggerRefresh = useCallback(() => {
     setRefreshTrigger(prev => prev + 1);
+  }, []);
+
+  // Apply AI suggestion to editor
+  const applyAISuggestion = useCallback((text, range) => {
+    if (editorRef.current && editorRef.current.applySuggestion) {
+      return editorRef.current.applySuggestion(text, range);
+    }
+    return false;
   }, []);
 
   return (
@@ -46,6 +59,8 @@ export const ProjectProvider = ({ children }) => {
       setSelectedDocument,
       refreshTrigger,
       triggerRefresh,
+      editorRef,
+      applyAISuggestion,
     }}>
       {children}
     </ProjectContext.Provider>

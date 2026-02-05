@@ -10,7 +10,7 @@ import Markdown from 'react-markdown';
 import api from '../../lib/api';
 
 export const AISidebar = () => {
-  const { selectedProject, selectedDocument } = useProject();
+  const { selectedProject, selectedDocument, applyAISuggestion } = useProject();
   const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -21,6 +21,9 @@ export const AISidebar = () => {
   const [pendingPlan, setPendingPlan] = useState(null);
   const [executingPlan, setExecutingPlan] = useState(false);
   const [completedSteps, setCompletedSteps] = useState([]);
+
+  // Text refinement state
+  const [textSuggestions, setTextSuggestions] = useState([]);
 
   const scrollRef = useRef(null);
   const textareaRef = useRef(null);
@@ -70,60 +73,6 @@ export const AISidebar = () => {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [messages]);
-
-  // Send message
-  const handleSend = useCallback(async () => {
-    if (!inputText.trim() || isSending || !selectedProject) return;
-
-    const message = inputText.trim();
-    setInputText('');
-    setIsSending(true);
-
-    // Build context
-    const context = {};
-    if (selectedDocument) {
-      context.document_id = selectedDocument.id;
-    }
-
-    // Optimistically add user message
-    const userMessage = {
-      id: `temp-${Date.now()}`,
-      role: 'user',
-      content: message,
-      timestamp: new Date().toISOString(),
-      context
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-
-    try {
-      const response = await api.post(`/chat/projects/${selectedProject.id}/send`, {
-        message,
-        context
-      });
-
-      // Replace optimistic message with server response
-      setMessages(prev => {
-        const withoutTemp = prev.filter(m => m.id !== userMessage.id);
-        return [
-          ...withoutTemp,
-          response.data.user_message,
-          response.data.ai_response
-        ];
-      });
-    } catch (error) {
-      console.error('Failed to send message:', error);
-      toast.error(error.response?.data?.detail || 'Failed to send message');
-      // Remove optimistic message on error
-      setMessages(prev => prev.filter(m => m.id !== userMessage.id));
-    } finally {
-      setIsSending(false);
-      // Focus textarea after sending
-      if (textareaRef.current && !isCollapsed) {
-        textareaRef.current.focus();
-      }
-    }
-  }, [inputText, isSending, selectedProject, selectedDocument, isCollapsed]);
 
   // Clear chat history
   const handleClearHistory = useCallback(async () => {
@@ -212,6 +161,33 @@ export const AISidebar = () => {
     </Card>
   );
 
+  // Text suggestion card component
+  const TextSuggestionCard = ({ suggestion, onApply, onDismiss }) => (
+    <Card className="p-3 bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800">
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <Bot className="h-3 w-3 text-green-600" />
+          <span className="text-xs font-semibold">Suggested Revision</span>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 w-6 p-0"
+          onClick={onDismiss}
+        >
+          <X className="h-3 w-3" />
+        </Button>
+      </div>
+      <div className="text-xs mb-2">
+        <p className="text-muted-foreground line-through">{suggestion.original}</p>
+        <p className="text-green-700 dark:text-green-300 font-medium">{suggestion.revised}</p>
+      </div>
+      <Button onClick={onApply} size="sm" className="w-full text-xs">
+        Apply Suggestion
+      </Button>
+    </Card>
+  );
+
   // Handle plan approval
   const handleApprovePlan = useCallback(async () => {
     if (!pendingPlan || !selectedProject) return;
@@ -251,6 +227,20 @@ export const AISidebar = () => {
   const handleRejectPlan = useCallback(() => {
     setPendingPlan(null);
     toast.info('Plan rejected. You can ask a simpler question.');
+  }, []);
+
+  // Handle applying text suggestion
+  const handleApplySuggestion = useCallback((suggestion) => {
+    const success = applyAISuggestion(suggestion.revised, suggestion.range);
+    if (success) {
+      // Remove suggestion after applying
+      handleDismissSuggestion(suggestion.id);
+    }
+  }, [applyAISuggestion]);
+
+  // Handle dismissing suggestion
+  const handleDismissSuggestion = useCallback((suggestionId) => {
+    setTextSuggestions(prev => prev.filter(s => s.id !== suggestionId));
   }, []);
 
   // Check if query needs plan proposal before sending
@@ -328,7 +318,7 @@ export const AISidebar = () => {
     }
   }, [inputText, isSending, selectedProject, selectedDocument, isCollapsed]);
 
-  // Override original handleSend to use plan check
+  // Assign handleSend to use plan check
   const handleSend = handleSendWithPlanCheck;
 
   if (!selectedProject) {
@@ -397,7 +387,7 @@ export const AISidebar = () => {
           <div className="flex items-center justify-center h-full">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
-        ) : messages.length === 0 ? (
+        ) : messages.length === 0 && textSuggestions.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
             <Bot className="h-12 w-12 mb-4 opacity-20" />
             <p className="text-sm">Ask me anything about your research</p>
@@ -405,6 +395,17 @@ export const AISidebar = () => {
           </div>
         ) : (
           <div className="space-y-4">
+            {/* Text suggestions */}
+            {textSuggestions.map((suggestion) => (
+              <TextSuggestionCard
+                key={suggestion.id}
+                suggestion={suggestion}
+                onApply={() => handleApplySuggestion(suggestion)}
+                onDismiss={() => handleDismissSuggestion(suggestion.id)}
+              />
+            ))}
+
+            {/* Messages */}
             {messages.map((message) => (
               <div
                 key={message.id}

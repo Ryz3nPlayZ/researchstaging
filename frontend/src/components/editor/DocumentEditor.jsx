@@ -272,13 +272,16 @@ const MenuBar = memo(({ editor, canUndo, canRedo, isSaving, onShowVersionHistory
 
 MenuBar.displayName = 'MenuBar';
 
-export const DocumentEditor = ({ documentId, projectId, initialContent, onSave, onShowVersionHistory, citationStyle = 'APA' }) => {
+export const DocumentEditor = ({ documentId, projectId, initialContent, onSave, onShowVersionHistory, citationStyle = 'APA', editorRef }) => {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedHash, setLastSavedHash] = useState('');
   const [showCitationPicker, setShowCitationPicker] = useState(false);
   const [bibliographyKey, setBibliographyKey] = useState(0);
   const [currentCitationStyle, setCurrentCitationStyle] = useState(citationStyle);
+
+  // Internal editor ref for local operations
+  const internalEditorRef = useRef(null);
 
   // AI Assistant state
   const [showRewriteDialog, setShowRewriteDialog] = useState(false);
@@ -573,6 +576,61 @@ export const DocumentEditor = ({ documentId, projectId, initialContent, onSave, 
   const handleVersionHistoryClose = useCallback(() => {
     setShowVersionHistory(false);
   }, []);
+
+  // Expose editor instance via ref (for external components like AISidebar)
+  useEffect(() => {
+    if (editor && editorRef) {
+      editorRef.current = editor;
+    }
+    // Also keep internal ref
+    internalEditorRef.current = editor;
+  }, [editor, editorRef]);
+
+  // Apply AI suggestion to editor
+  const applySuggestion = useCallback((suggestionText, range = null) => {
+    if (!editor) return false;
+
+    try {
+      if (range && range.from !== undefined && range.to !== undefined) {
+        // Replace specific range
+        const { from, to } = range;
+        const { state, view } = editor;
+
+        const tr = state.tr.replaceWith(
+          from,
+          to,
+          state.schema.text(suggestionText)
+        );
+
+        view.dispatch(tr);
+      } else {
+        // Insert at current cursor position
+        editor.chain().focus().insertContent(suggestionText).run();
+      }
+
+      toast({
+        title: 'Suggestion applied',
+        description: 'Text has been updated',
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Failed to apply suggestion:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Failed to apply suggestion',
+        description: error.message
+      });
+      return false;
+    }
+  }, [editor, toast]);
+
+  // Expose applySuggestion method via ref
+  useEffect(() => {
+    if (editorRef && editorRef.current !== null) {
+      editorRef.current.applySuggestion = applySuggestion;
+    }
+  }, [editorRef, applySuggestion]);
 
   if (!editor) {
     return (

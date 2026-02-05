@@ -47,7 +47,8 @@ export const Workspace = () => {
     selectedFile,
     setSelectedFile,
     setSelectedDocument,
-    triggerRefresh
+    triggerRefresh,
+    editorRef
   } = useProject();
   
   const [executing, setExecuting] = useState(false);
@@ -560,6 +561,7 @@ export const Workspace = () => {
                           documentId={documentData.id}
                           initialContent={documentData.content}
                           onSave={handleDocumentSave}
+                          editorRef={editorRef}
                         />
                       );
                     }
