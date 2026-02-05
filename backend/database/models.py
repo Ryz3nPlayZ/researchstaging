@@ -603,3 +603,116 @@ class ClaimRelationship(Base):
         Index("idx_claim_relationships_to_claim", "to_claim_id"),
         Index("idx_claim_relationships_type", "relationship_type"),
     )
+
+
+# ============== Document Editor Models ==============
+
+class CitationSource(str, enum.Enum):
+    """Types of sources that can be cited."""
+    PAPER = "paper"
+    CLAIM = "claim"
+    MANUAL = "manual"
+
+
+class Document(Base):
+    """
+    Rich text document for academic writing.
+    Documents store TipTap JSON content and support citation management.
+    """
+    __tablename__ = "documents"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    project_id = Column(String(36), ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
+
+    # Document metadata
+    title = Column(String(500), nullable=False, default="Untitled Document")
+
+    # Content (TipTap JSON format)
+    content = Column(JSONB, nullable=False, default=dict)
+    content_hash = Column(String(64), nullable=True)  # SHA-256 hash for change detection
+
+    # Citation style
+    citation_style = Column(String(20), nullable=True, default="apa")  # apa, mla, chicago
+
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)
+
+    # Created by
+    created_by = Column(String(36), nullable=True)  # User ID
+
+    # Relationships
+    citations = relationship("DocumentCitation", back_populates="document", cascade="all, delete-orphan")
+    versions = relationship("DocumentVersion", back_populates="document", cascade="all, delete-orphan")
+
+    __table_args__ = (
+        Index("idx_documents_project_id", "project_id"),
+        Index("idx_documents_updated_at", "updated_at"),
+    )
+
+
+class DocumentCitation(Base):
+    """
+    Citation within a document.
+    Links document content to papers, claims, or manual entries.
+    """
+    __tablename__ = "document_citations"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    document_id = Column(String(36), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
+
+    # Position in document (TipTap position)
+    citation_position = Column(JSONB, nullable=True)  # {from: int, to: int}
+
+    # Source of citation (polymorphic)
+    source_type = Column(SQLEnum(CitationSource), nullable=False)
+    source_id = Column(String(36), nullable=True)  # papers.id or claims.id
+
+    # Formatted citation data
+    citation_data = Column(JSONB, nullable=False, default=dict)  # {authors, title, year, venue, etc.}
+
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+    # Relationships
+    document = relationship("Document", back_populates="citations")
+
+    __table_args__ = (
+        Index("idx_document_citations_document_id", "document_id"),
+        Index("idx_document_citations_source", "source_type", "source_id"),
+    )
+
+
+class DocumentVersion(Base):
+    """
+    Version history for documents.
+    Stores snapshots of document content for branching and diff viewing.
+    """
+    __tablename__ = "document_versions"
+
+    id = Column(String(36), primary_key=True, default=generate_uuid)
+    document_id = Column(String(36), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
+
+    # Content snapshot
+    content = Column(JSONB, nullable=False)
+
+    # Version metadata
+    change_description = Column(Text, nullable=True)
+
+    # Timestamps
+    created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
+
+    # Created by
+    created_by = Column(String(36), nullable=True)  # User ID
+
+    # Branching support
+    parent_version_id = Column(String(36), ForeignKey("document_versions.id"), nullable=True)
+
+    # Relationships
+    document = relationship("Document", back_populates="versions")
+    parent_version = relationship("DocumentVersion", remote_side=[id])
+
+    __table_args__ = (
+        Index("idx_document_versions_document_id", "document_id"),
+        Index("idx_document_versions_created_at", "created_at"),
+    )
