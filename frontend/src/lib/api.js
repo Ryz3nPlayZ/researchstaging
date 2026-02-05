@@ -110,6 +110,35 @@ export const filesApi = {
   moveFile: (fileId, folderId) => api.patch(`/files/files/${fileId}/move`, { folder_id: folderId }),
 };
 
+// Documents API
+export const documentsApi = {
+  // Save document (update existing)
+  saveDocument: (documentId, content, title) => {
+    const data = { content };
+    if (title !== undefined) {
+      data.title = title;
+    }
+    return api.put(`/documents/${documentId}`, data);
+  },
+
+  // Load document by ID
+  loadDocument: (documentId) => api.get(`/documents/${documentId}`),
+
+  // Create new document
+  createDocument: (projectId, title, citationStyle = 'APA') => {
+    return api.post(`/projects/${projectId}/documents`, {
+      title,
+      citation_style: citationStyle,
+    });
+  },
+
+  // List documents for a project
+  listDocuments: (projectId) => api.get(`/projects/${projectId}/documents`),
+
+  // Delete document
+  deleteDocument: (documentId) => api.delete(`/documents/${documentId}`),
+};
+
 // WebSocket connection for real-time updates
 export const createWebSocketConnection = (projectId, onEvent, onError) => {
   const wsUrl = BACKEND_URL.replace('http', 'ws').replace('https', 'wss');
