@@ -10,17 +10,17 @@ See: .planning/PROJECT.md (updated 2025-02-01)
 ## Current Position
 
 Phase: 5 of 8 (Literature Search & Review) - 🔄 IN PROGRESS
-Plan: 02 of 3 (AI-Powered Claim Extraction) - ✓ COMPLETE
-Status: Claim extraction from PDF papers with LLM, API endpoint, and UI integration complete. Ready for: citation management, claim visualization
-Last activity: 2026-02-05 — Completed Phase 5 Plan 02 (AI-Powered Claim Extraction)
+Plan: 03 of 3 (Literature Citation Integration) - ✓ COMPLETE
+Status: Citation integration for literature search complete. Literature search papers can be inserted as formatted citations into documents. Ready for: next phase features
+Last activity: 2026-02-05 — Completed Phase 5 Plan 03 (Literature Citation Integration)
 
-Progress: ███████░░ 58% (11/19 plans complete; 4/8 phases complete; 2/3 plans in Phase 5)
+Progress: ███████░░ 63% (12/19 plans complete; 4/8 phases complete; 3/3 plans in Phase 5)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 15
-- Average duration: 6 min
+- Total plans completed: 16
+- Average duration: 5 min
 - Total execution time: 1.5 hours
 
 **By Phase:**
@@ -31,11 +31,11 @@ Progress: ███████░░ 58% (11/19 plans complete; 4/8 phases comp
 | 02-file-management | 4 | 4 | 5 min |
 | 03-memory-backend | 4 | 4 | 3 min |
 | 04-rich-text-editor | 3 | ~6 | 6 min |
-| 05-literature | 2 | ~3 | 5 min |
+| 05-literature | 3 | ~3 | 5 min |
 | 06-08 | — | — | — |
 
 **Recent Trend:**
-- Last 5 plans: 4 min, 8 min, 4 min, 4 min, 6 min, 4 min (04-01, 04-03, 04-02, 04-06, 05-01, 05-02)
+- Last 5 plans: 4 min, 4 min, 6 min, 4 min, 5 min (04-02, 04-06, 05-01, 05-02, 05-03)
 - Trend: Steady (consistent execution speed)
 
 *Updated after each plan completion*
@@ -175,6 +175,12 @@ Recent decisions affecting current work:
 85. **Automatic paper addition** — Claims extraction automatically adds paper to project (via onAddToProject callback) for seamless workflow.
 86. **Prompt template file pattern** — Store prompts in `backend/prompts/` directory with placeholder replacement for max_claims and other parameters.
 
+**From 05-03 (Literature Citation Integration):**
+87. **Literature citation integration** — Citation picker includes Literature Search tab for direct paper-to-citation workflow without manual data entry.
+88. **Citation formatting API reuse** — `/api/citations/format-paper` endpoint leverages existing CitationService formatting methods for consistency.
+89. **Debounced literature search** — 300ms debounce in citation picker reduces API calls while maintaining responsive UX.
+90. **Context-aware citation insertion** — Insert Citation button only shows when document is open, preventing errors from missing context.
+
 ### Pending Todos
 
 **P0 - Critical:**
@@ -238,6 +244,9 @@ Recent decisions affecting current work:
 
 **From 05-02 (AI-Powered Claim Extraction):**
 - No blockers identified. Claim extraction service, API endpoint, and UI integration fully functional.
+
+**From 05-03 (Literature Citation Integration):**
+- No blockers identified. Citation formatting API, picker integration, and insertion UI fully functional.
 
 ### Patterns Established
 
@@ -312,6 +321,6 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Completed Phase 5 Plan 02 (AI-Powered Claim Extraction)
-Resume file: .planning/phases/05-literature/05-02-SUMMARY.md
-Next: Phase 5 Plan 03 (Citation Management and Claim Visualization) or continue with remaining plans
+Stopped at: Completed Phase 5 Plan 03 (Literature Citation Integration)
+Resume file: .planning/phases/05-literature/05-03-SUMMARY.md
+Next: Phase 6 (AI Planning & Execution) or other planned features
