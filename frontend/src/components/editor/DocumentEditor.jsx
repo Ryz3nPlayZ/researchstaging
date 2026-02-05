@@ -33,11 +33,12 @@ import {
   Undo,
   Redo,
   Save,
-  Loader2
+  Loader2,
+  History as HistoryIcon
 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 
-const MenuBar = memo(({ editor, canUndo, canRedo, isSaving }) => {
+const MenuBar = memo(({ editor, canUndo, canRedo, isSaving, onShowVersionHistory }) => {
   if (!editor) return null;
 
   return (
@@ -63,6 +64,17 @@ const MenuBar = memo(({ editor, canUndo, canRedo, isSaving }) => {
       >
         <Redo className="h-4 w-4" />
       </Button>
+      {onShowVersionHistory && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0"
+          onClick={onShowVersionHistory}
+          title="Version History"
+        >
+          <HistoryIcon className="h-4 w-4" />
+        </Button>
+      )}
 
       <Separator orientation="vertical" className="h-6 mx-2" />
 
@@ -220,7 +232,7 @@ const MenuBar = memo(({ editor, canUndo, canRedo, isSaving }) => {
 
 MenuBar.displayName = 'MenuBar';
 
-export const DocumentEditor = ({ documentId, initialContent, onSave }) => {
+export const DocumentEditor = ({ documentId, initialContent, onSave, onShowVersionHistory }) => {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = React.useState(false);
   const [lastSavedHash, setLastSavedHash] = React.useState('');
@@ -386,6 +398,7 @@ export const DocumentEditor = ({ documentId, initialContent, onSave }) => {
         canUndo={canUndo}
         canRedo={canRedo}
         isSaving={isSaving}
+        onShowVersionHistory={onShowVersionHistory}
       />
 
       {/* Editor Content */}
