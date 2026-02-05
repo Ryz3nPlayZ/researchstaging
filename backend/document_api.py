@@ -17,7 +17,7 @@ from llm_service import llm_service
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api", tags=["documents"])
+router = APIRouter(tags=["documents"])
 
 
 # ============== Pydantic Models ==============
