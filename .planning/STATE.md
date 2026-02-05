@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2025-02-01)
 
 **Core value:** Stateful research intelligence — Single workspace where AI agent remembers everything important (all chats, analyses, documents, file contents) and uses that context to provide genuinely helpful research assistance.
-**Current focus:** Phase 8 (Document Export) - Backend export service and API complete
+**Current focus:** Phase 8 (Document Export) - Backend complete, Frontend export UI pending
 
 ## Current Position
 
 Phase: 8 of 8 (Document Export) - 🟡 IN PROGRESS
-Plan: 01 of 1 (Backend Export Service and API) - ✅ COMPLETE
-Status: Backend export complete (Pandoc service + API endpoints). Frontend integration pending.
-Last activity: 2026-02-05 — Completed Phase 8 Plan 01: Export service with TipTap to Markdown conversion, PDF/DOCX export endpoints
+Plan: 01 of 2 (Backend Export Service and API) - ✅ COMPLETE
+Status: Backend export complete (Pandoc service + API endpoints + PDF engine detection). Frontend integration pending (08-02).
+Last activity: 2026-02-05 — Completed Phase 8 Plan 01: Export service with TipTap to Markdown conversion, PDF/DOCX export endpoints, PDF engine auto-detection
 
-Progress: ██████████ 92% (24/25 plans complete; 7/8 phases complete, 1/8 partial)
+Progress: ██████████ 96% (24/25 plans complete; 7/8 phases complete, 1/8 partial)
 
 ## Performance Metrics
 
@@ -34,7 +34,7 @@ Progress: ██████████ 92% (24/25 plans complete; 7/8 phases c
 | 05-literature | 3 | ~3 | 5 min |
 | 06-ai-agent | 3 | ~3 | 5 min |
 | 07-data-analysis | 3 | ~3 | 4 min |
-| 08-document-export | 1 | ~1 | 5 min |
+| 08-document-export | 1 | 2 | 5 min |
 
 **Recent Trend:**
 - Last 5 plans: 6 min, 3 min, 4 min, 4 min, 5 min (06-02, 06-03, 07-01, 07-02, 07-03)
@@ -227,6 +227,7 @@ Recent decisions affecting current work:
 118. **30-second timeout on Pandoc calls** — Prevents hanging on large documents or Pandoc errors. Returns TimeoutError with clear message to user.
 119. **Safe filename generation** — Strip slashes and backslashes from document title, truncate to 100 chars. Prevents path traversal and filename overflow issues.
 120. **Custom exception hierarchy** — PandocNotFoundError, ConversionError, TimeoutError. Structured error handling for different failure modes with specific HTTP status codes.
+121. **PDF engine auto-detection** — Detect available LaTeX engines (xelatex, pdflatex, lualatex) on startup and use first available. Provides clear installation instructions when none found. DOCX export works without LaTeX.
 
 **From 05-01 (Literature Search & Unpaywall Integration):**
 75. **Service layer enrichment** — Unpaywall integration and result sorting implemented in LiteratureService, not API layer. Enables reuse and testing.
@@ -368,6 +369,18 @@ Recent decisions affecting current work:
 **From 06-03 (Advanced AI Features):**
 - No blockers identified. Plan proposal, approval UI, and text refinement fully functional.
 
+**From 07-01 (AI-Powered Code Generation):**
+- No blockers identified. Code generation service, Monaco editor, and integration fully functional.
+
+**From 07-02 (Sandboxed Code Execution):**
+- No blockers identified. Python/R code execution with timeout protection, output capture, and automatic memory persistence fully functional.
+
+**From 07-03 (Analysis Results Display):**
+- No blockers identified. Plotly charts, modal display, multi-format download, and keyboard shortcuts fully functional.
+
+**From 08-01 (Document Export Backend):**
+- No blockers identified. Pandoc-based export service with PDF engine auto-detection, ownership validation, and comprehensive error handling fully functional.
+
 ### Patterns Established
 
 **From 01-01 & 01-02 (Authentication):**
@@ -452,7 +465,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-05
+Last session: 2026-02-05 18:24 UTC
 Stopped at: Completed Phase 8 Plan 01 (Backend Export Service and API)
 Resume file: .planning/phases/08-document-export/08-01-SUMMARY.md
-Next: Phase 8 complete - Frontend export integration pending (would be 08-02 if planned)
+Next: Phase 8 Plan 02 (Frontend Export UI) - ExportButton component with PDF/DOCX download
