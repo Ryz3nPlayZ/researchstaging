@@ -193,6 +193,33 @@ export const analysisApi = {
       language,
       data_context: dataContext
     }),
+
+  executeCode: (projectId, code, language, saveToMemory = true) =>
+    api.post(`/analysis/projects/${projectId}/execute`, {
+      code,
+      language,
+      save_to_memory: saveToMemory
+    }),
+
+  downloadResult: (findingId, format = 'txt') => {
+    const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+    const url = `${BACKEND_URL}/api/analysis/results/${findingId}/download?format=${format}`;
+
+    // For file downloads, we need to fetch the blob
+    return fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    }).then(response => {
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.statusText}`);
+      }
+      return response.blob();
+    });
+  },
+
+  visualizeResult: (findingId) =>
+    api.get(`/analysis/results/${findingId}/visualize`),
 };
 
 // WebSocket connection for real-time updates
