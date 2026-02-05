@@ -203,13 +203,15 @@ The Research Workspace delivers stateful research intelligence — a single work
   8. User can view and edit AI-generated code before execution
   9. System saves analysis results to memory for future access
 
-**Research**: Likely (cloud sandbox execution, code generation safety)
-**Research topics**: Docker container per-project isolation, R/Python execution patterns, code generation safety, visualization libraries
+**Research**: Complete - Subprocess-based execution with timeout protection, Plotly/Recharts for visualization
+**Research topics**: Subprocess execution, timeout handling, CSV/JSON parsing, Plotly chart rendering
 
-**Plans**: TBD
+**Completed**: 2026-02-05 (Planned)
 
-Plans:
-- [ ] 07-01: [Brief description]
+**Plans**:
+- [ ] 07-01: Code Generation and Editing UI — AnalysisAgent, code generation API, CodeEditor component
+- [ ] 07-02: Code Execution Service — ExecutionService, execution API, memory integration
+- [ ] 07-03: Visualization and Export — AnalysisResults component, download endpoints, workflow integration
 
 ### Phase 8: Document Export
 
