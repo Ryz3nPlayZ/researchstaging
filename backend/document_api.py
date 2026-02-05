@@ -344,3 +344,91 @@ async def get_document_version(
         "created_by": version.created_by,
         "parent_version_id": version.parent_version_id,
     }
+
+
+@router.post("/documents/{document_id}/restore/{version_id}", response_model=DocumentResponse)
+async def restore_document_version(
+    document_id: str,
+    version_id: str,
+    session: AsyncSession = Depends(get_db),
+):
+    """
+    Restore a document to a previous version.
+
+    Process:
+    1. Create new DocumentVersion for pre-restore state (audit trail)
+    2. Update Document.content with version content
+    3. Create DocumentVersion for restored state
+
+    Preserves full history of what was there before and after restore.
+    """
+    # Get document
+    result = await session.execute(
+        select(Document).where(Document.id == document_id)
+    )
+    document = result.scalar_one_or_none()
+
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Get version to restore from
+    result = await session.execute(
+        select(DocumentVersion).where(DocumentVersion.id == version_id)
+    )
+    version = result.scalar_one_or_none()
+
+    if not version:
+        raise HTTPException(status_code=404, detail="Document version not found")
+
+    if version.document_id != document_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Version does not belong to this document"
+        )
+
+    # Step 1: Create version for pre-restore state (audit trail)
+    pre_restore_version = DocumentVersion(
+        document_id=document.id,
+        content=document.content,
+        change_description="Auto-saved before restore",
+        created_at=datetime.now(timezone.utc),
+        created_by=document.created_by,
+    )
+    session.add(pre_restore_version)
+
+    # Step 2: Update document content
+    document.content = version.content
+
+    # Calculate new content hash
+    content_json = json.dumps(version.content, sort_keys=True)
+    new_hash = hashlib.sha256(content_json.encode()).hexdigest()
+    document.content_hash = new_hash
+    document.updated_at = datetime.now(timezone.utc)
+
+    # Step 3: Create version for restored state
+    restored_version = DocumentVersion(
+        document_id=document.id,
+        content=version.content,
+        change_description=f"Restored from version {version_id}",
+        created_at=datetime.now(timezone.utc),
+        created_by=document.created_by,
+    )
+    session.add(restored_version)
+
+    await session.flush()
+
+    logger.info(
+        f"Restored document {document_id} to version {version_id}. "
+        f"Pre-restore saved as {pre_restore_version.id}, "
+        f"Post-restore saved as {restored_version.id}"
+    )
+
+    return DocumentResponse(
+        id=document.id,
+        project_id=document.project_id,
+        title=document.title,
+        content=document.content,
+        citation_style=document.citation_style.value,
+        created_at=document.created_at,
+        updated_at=document.updated_at,
+    )

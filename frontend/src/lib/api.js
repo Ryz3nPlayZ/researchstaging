@@ -137,6 +137,14 @@ export const documentsApi = {
 
   // Delete document
   deleteDocument: (documentId) => api.delete(`/documents/${documentId}`),
+
+  // Version history
+  listVersions: (documentId) => api.get(`/documents/${documentId}/versions`),
+
+  getVersion: (versionId) => api.get(`/documents/versions/${versionId}`),
+
+  restoreVersion: (documentId, versionId) =>
+    api.post(`/documents/${documentId}/restore/${versionId}`),
 };
 
 // WebSocket connection for real-time updates
