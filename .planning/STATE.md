@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2025-02-01)
 
 **Core value:** Stateful research intelligence — Single workspace where AI agent remembers everything important (all chats, analyses, documents, file contents) and uses that context to provide genuinely helpful research assistance.
-**Current focus:** Phase 5 COMPLETE - Literature Search & Review fully implemented and verified
+**Current focus:** Phase 6 PLANNED - AI Agent & Sidebar Chat ready for execution
 
 ## Current Position
 
-Phase: 5 of 8 (Literature Search & Review) - ✅ COMPLETE
-Plan: 03 of 3 (Citation Integration)
-Status: Phase 5 execution complete. All plans implemented, verified (15/15 must_haves passed). Ready for Phase 6
-Last activity: 2026-02-05 — Completed Phase 5 (all 3 plans), literature search, claim extraction, citation integration
+Phase: 6 of 8 (AI Agent & Sidebar Chat) - 🔄 IN PROGRESS
+Plan: 01 of 3 (Persistent Sidebar Chat)
+Status: Plan 01 complete. Persistent sidebar chat with context-aware AI responses implemented
+Last activity: 2025-02-05 — Completed Phase 6 Plan 01 (Persistent Sidebar Chat)
 
-Progress: ████████░░ 63% (11/22 plans complete; 5/8 phases complete)
+Progress: ████████░░ 67% (12/25 plans complete; 5/8 phases complete, 1 in progress)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 16
+- Total plans completed: 17
 - Average duration: 5 min
-- Total execution time: 1.5 hours
+- Total execution time: ~1.6 hours
 
 **By Phase:**
 
@@ -32,10 +32,11 @@ Progress: ████████░░ 63% (11/22 plans complete; 5/8 phases c
 | 03-memory-backend | 4 | 4 | 3 min |
 | 04-rich-text-editor | 3 | ~6 | 6 min |
 | 05-literature | 3 | ~3 | 5 min |
-| 06-08 | — | — | — |
+| 06-ai-agent | 1 | ~3 | 6 min |
+| 07-08 | — | — | — |
 
 **Recent Trend:**
-- Last 5 plans: 4 min, 4 min, 6 min, 4 min, 5 min (04-02, 04-06, 05-01, 05-02, 05-03)
+- Last 5 plans: 6 min, 4 min, 5 min, 5 min, 6 min (04-06, 05-01, 05-02, 05-03, 06-01)
 - Trend: Steady (consistent execution speed)
 
 *Updated after each plan completion*
@@ -181,6 +182,14 @@ Recent decisions affecting current work:
 89. **Debounced literature search** — 300ms debounce in citation picker reduces API calls while maintaining responsive UX.
 90. **Context-aware citation insertion** — Insert Citation button only shows when document is open, preventing errors from missing context.
 
+**From 06-01 (Persistent Sidebar Chat):**
+91. **In-memory chat message storage** — Using Python dictionary for MVP instead of database. Stores last 100 messages per project. Simpler implementation for initial release.
+92. **Context injection for AI responses** — AI responses enhanced with project goal, document content (if open), and recent claims from memory. Provides more relevant assistance than generic chatbot.
+93. **Collapsible sidebar design** — AI sidebar 400px when expanded, 60px when collapsed. Saves screen space while keeping AI accessible. State persisted to localStorage.
+94. **Markdown rendering for AI responses** — Using react-markdown to support formatted output (code blocks, lists, links). Better UX than plain text.
+95. **Optimistic UI updates** — User message appears immediately, AI response loads asynchronously. Error handling rolls back optimistic update.
+96. **Chat API pattern** — GET history (paginated), POST send (with context), DELETE clear. Simple REST interface for chat operations.
+
 ### Pending Todos
 
 **P0 - Critical:**
@@ -247,6 +256,9 @@ Recent decisions affecting current work:
 
 **From 05-03 (Literature Citation Integration):**
 - No blockers identified. Citation formatting API, picker integration, and insertion UI fully functional.
+
+**From 06-01 (Persistent Sidebar Chat):**
+- No blockers identified. Chat API, AISidebar component, and workspace integration fully functional.
 
 ### Patterns Established
 
@@ -320,7 +332,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-05
-Stopped at: Completed Phase 5 Plan 03 (Literature Citation Integration)
-Resume file: .planning/phases/05-literature/05-03-SUMMARY.md
-Next: Phase 6 (AI Planning & Execution) or other planned features
+Last session: 2025-02-05
+Stopped at: Completed Phase 6 Plan 01 (Persistent Sidebar Chat)
+Resume file: .planning/phases/06-ai-agent/06-01-SUMMARY.md
+Next: Phase 6 Plan 02 (Multi-Agent Orchestration) or other planned features
