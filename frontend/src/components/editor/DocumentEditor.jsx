@@ -46,7 +46,7 @@ import {
   DialogContent,
 } from '../ui/dialog';
 
-const MenuBar = memo(({ editor, canUndo, canRedo, isSaving, onShowVersionHistory, onInsertCitation }) => {
+const MenuBar = memo(({ editor, canUndo, canRedo, isSaving, onShowVersionHistory, onInsertCitation, citationStyle, onCitationStyleChange }) => {
   if (!editor) return null;
 
   return (
@@ -237,6 +237,25 @@ const MenuBar = memo(({ editor, canUndo, canRedo, isSaving, onShowVersionHistory
       >
         <QuoteIcon className="h-4 w-4" />
       </Button>
+
+      {/* Citation Style Selector */}
+      {onCitationStyleChange && (
+        <>
+          <Separator orientation="vertical" className="h-6 mx-2" />
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Citation Style:</span>
+            <select
+              value={citationStyle}
+              onChange={(e) => onCitationStyleChange(e.target.value)}
+              className="h-8 px-2 text-sm border border-border rounded-md bg-background"
+            >
+              <option value="APA">APA 7th</option>
+              <option value="MLA">MLA 9th</option>
+              <option value="Chicago">Chicago 17th</option>
+            </select>
+          </div>
+        </>
+      )}
 
       <div className="flex-1" />
 
@@ -576,6 +595,8 @@ export const DocumentEditor = ({ documentId, projectId, initialContent, onSave, 
         isSaving={isSaving}
         onShowVersionHistory={onShowVersionHistory}
         onInsertCitation={handleCitationInsert}
+        citationStyle={currentCitationStyle}
+        onCitationStyleChange={handleCitationStyleChange}
       />
 
       {/* Editor Content */}
