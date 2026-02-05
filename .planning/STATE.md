@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2025-02-01)
 
 **Core value:** Stateful research intelligence — Single workspace where AI agent remembers everything important (all chats, analyses, documents, file contents) and uses that context to provide genuinely helpful research assistance.
-**Current focus:** Phase 8 (Document Export) - Backend and Frontend complete, ready for human verification
+**Current focus:** Phase 9 (File Content Loading) - Gap closure for P0 bug from v1.0 milestone audit
 
 ## Current Position
 
-Phase: 8 of 8 (Document Export) - ✅ COMPLETE
-Plan: 02 of 2 (Frontend Export UI) - ✅ COMPLETE
-Status: Document export feature complete (Backend Pandoc service + API endpoints + Frontend ExportButton + Toolbar integration). Ready for end-to-end testing.
-Last activity: 2026-02-05 — Completed Phase 8 Plan 02: Frontend export UI with ExportButton dropdown, PDF/DOCX download, loading states, error handling. Fixed missing useRef import in DocumentEditor.
+Phase: 9 of 9 (File Content Loading) - Gap Closure Phase
+Plan: 03 of 4 (DOCX to TipTap Parser) - ✅ COMPLETE
+Status: DOCX to TipTap conversion complete. Added python-docx dependency, created docx_to_tiptap() and markdown_to_tiptap() functions, enhanced content API to return TipTap JSON directly. Ready for Workspace integration (plan 09-04).
+Last activity: 2026-02-05 — Completed Phase 9 Plan 03: DOCX to TipTap parser with python-docx library, heading/style detection, inline formatting preservation, enhanced content API.
 
-Progress: ██████████ 100% (25/25 plans complete; 8/8 phases complete)
+Progress: █████████░ 97% (28/29 plans complete; 8/8 phases complete; Phase 9: 3/4 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 24
+- Total plans completed: 28
 - Average duration: 5 min
-- Total execution time: ~2 hours
+- Total execution time: ~2.3 hours
 
 **By Phase:**
 
@@ -30,18 +30,19 @@ Progress: ██████████ 100% (25/25 plans complete; 8/8 phases 
 | 01-authentication | 2 | 2 | 10 min |
 | 02-file-management | 4 | 4 | 5 min |
 | 03-memory-backend | 4 | 4 | 3 min |
-| 04-document-editor | 6 | ~6 | 6 min |
-| 05-literature | 3 | ~3 | 5 min |
-| 06-ai-agent | 3 | ~3 | 5 min |
-| 07-data-analysis | 3 | ~3 | 4 min |
+| 04-document-editor | 6 | 6 | 6 min |
+| 05-literature | 3 | 3 | 5 min |
+| 06-ai-agent | 3 | 3 | 5 min |
+| 07-data-analysis | 3 | 3 | 4 min |
 | 08-document-export | 2 | 2 | 4 min |
+| 09-file-content-loading | 3 | 4 | 2 min |
 
 **Recent Trend:**
-- Last 5 plans: 6 min, 3 min, 4 min, 4 min, 2 min (06-02, 06-03, 07-01, 07-02, 07-03, 08-01, 08-02)
-- Latest: 2 min (08-02)
-- Trend: Steady (consistent execution speed)
+- Last 5 plans: 2 min, 2 min, 2 min, 2 min, 2 min (09-01, 09-02, 09-03)
+- Latest: 2 min (09-03)
+- Trend: Very fast (gap closure going smoothly)
 
-**🎉 MILESTONE: ALL 8 PHASES COMPLETE (25/25 plans)**
+**🎉 MILESTONE: MVP CORE COMPLETE (28/29 plans, 8/8 production phases + gap closure)**
 
 *Updated after each plan completion*
 
@@ -237,6 +238,13 @@ Recent decisions affecting current work:
 124. **Format-specific loading states** — Track exportFormat ('pdf' | 'docx') to show "Exporting..." on specific menu item while other format remains clickable. Better UX than disabling entire dropdown.
 125. **Comprehensive error handling with user-friendly messages** — Map HTTP status codes (404, 403, 503) and network errors to specific messages. Users get actionable feedback instead of generic "Export failed".
 126. **Filename sanitization for downloads** — Convert document title to URL-safe filename (lowercase, hyphens instead of special chars). Ensures downloads work across all browsers and file systems.
+
+**From 09-03 (DOCX to TipTap Parser):**
+127. **python-docx library for Word document parsing** — Handles Word 2007+ format, no external Word installation required, well-documented and stable. Chosen over manual DOCX parsing with zipfile (too complex).
+128. **Return TipTap JSON directly from content endpoint** — GET /files/{file_id}/content now returns TipTap format directly, simplifying frontend integration. Workspace.jsx can use response without additional conversion.
+129. **Parse DOCX files as bytes, not text** — DOCX is binary format (zipped XML), must be read as bytes for python-docx to parse correctly. Uses BytesIO for in-memory processing without temporary files.
+130. **Preserve Word heading styles** — Map Word style names (Heading 1-6, Title) to TipTap heading nodes with correct levels. Users expect document structure preserved when opening in editor.
+131. **Extract inline formatting from runs** — Parse bold, italic, underline from Word runs and convert to TipTap marks. Preserves basic formatting from source documents.
 
 **From 05-01 (Literature Search & Unpaywall Integration):**
 75. **Service layer enrichment** — Unpaywall integration and result sorting implemented in LiteratureService, not API layer. Enables reuse and testing.
