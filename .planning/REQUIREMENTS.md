@@ -66,15 +66,15 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Data Analysis
 
-- [ ] **ANA-01**: AI agent can generate R code for data analysis
-- [ ] **ANA-02**: AI agent can generate Python code for data analysis
-- [ ] **ANA-03**: System executes code in sandboxed cloud environment
-- [ ] **ANA-04**: System displays analysis results as tables
-- [ ] **ANA-05**: System displays analysis results as charts
-- [ ] **ANA-06**: System displays analysis results as visualizations
-- [ ] **ANA-07**: User can download analysis results
-- [ ] **ANA-08**: User can view and edit AI-generated code before execution
-- [ ] **ANA-09**: System saves analysis results to memory for future access
+- [x] **ANA-01**: AI agent can generate R code for data analysis
+- [x] **ANA-02**: AI agent can generate Python code for data analysis
+- [x] **ANA-03**: System executes code in sandboxed cloud environment
+- [x] **ANA-04**: System displays analysis results as tables
+- [x] **ANA-05**: System displays analysis results as charts
+- [x] **ANA-06**: System displays analysis results as visualizations
+- [x] **ANA-07**: User can download analysis results
+- [x] **ANA-08**: User can view and edit AI-generated code before execution
+- [x] **ANA-09**: System saves analysis results to memory for future access
 
 ### File & Project Management
 
@@ -205,15 +205,15 @@ Which phases cover which requirements. Updated by create-roadmap.
 | AI-08 | Phase 6 | Complete |
 | AI-09 | Phase 6 | Complete |
 | AI-10 | Phase 6 | Complete |
-| ANA-01 | Phase 7 | Pending |
-| ANA-02 | Phase 7 | Pending |
-| ANA-03 | Phase 7 | Pending |
-| ANA-04 | Phase 7 | Pending |
-| ANA-05 | Phase 7 | Pending |
-| ANA-06 | Phase 7 | Pending |
-| ANA-07 | Phase 7 | Pending |
-| ANA-08 | Phase 7 | Pending |
-| ANA-09 | Phase 7 | Pending |
+| ANA-01 | Phase 7 | Complete |
+| ANA-02 | Phase 7 | Complete |
+| ANA-03 | Phase 7 | Complete |
+| ANA-04 | Phase 7 | Complete |
+| ANA-05 | Phase 7 | Complete |
+| ANA-06 | Phase 7 | Complete |
+| ANA-07 | Phase 7 | Complete |
+| ANA-08 | Phase 7 | Complete |
+| ANA-09 | Phase 7 | Complete |
 | EXP-01 | Phase 8 | Pending |
 | EXP-02 | Phase 8 | Pending |
 

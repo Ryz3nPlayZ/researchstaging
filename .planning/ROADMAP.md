@@ -203,15 +203,15 @@ The Research Workspace delivers stateful research intelligence — a single work
   8. User can view and edit AI-generated code before execution
   9. System saves analysis results to memory for future access
 
-**Research**: Complete - Subprocess-based execution with timeout protection, Plotly/Recharts for visualization
+**Research**: Complete - Subprocess-based execution with timeout protection, Plotly for visualization
 **Research topics**: Subprocess execution, timeout handling, CSV/JSON parsing, Plotly chart rendering
 
-**Completed**: 2026-02-05 (Planned)
+**Completed**: 2026-02-05
 
 **Plans**:
-- [ ] 07-01: Code Generation and Editing UI — AnalysisAgent, code generation API, CodeEditor component
-- [ ] 07-02: Code Execution Service — ExecutionService, execution API, memory integration
-- [ ] 07-03: Visualization and Export — AnalysisResults component, download endpoints, workflow integration
+- [x] 07-01: Code Generation and Editing UI — AnalysisAgent, code generation API, CodeEditor component
+- [x] 07-02: Code Execution Service — ExecutionService, execution API, memory integration
+- [x] 07-03: Visualization and Export — AnalysisResults component, download endpoints, workflow integration
 
 ### Phase 8: Document Export
 
@@ -246,5 +246,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 4. Rich Text Document Editor | 6/6 | ✓ Complete | 2026-02-05 |
 | 5. Literature Search & Review | 3/3 | ✓ Complete | 2026-02-05 |
 | 6. AI Agent & Sidebar Chat | 3/3 | ✓ Complete | 2026-02-05 |
-| 7. Data Analysis | 0/0 | Not started | - |
+| 7. Data Analysis | 3/3 | ✓ Complete | 2026-02-05 |
 | 8. Document Export | 0/0 | Not started | - |
