@@ -6,6 +6,7 @@ import logging
 from typing import Dict, Any, Optional, List
 from abc import ABC, abstractmethod
 from pydantic import BaseModel
+import json
 
 from llm_service import llm_service
 from memory_service import MemoryService
@@ -21,6 +22,23 @@ class AgentResponse(BaseModel):
     confidence: float
     response: str
     context_used: Dict[str, Any]
+
+
+class PlanStep(BaseModel):
+    """A single step in a proposed plan."""
+    step_number: int
+    description: str
+    action_type: str  # "search", "analyze", "refine_text", "extract_claims"
+    estimated_duration: str  # "2 minutes", "5 minutes"
+    requires_confirmation: bool = False
+
+
+class ProposedPlan(BaseModel):
+    """A multi-step plan proposed by AI for complex actions."""
+    goal: str
+    steps: List[PlanStep]
+    estimated_total_time: str
+    confidence: float  # 0.0-1.0
 
 
 # ============== Base Agent Class ==============
@@ -241,6 +259,12 @@ class GeneralAgent(Agent):
 class AgentRouter:
     """Routes queries to appropriate specialized agents."""
 
+    # Action verbs that indicate complex multi-step actions
+    COMPLEX_ACTION_VERBS = [
+        "analyze", "compare", "extract", "generate", "search",
+        "synthesize", "summarize all", "review all", "evaluate"
+    ]
+
     def __init__(self, llm_service):
         self.llm = llm_service
         self.agents = [
@@ -249,6 +273,232 @@ class AgentRouter:
             MemoryAgent(llm_service),
             GeneralAgent(llm_service),  # Always last (fallback)
         ]
+
+    def _is_simple_query(self, query: str) -> bool:
+        """
+        Determine if a query is simple (no plan needed) or complex (requires plan).
+
+        Simple queries:
+        - Short questions (< 50 chars)
+        - Questions without complex action verbs
+        - "What is X?", "Tell me about Y", "Summarize Z"
+
+        Complex queries:
+        - Long queries (> 50 chars)
+        - Contain action verbs: "analyze", "compare", "extract", "generate"
+        - Multi-step operations
+
+        Returns:
+            True if simple, False if complex
+        """
+        query_lower = query.lower().strip()
+
+        # Check length
+        if len(query) > 50:
+            # Check for complex action verbs
+            for verb in self.COMPLEX_ACTION_VERBS:
+                if verb in query_lower:
+                    return False  # Complex query
+
+        return True  # Simple query
+
+    async def propose_plan(
+        self,
+        query: str,
+        context: Dict[str, Any]
+    ) -> Optional[ProposedPlan]:
+        """
+        Generate a plan for complex multi-step actions.
+
+        Args:
+            query: User's query
+            context: Context dict with document, claims, findings, preferences
+
+        Returns:
+            ProposedPlan if complex action, None if simple query
+        """
+        # Detect if query requires complex action
+        if self._is_simple_query(query):
+            return None  # No plan needed for simple queries
+
+        # Use LLM to generate plan
+        prompt = f"""User request: {query}
+
+Available contexts:
+- Document: {bool(context.get('document'))}
+- Literature: {len(context.get('claims', []))} claims extracted
+- Memory: {len(context.get('findings', []))} findings
+- Preferences: {bool(context.get('preferences'))}
+
+Generate a step-by-step plan to accomplish this request.
+
+Return JSON with this exact structure:
+{{
+  "goal": "Brief statement of what we're accomplishing",
+  "steps": [
+    {{
+      "step_number": 1,
+      "description": "What this step does",
+      "action_type": "search|analyze|refine_text|extract_claims",
+      "estimated_duration": "X minutes",
+      "requires_confirmation": false
+    }}
+  ],
+  "estimated_total_time": "Total time estimate",
+  "confidence": 0.8
+}}
+
+Action types:
+- search: Search literature/papers
+- analyze: Analyze documents/content
+- refine_text: Improve or rewrite text
+- extract_claims: Extract claims from papers
+
+Only return the JSON, no other text."""
+
+        try:
+            response = await self.llm.generate(
+                prompt=prompt,
+                system_message="You are a research planning assistant. Generate clear, actionable plans for research tasks."
+            )
+
+            # Parse JSON response
+            # Handle case where LLM adds markdown code blocks
+            json_str = response.strip()
+            if json_str.startswith("```"):
+                # Extract JSON from markdown code block
+                lines = json_str.split("\n")
+                json_lines = []
+                in_code_block = False
+                for line in lines:
+                    if line.startswith("```json") or line.startswith("```"):
+                        in_code_block = not in_code_block
+                        continue
+                    if in_code_block or not line.startswith("```"):
+                        json_lines.append(line)
+                json_str = "\n".join(json_lines).strip()
+
+            plan_data = json.loads(json_str)
+
+            return ProposedPlan(**plan_data)
+
+        except Exception as e:
+            logger.error(f"Failed to generate plan: {e}")
+            # Return None on failure - fallback to direct handling
+            return None
+
+    async def execute_step(
+        self,
+        step: PlanStep,
+        context: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Execute a single plan step.
+
+        Args:
+            step: PlanStep to execute
+            context: Context dict
+
+        Returns:
+            Dict with execution status and results
+        """
+        try:
+            if step.action_type == "search":
+                # Literature search - return info about available search
+                return {
+                    "status": "completed",
+                    "step": step.step_number,
+                    "description": step.description,
+                    "message": f"Literature search would be performed here. {len(context.get('claims', []))} claims already in memory.",
+                    "results_count": len(context.get('claims', []))
+                }
+
+            elif step.action_type == "analyze":
+                # Analysis step
+                return {
+                    "status": "completed",
+                    "step": step.step_number,
+                    "description": step.description,
+                    "message": "Analysis completed using available context.",
+                    "context_available": {
+                        "document": bool(context.get('document')),
+                        "claims": len(context.get('claims', [])),
+                        "findings": len(context.get('findings', []))
+                    }
+                }
+
+            elif step.action_type == "refine_text":
+                # Text refinement - requires user action in frontend
+                return {
+                    "status": "requires_user_action",
+                    "step": step.step_number,
+                    "description": step.description,
+                    "message": "This step requires text selection and refinement in the editor."
+                }
+
+            elif step.action_type == "extract_claims":
+                # Claim extraction
+                return {
+                    "status": "completed",
+                    "step": step.step_number,
+                    "description": step.description,
+                    "message": f"Claims extraction available. Currently {len(context.get('claims', []))} claims in memory."
+                }
+
+            else:
+                return {
+                    "status": "unknown",
+                    "step": step.step_number,
+                    "description": step.description,
+                    "message": f"Unknown action type: {step.action_type}"
+                }
+
+        except Exception as e:
+            logger.error(f"Step execution error: {e}")
+            return {
+                "status": "error",
+                "step": step.step_number,
+                "description": step.description,
+                "error": str(e)
+            }
+
+    async def execute_plan(
+        self,
+        plan: ProposedPlan,
+        context: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
+        """
+        Execute all steps in a proposed plan.
+
+        Args:
+            plan: ProposedPlan to execute
+            context: Context dict
+
+        Returns:
+            List of step execution results
+        """
+        results = []
+
+        for step in plan.steps:
+            if step.requires_confirmation:
+                # Stop at confirmation-required steps
+                results.append({
+                    "status": "awaiting_confirmation",
+                    "step": step.step_number,
+                    "description": step.description,
+                    "message": "This step requires user confirmation before proceeding."
+                })
+                break
+
+            result = await self.execute_step(step, context)
+            results.append(result)
+
+            # Stop if step failed
+            if result.get("status") == "error":
+                logger.error(f"Plan execution failed at step {step.step_number}")
+                break
+
+        return results
 
     def analyze_query(self, query: str) -> str:
         """

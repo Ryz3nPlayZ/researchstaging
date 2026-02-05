@@ -13,7 +13,8 @@ import logging
 
 from database import get_db, Project, Claim, Finding
 from llm_service import llm_service
-from agent_service import AgentRouter
+from agent_service import AgentRouter, ProposedPlan
+import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,12 @@ class SendMessageResponse(BaseModel):
     """Send message response model."""
     user_message: ChatMessage
     ai_response: ChatMessage
+
+
+class ProposePlanRequest(BaseModel):
+    """Propose plan request model."""
+    query: str = Field(..., min_length=1, max_length=10000)
+    context: Optional[Dict[str, Any]] = None
 
 
 # ============== Chat Message Table (in-memory for MVP) ==============
@@ -271,6 +278,128 @@ async def get_chat_history(
         ],
         total=total
     )
+
+
+@router.post("/projects/{project_id}/propose-plan")
+async def propose_plan(
+    project_id: str,
+    request: ProposePlanRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Propose a plan for complex multi-step actions.
+
+    Returns 404 if the query is simple (no plan needed).
+    Returns ProposedPlan if complex action detected.
+
+    Args:
+        project_id: Project ID
+        request: Query and optional context
+
+    Returns:
+        Proposed plan with steps, or 404 if simple query
+    """
+    # Verify project exists
+    result = await db.execute(
+        select(Project).where(Project.id == project_id)
+    )
+    project = result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Inject context
+    document_id = request.context.get("document_id") if request.context else None
+    context = await inject_context(
+        project_id=project_id,
+        document_id=document_id,
+        query=request.query,
+        db=db
+    )
+
+    try:
+        # Create agent router
+        agent_router = AgentRouter(llm_service)
+
+        # Generate plan
+        plan = await agent_router.propose_plan(
+            query=request.query,
+            context=context
+        )
+
+        # Return 404 if no plan (simple query)
+        if plan is None:
+            raise HTTPException(
+                status_code=404,
+                detail="No plan needed. This query can be handled directly."
+            )
+
+        return plan
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to propose plan: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate plan: {str(e)}"
+        )
+
+
+@router.post("/projects/{project_id}/execute-plan")
+async def execute_plan(
+    project_id: str,
+    plan: ProposedPlan,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Execute an approved plan step-by-step.
+
+    Args:
+        project_id: Project ID
+        plan: Approved ProposedPlan
+
+    Returns:
+        List of step execution results
+    """
+    # Verify project exists
+    result = await db.execute(
+        select(Project).where(Project.id == project_id)
+    )
+    project = result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Inject context
+    context = await inject_context(
+        project_id=project_id,
+        document_id=None,
+        query=plan.goal,
+        db=db
+    )
+
+    try:
+        # Create agent router
+        agent_router = AgentRouter(llm_service)
+
+        # Execute plan
+        results = await agent_router.execute_plan(
+            plan=plan,
+            context=context
+        )
+
+        return {
+            "goal": plan.goal,
+            "results": results,
+            "total_steps": len(plan.steps),
+            "completed_steps": len([r for r in results if r.get("status") == "completed"])
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to execute plan: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to execute plan: {str(e)}"
+        )
 
 
 @router.post("/projects/{project_id}/send", response_model=SendMessageResponse)
