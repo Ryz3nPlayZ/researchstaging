@@ -38,14 +38,15 @@ import { toast } from 'sonner';
 import { Upload } from 'lucide-react';
 
 export const Workspace = () => {
-  const { 
-    selectedProject, 
-    selectedTask, 
-    selectedArtifact, 
+  const {
+    selectedProject,
+    selectedTask,
+    selectedArtifact,
     selectedPaper,
     setSelectedArtifact,
     selectedFile,
     setSelectedFile,
+    setSelectedDocument,
     triggerRefresh
   } = useProject();
   
@@ -194,6 +195,7 @@ export const Workspace = () => {
     const loadDocumentForFile = async () => {
       if (!selectedFile || !selectedProject) {
         setDocumentData(null);
+        setSelectedDocument(null);
         return;
       }
 
@@ -202,6 +204,7 @@ export const Workspace = () => {
       // Only process .md and .docx files
       if (!['md', 'docx'].includes(ext)) {
         setDocumentData(null);
+        setSelectedDocument(null);
         return;
       }
 
@@ -218,36 +221,69 @@ export const Workspace = () => {
         if (documentId) {
           // Load existing document
           const response = await documentsApi.loadDocument(documentId);
-          setDocumentData({
+          const doc = {
             id: response.data.id,
             content: response.data.content,
             title: response.data.title,
-          });
+          };
+          setDocumentData(doc);
+          setSelectedDocument(doc);
         } else {
-          // Create new document for this file
+          // Get file content first
+          let fileContent = '';
+          try {
+            const contentResponse = await filesApi.getFileContent(selectedFile.id);
+            fileContent = contentResponse.data.content || '';
+          } catch (contentError) {
+            console.warn('Could not load file content, creating empty document:', contentError);
+            fileContent = '';
+          }
+
+          // Convert file content to TipTap JSON format
+          // For markdown, we'll create simple paragraph structure
+          // Each line becomes a paragraph
+          const paragraphs = fileContent.split('\n\n').filter(p => p.trim());
+          const tipTapContent = {
+            type: 'doc',
+            content: paragraphs.length > 0
+              ? paragraphs.map(para => ({
+                  type: 'paragraph',
+                  content: [{ type: 'text', text: para.trim() }]
+                }))
+              : [{ type: 'paragraph', content: [] }] // Empty document
+          };
+
+          // Create new document for this file with content
           const response = await documentsApi.createDocument(
             selectedProject.id,
             selectedFile.name.replace(/\.(md|docx)$/, ''),
             'apa'
           );
-          setDocumentData({
+
+          // Update document with file content
+          await documentsApi.updateDocument(response.data.id, tipTapContent);
+
+          const doc = {
             id: response.data.id,
-            content: response.data.content,
+            content: tipTapContent,
             title: response.data.title,
-          });
+          };
+          setDocumentData(doc);
+          setSelectedDocument(doc);
           // Note: In a full implementation, you'd update the file's tags with document_id
         }
       } catch (error) {
         console.error('Failed to load/create document:', error);
         toast.error('Failed to open document editor');
         setDocumentData(null);
+        setSelectedDocument(null);
       } finally {
         setLoadingDocument(false);
       }
     };
 
     loadDocumentForFile();
-  }, [selectedFile, selectedProject]);
+  }, [selectedFile, selectedProject, setSelectedDocument]);
 
   const handleExecuteAll = useCallback(async () => {
     if (!selectedProject) return;

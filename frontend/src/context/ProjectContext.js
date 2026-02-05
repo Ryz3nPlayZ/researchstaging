@@ -11,6 +11,8 @@ const ProjectContext = createContext({
   setSelectedPaper: () => {},
   selectedFile: null,
   setSelectedFile: () => {},
+  selectedDocument: null,
+  setSelectedDocument: () => {},
   refreshTrigger: 0,
   triggerRefresh: () => {},
 });
@@ -21,6 +23,7 @@ export const ProjectProvider = ({ children }) => {
   const [selectedArtifact, setSelectedArtifact] = useState(null);
   const [selectedPaper, setSelectedPaper] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [selectedDocument, setSelectedDocument] = useState(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const triggerRefresh = useCallback(() => {
@@ -39,6 +42,8 @@ export const ProjectProvider = ({ children }) => {
       setSelectedPaper,
       selectedFile,
       setSelectedFile,
+      selectedDocument,
+      setSelectedDocument,
       refreshTrigger,
       triggerRefresh,
     }}>

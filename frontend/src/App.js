@@ -6,6 +6,7 @@ import { StatusBar } from './components/layout/StatusBar';
 import { Navigator } from './components/layout/Navigator';
 import { Workspace } from './components/layout/Workspace';
 import { Inspector } from './components/layout/Inspector';
+import { AISidebar } from './components/ai/AISidebar';
 import { Dashboard } from './components/pages/Dashboard';
 import { PlanningFlow } from './components/pages/PlanningFlow';
 import { LoginPage } from './pages/LoginPage';
@@ -196,15 +197,18 @@ function AppContent() {
         <main className="flex-1 overflow-hidden flex flex-col min-w-0">
           <Workspace />
         </main>
-        
+
+        {/* AI Sidebar */}
+        <AISidebar />
+
         {/* Inspector Resize Handle */}
         <div
           className={`hidden lg:flex w-1 cursor-col-resize hover:bg-primary/50 transition-colors flex-shrink-0 ${isResizingInspector ? 'bg-primary/50' : 'bg-transparent'}`}
           onMouseDown={startResizeInspector}
         />
-        
+
         {/* Inspector Panel */}
-        <aside 
+        <aside
           className="hidden lg:flex flex-col bg-muted/30 border-l border-border flex-shrink-0"
           style={{ width: inspectorWidth }}
         >
