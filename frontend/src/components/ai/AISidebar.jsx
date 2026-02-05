@@ -3,7 +3,8 @@ import { useProject } from '../../context/ProjectContext';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { Badge } from '../ui/badge';
-import { Loader2, Send, X, Bot, User, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { Card } from '../ui/card';
+import { Loader2, Send, X, Bot, User, ChevronLeft, ChevronRight, Trash2, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import Markdown from 'react-markdown';
 import api from '../../lib/api';
@@ -15,6 +16,12 @@ export const AISidebar = () => {
   const [isSending, setIsSending] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Plan proposal state
+  const [pendingPlan, setPendingPlan] = useState(null);
+  const [executingPlan, setExecutingPlan] = useState(false);
+  const [completedSteps, setCompletedSteps] = useState([]);
+
   const scrollRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -149,6 +156,181 @@ export const AISidebar = () => {
     }
   }, []);
 
+  // Plan proposal card component
+  const PlanProposalCard = ({ plan, onApprove, onReject }) => (
+    <Card className="p-4 bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <h4 className="font-semibold text-sm flex items-center gap-2">
+            <Bot className="h-4 w-4 text-blue-600" />
+            Proposed Plan
+          </h4>
+          <p className="text-xs text-muted-foreground mt-1">
+            Estimated time: {plan.estimated_total_time} • Confidence: {Math.round(plan.confidence * 100)}%
+          </p>
+        </div>
+      </div>
+
+      <p className="text-sm mb-4 font-medium">{plan.goal}</p>
+
+      <div className="space-y-2 mb-4">
+        {plan.steps.map((step) => (
+          <div key={step.step_number} className="flex items-start gap-2 text-sm">
+            <Badge variant="outline" className="text-xs mt-0.5">
+              {step.step_number}
+            </Badge>
+            <div className="flex-1">
+              <p className="text-xs">{step.description}</p>
+              <div className="flex items-center gap-2 mt-1">
+                <Badge variant="secondary" className="text-[10px]">
+                  {step.action_type}
+                </Badge>
+                <span className="text-[10px] text-muted-foreground">
+                  {step.estimated_duration}
+                </span>
+                {step.requires_confirmation && (
+                  <Badge variant="default" className="text-[10px]">
+                    Requires confirmation
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex gap-2">
+        <Button onClick={onApprove} size="sm" className="flex-1">
+          <CheckCircle className="h-3 w-3 mr-1" />
+          Approve
+        </Button>
+        <Button onClick={onReject} variant="outline" size="sm" className="flex-1">
+          <XCircle className="h-3 w-3 mr-1" />
+          Reject
+        </Button>
+      </div>
+    </Card>
+  );
+
+  // Handle plan approval
+  const handleApprovePlan = useCallback(async () => {
+    if (!pendingPlan || !selectedProject) return;
+
+    setExecutingPlan(true);
+    setCompletedSteps([]);
+
+    try {
+      // Execute plan
+      const response = await api.post(`/chat/projects/${selectedProject.id}/execute-plan`, pendingPlan);
+
+      // Add plan execution results as messages
+      const planMessage = {
+        id: `plan-${Date.now()}`,
+        role: 'assistant',
+        content: `**Plan Execution Complete**\n\nGoal: ${pendingPlan.goal}\n\n${response.data.results.map(r =>
+          `- Step ${r.step}: ${r.description} - ${r.message}`
+        ).join('\n')}`,
+        timestamp: new Date().toISOString(),
+        context: { type: 'plan_execution', results: response.data.results }
+      };
+
+      setMessages(prev => [...prev, planMessage]);
+      setPendingPlan(null);
+
+      toast.success(`Plan completed: ${response.data.completed_steps}/${response.data.total_steps} steps`);
+    } catch (error) {
+      console.error('Failed to execute plan:', error);
+      toast.error(error.response?.data?.detail || 'Failed to execute plan');
+    } finally {
+      setExecutingPlan(false);
+      setCompletedSteps([]);
+    }
+  }, [pendingPlan, selectedProject]);
+
+  // Handle plan rejection
+  const handleRejectPlan = useCallback(() => {
+    setPendingPlan(null);
+    toast.info('Plan rejected. You can ask a simpler question.');
+  }, []);
+
+  // Check if query needs plan proposal before sending
+  const handleSendWithPlanCheck = useCallback(async () => {
+    if (!inputText.trim() || isSending || !selectedProject) return;
+
+    const message = inputText.trim();
+    setInputText('');
+    setIsSending(true);
+
+    // Build context
+    const context = {};
+    if (selectedDocument) {
+      context.document_id = selectedDocument.id;
+    }
+
+    // First, try to propose a plan
+    try {
+      const planResponse = await api.post(`/chat/projects/${selectedProject.id}/propose-plan`, {
+        query: message,
+        context
+      });
+
+      // If we got a plan proposal, show it
+      if (planResponse.data) {
+        setPendingPlan(planResponse.data);
+        setIsSending(false);
+        return;
+      }
+    } catch (error) {
+      // 404 means no plan needed (simple query)
+      // Continue to normal send
+      if (error.response?.status !== 404) {
+        console.error('Plan proposal error:', error);
+      }
+    }
+
+    // Optimistically add user message
+    const userMessage = {
+      id: `temp-${Date.now()}`,
+      role: 'user',
+      content: message,
+      timestamp: new Date().toISOString(),
+      context
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+
+    try {
+      const response = await api.post(`/chat/projects/${selectedProject.id}/send`, {
+        message,
+        context
+      });
+
+      // Replace optimistic message with server response
+      setMessages(prev => {
+        const withoutTemp = prev.filter(m => m.id !== userMessage.id);
+        return [
+          ...withoutTemp,
+          response.data.user_message,
+          response.data.ai_response
+        ];
+      });
+    } catch (error) {
+      console.error('Failed to send message:', error);
+      toast.error(error.response?.data?.detail || 'Failed to send message');
+      // Remove optimistic message on error
+      setMessages(prev => prev.filter(m => m.id !== userMessage.id));
+    } finally {
+      setIsSending(false);
+      // Focus textarea after sending
+      if (textareaRef.current && !isCollapsed) {
+        textareaRef.current.focus();
+      }
+    }
+  }, [inputText, isSending, selectedProject, selectedDocument, isCollapsed]);
+
+  // Override original handleSend to use plan check
+  const handleSend = handleSendWithPlanCheck;
+
   if (!selectedProject) {
     return null;
   }
@@ -201,6 +383,16 @@ export const AISidebar = () => {
 
       {/* Messages */}
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+        {pendingPlan && (
+          <div className="mb-4">
+            <PlanProposalCard
+              plan={pendingPlan}
+              onApprove={handleApprovePlan}
+              onReject={handleRejectPlan}
+            />
+          </div>
+        )}
+
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
