@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2025-02-01)
 ## Current Position
 
 Phase: 4 of 8 (Rich Text Document Editor)
-Plan: 01 of 06 (Document Backend Foundation)
-Status: Phase 4 in progress, Plan 01 complete
-Last activity: 2026-02-05 — Completed Phase 4 Plan 01 (Document Backend Foundation)
+Plan: 02 of ~6 (TipTap Editor Frontend)
+Status: Phase 4 in progress, Plan 02 complete
+Last activity: 2026-02-05 — Completed Phase 4 Plan 02 (TipTap Editor Frontend)
 
-Progress: █████░░░░ 37.5% (6/16 plans complete; 3/8 phases complete, 1 phase in progress)
+Progress: ██████░░░ 43.75% (7/16 plans complete; 3/8 phases complete, 1 phase in progress)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 12
+- Total plans completed: 13
 - Average duration: 6 min
-- Total execution time: 1.2 hours
+- Total execution time: 1.3 hours
 
 **By Phase:**
 
@@ -30,11 +30,11 @@ Progress: █████░░░░ 37.5% (6/16 plans complete; 3/8 phases com
 | 01-authentication | 2 | 2 | 10 min |
 | 02-file-management | 4 | 4 | 5 min |
 | 03-memory-backend | 4 | 4 | 3 min |
-| 04-rich-text-editor | 2 | ~6 | 5 min |
+| 04-rich-text-editor | 3 | ~6 | 6 min |
 | 05-08 | — | — | — |
 
 **Recent Trend:**
-- Last 5 plans: 4 min, 2 min, 1 min, 4 min, 4 min, 5 min (03-02, 03-03, 03-04, 04-03, 04-01)
+- Last 5 plans: 2 min, 1 min, 4 min, 4 min, 8 min (03-03, 03-04, 04-01, 04-03, 04-02)
 - Trend: Steady (consistent execution speed)
 
 *Updated after each plan completion*
@@ -133,6 +133,13 @@ Recent decisions affecting current work:
 56. **Three citation styles for MVP** — APA 7th, MLA 9th, and Chicago 17th editions cover 90%+ of academic use cases. Implemented in CitationService with style-specific formatting rules.
 57. **Bibliography returns formatted string** — API endpoint returns pre-formatted bibliography text rather than structured data. Simplifies frontend integration and avoids duplicating formatting logic.
 58. **Document and DocumentVersion models** — Added as foundational structure for document editor, even though not explicitly required in this plan. Needed for citations to reference documents and for version history support.
+
+**From 04-02 (TipTap Editor Frontend):**
+59. **TipTap over Slate.js/Quill** — More React-friendly with better extensible architecture for custom nodes/marks. Active community and comprehensive documentation.
+60. **4-second debounce for auto-save** — Balances responsiveness (user doesn't wait long) with server load (doesn't save on every keystroke). Configurable via lodash.debounce.
+61. **localStorage immediate backup** — Every keystroke saved to localStorage immediately. Provides data loss prevention from crashes or network failures before server save completes.
+62. **Content hash-based change detection** — JSON.stringify content to compute hash, only save if hash changed. Avoids unnecessary saves when user only moves cursor.
+63. **Named imports for TipTap extensions** — TipTap v3 uses named exports `import { Table } from '@tiptap/extension-table'` not default imports. Required for table-related extensions.
 
 ### Pending Todos
 
@@ -246,6 +253,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Completed Phase 4 Plan 03 (Citation Management Backend)
-Resume file: .planning/phases/04-document-editor/04-03-SUMMARY.md
-Next: Phase 4 Plan 04 or continue with remaining plans
+Stopped at: Completed Phase 4 Plan 02 (TipTap Editor Frontend)
+Resume file: .planning/phases/04-document-editor/04-02-SUMMARY.md
+Next: Phase 4 Plan 04 (Version History UI) or continue with remaining plans
