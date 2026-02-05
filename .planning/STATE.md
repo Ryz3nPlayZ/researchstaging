@@ -9,19 +9,19 @@ See: .planning/PROJECT.md (updated 2025-02-01)
 
 ## Current Position
 
-Phase: 3 of 8 (Memory & Information Graph Backend)
-Plan: Complete (4/4 plans executed)
-Status: Phase 1 complete, Phase 2 complete, Phase 3 complete and verified. Ready for Phase 4 planning.
-Last activity: 2026-02-04 — Completed Phase 3 (Memory & Information Graph Backend), verified goal achievement
+Phase: 4 of 8 (Rich Text Document Editor)
+Plan: 01 of 06 (Document Backend Foundation)
+Status: Phase 4 in progress, Plan 01 complete
+Last activity: 2026-02-05 — Completed Phase 4 Plan 01 (Document Backend Foundation)
 
-Progress: █████░░░░░ 37.5% (3/8 phases complete)
+Progress: █████░░░░ 37.5% (6/16 plans complete; 3/8 phases complete, 1 phase in progress)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 10
+- Total plans completed: 12
 - Average duration: 6 min
-- Total execution time: 1.0 hours
+- Total execution time: 1.2 hours
 
 **By Phase:**
 
@@ -30,10 +30,11 @@ Progress: █████░░░░░ 37.5% (3/8 phases complete)
 | 01-authentication | 2 | 2 | 10 min |
 | 02-file-management | 4 | 4 | 5 min |
 | 03-memory-backend | 4 | 4 | 3 min |
-| 04-08 | — | — | — |
+| 04-rich-text-editor | 2 | ~6 | 5 min |
+| 05-08 | — | — | — |
 
 **Recent Trend:**
-- Last 5 plans: 4 min, 2 min, 1 min, 4 min (03-01, 03-02, 03-03, 03-04)
+- Last 5 plans: 4 min, 2 min, 1 min, 4 min, 4 min, 5 min (03-02, 03-03, 03-04, 04-03, 04-01)
 - Trend: Steady (consistent execution speed)
 
 *Updated after each plan completion*
@@ -41,6 +42,12 @@ Progress: █████░░░░░ 37.5% (3/8 phases complete)
 ## Accumulated Context
 
 ### Decisions
+
+**From 04-03 (Citation Management):**
+45. **Citation service encapsulation** — CitationService handles all citation formatting logic separately from API endpoints. Enables reuse and testing.
+46. **Style-specific formatting methods** — Separate methods for APA, MLA, Chicago with style-specific author formatting, punctuation, and sorting rules.
+47. **Bibliography generation pattern** — Collect all citations, format in bulk, sort by style requirements (alphabetical for APA/MLA), return formatted string.
+48. **Venue extraction fallback chain** — Try URL patterns, abstract text parsing, then source field as fallback for extracting publication venue.
 
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
@@ -115,6 +122,18 @@ Recent decisions affecting current work:
 49. **Re-score endpoint** — POST /api/memory/projects/{id}/claims/rescore allows bulk re-scoring after preference changes.
 50. **Stop word filtering** — Standard NLP practice removes common words (the, and, for, etc.) from keyword extraction for better relevance.
 
+**From 04-01 (Document Backend Foundation):**
+51. **CitationStyle enum for type safety** — Used SQLEnum instead of String for citation_style field. Provides database-level validation and prevents invalid values.
+52. **SHA-256 hash for change detection** — Content hashing for detecting changes is more efficient than content comparison and reliably identifies modifications.
+53. **Auto-version only on content changes** — Document versions created only when TipTap content changes, not when title or citation_style changes. Reduces version noise.
+54. **Empty TipTap structure for new documents** — New documents initialized with valid TipTap structure: `{type: 'doc', content: [{type: 'paragraph', content: []}]}`. Ensures editor can always render.
+
+**From 04-03 (Citation Management Backend):**
+55. **Polymorphic citation source pattern** — DocumentCitation uses source_type enum (PAPER/CLAIM/MANUAL) + source_id for flexible source references without separate foreign keys. Follows established Claim model pattern.
+56. **Three citation styles for MVP** — APA 7th, MLA 9th, and Chicago 17th editions cover 90%+ of academic use cases. Implemented in CitationService with style-specific formatting rules.
+57. **Bibliography returns formatted string** — API endpoint returns pre-formatted bibliography text rather than structured data. Simplifies frontend integration and avoids duplicating formatting logic.
+58. **Document and DocumentVersion models** — Added as foundational structure for document editor, even though not explicitly required in this plan. Needed for citations to reference documents and for version history support.
+
 ### Pending Todos
 
 None yet.
@@ -147,6 +166,12 @@ None yet.
 
 **From 03-04:**
 - No blockers identified. Relevance scoring complete with automatic calculation and preference-driven boosts.
+
+**From 04-01:**
+- No blockers identified. Document backend complete with models, migration, and API endpoints.
+
+**From 04-03:**
+- No blockers identified. Citation management backend complete with APA/MLA/Chicago formatting and bibliography generation.
 
 ### Patterns Established
 
@@ -212,9 +237,15 @@ None yet.
 43. **Double-flush pattern for dependent fields** — Flush to get ID, calculate dependent field (relevance_score), flush again to save.
 44. **Bulk operation support** — recalculate_project_claims() efficiently updates all claims for a project when preferences change.
 
+**From 04-01 (Document Backend):**
+45. **TipTap JSONB storage pattern** — Document content stored as JSONB with TipTap document structure. Enables rich text editing with JSON serialization.
+46. **Content hash change detection** — SHA-256 hash stored in content_hash field. Compare hashes to detect content changes for versioning.
+47. **Auto-version on content change** — PUT endpoint creates DocumentVersion when content_hash changes. Preserves history without explicit version creation calls.
+48. **Document API prefix pattern** — Document endpoints use /api/documents prefix for clear namespacing. Project-scoped endpoints use /api/projects/{id}/documents.
+
 ## Session Continuity
 
-Last session: 2026-02-04
-Stopped at: Completed Phase 3 (Memory & Information Graph Backend), verified goal achievement
-Resume file: .planning/phases/03-memory-backend/03-memory-backend-VERIFICATION.md
-Next: Plan Phase 4 (Rich Text Document Editor)
+Last session: 2026-02-05
+Stopped at: Completed Phase 4 Plan 03 (Citation Management Backend)
+Resume file: .planning/phases/04-document-editor/04-03-SUMMARY.md
+Next: Phase 4 Plan 04 or continue with remaining plans
