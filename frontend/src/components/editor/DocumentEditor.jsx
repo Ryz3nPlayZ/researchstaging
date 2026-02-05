@@ -40,6 +40,11 @@ import { useToast } from '../../hooks/use-toast';
 import { CitationPicker } from './CitationPicker';
 import { Bibliography } from './Bibliography';
 import { RewriteDialog, GrammarDialog } from './AIAssistant';
+import { VersionHistory } from './VersionHistory';
+import {
+  Dialog,
+  DialogContent,
+} from '../ui/dialog';
 
 const MenuBar = memo(({ editor, canUndo, canRedo, isSaving, onShowVersionHistory, onInsertCitation }) => {
   if (!editor) return null;
@@ -72,7 +77,7 @@ const MenuBar = memo(({ editor, canUndo, canRedo, isSaving, onShowVersionHistory
           variant="ghost"
           size="sm"
           className="h-8 w-8 p-0"
-          onClick={onShowVersionHistory}
+          onClick={handleShowVersionHistory}
           title="Version History"
         >
           <HistoryIcon className="h-4 w-4" />
@@ -260,6 +265,9 @@ export const DocumentEditor = ({ documentId, projectId, initialContent, onSave, 
   const [showRewriteDialog, setShowRewriteDialog] = useState(false);
   const [showGrammarDialog, setShowGrammarDialog] = useState(false);
   const [selectedText, setSelectedText] = useState('');
+
+  // Version History state
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
 
   // Compute content hash for change detection
   const computeContentHash = useCallback((content) => {
@@ -518,6 +526,35 @@ export const DocumentEditor = ({ documentId, projectId, initialContent, onSave, 
     setSelectedText('');
   }, []);
 
+  // Handle show version history
+  const handleShowVersionHistory = useCallback(() => {
+    setShowVersionHistory(true);
+  }, []);
+
+  // Handle version restored - update editor content
+  const handleVersionRestored = useCallback((docId, newContent) => {
+    if (!editor || !newContent) return;
+
+    // Update editor with restored content
+    editor.commands.setContent(newContent);
+
+    // Update local storage backup
+    saveToLocalStorage(newContent);
+
+    // Update last saved hash
+    setLastSavedHash(computeContentHash(newContent));
+
+    toast({
+      title: 'Version restored',
+      description: 'Document content has been restored',
+    });
+  }, [editor, saveToLocalStorage, computeContentHash, toast]);
+
+  // Handle version history close
+  const handleVersionHistoryClose = useCallback(() => {
+    setShowVersionHistory(false);
+  }, []);
+
   if (!editor) {
     return (
       <div className="h-full flex items-center justify-center text-muted-foreground">
@@ -607,6 +644,17 @@ export const DocumentEditor = ({ documentId, projectId, initialContent, onSave, 
         text={selectedText}
         onReplace={handleAIReplace}
       />
+
+      {/* Version History Dialog */}
+      <Dialog open={showVersionHistory} onOpenChange={setShowVersionHistory}>
+        <DialogContent className="max-w-6xl h-[600px] p-0">
+          <VersionHistory
+            documentId={documentId}
+            onVersionRestored={handleVersionRestored}
+            onClose={handleVersionHistoryClose}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
