@@ -1281,3 +1281,201 @@ async def read_file_content(
             status_code=500,
             detail=f"Failed to read file content: {str(e)}"
         )
+
+
+def markdown_to_tiptap(markdown_text: str) -> dict:
+    """
+    Convert Markdown text to TipTap JSON structure.
+
+    Parses Markdown and converts to TipTap document format with support for:
+    - Headings (1-6 levels)
+    - Bold, italic, code (inline)
+    - Ordered and unordered lists
+    - Code blocks with language
+    - Links
+    - Blockquotes
+
+    Args:
+        markdown_text: Markdown content as string
+
+    Returns:
+        TipTap JSON document structure
+
+    Example:
+        >>> markdown_to_tiptap("# Hello\\n\\nWorld")
+        {"type": "doc", "content": [{"type": "heading", "attrs": {"level": 1}, "content": [{"type": "text", "text": "Hello"}]}, {"type": "paragraph", "content": [{"type": "text", "text": "World"}]}]}
+    """
+    # Handle empty input
+    if not markdown_text or not markdown_text.strip():
+        return {"type": "doc", "content": [{"type": "paragraph", "content": []}]}
+
+    # Split into blocks by double newline
+    blocks = markdown_text.split('\n\n')
+    content = []
+
+    for block in blocks:
+        block = block.strip()
+        if not block:
+            continue
+
+        # Try different block patterns
+        node = None
+
+        # Code block: ```language\ncode\n```
+        code_match = re.match(r'^```(\w*)\n([\s\S]+?)\n```$', block)
+        if code_match:
+            language = code_match.group(1) or 'text'
+            code_content = code_match.group(2)
+            node = {
+                "type": "codeBlock",
+                "attrs": {"language": language},
+                "content": [{"type": "text", "text": code_content}]
+            }
+
+        # Heading: # ## ### etc.
+        elif node is None:
+            heading_match = re.match(r'^(#{1,6})\s+(.+)$', block)
+            if heading_match:
+                level = len(heading_match.group(1))
+                heading_text = heading_match.group(2)
+                node = {
+                    "type": "heading",
+                    "attrs": {"level": level},
+                    "content": _parse_inline_markdown(heading_text)
+                }
+
+        # Blockquote: > text
+        elif node is None:
+            if block.startswith('> '):
+                quote_text = block[2:].strip()
+                node = {
+                    "type": "blockquote",
+                    "content": [{"type": "paragraph", "content": _parse_inline_markdown(quote_text)}]
+                }
+
+        # Unordered list: - or * item
+        elif node is None:
+            if block.startswith('- ') or block.startswith('* '):
+                list_text = block[2:].strip()
+                node = {
+                    "type": "bulletList",
+                    "content": [
+                        {
+                            "type": "listItem",
+                            "content": [{"type": "paragraph", "content": _parse_inline_markdown(list_text)}]
+                        }
+                    ]
+                }
+
+        # Ordered list: 1. item
+        elif node is None:
+            ordered_match = re.match(r'^\d+\.\s+(.+)$', block)
+            if ordered_match:
+                list_text = ordered_match.group(1)
+                node = {
+                    "type": "orderedList",
+                    "content": [
+                        {
+                            "type": "listItem",
+                            "content": [{"type": "paragraph", "content": _parse_inline_markdown(list_text)}]
+                        }
+                    ]
+                }
+
+        # Default: paragraph
+        if node is None:
+            node = {
+                "type": "paragraph",
+                "content": _parse_inline_markdown(block)
+            }
+
+        content.append(node)
+
+    return {
+        "type": "doc",
+        "content": content if content else [{"type": "paragraph", "content": []}]
+    }
+
+
+def _parse_inline_markdown(text: str) -> list:
+    """
+    Parse inline Markdown formatting (bold, italic, code, links).
+
+    Args:
+        text: Text string with potential inline formatting
+
+    Returns:
+        List of TipTap text nodes with marks
+    """
+    if not text:
+        return []
+
+    nodes = []
+    remaining = text
+
+    while remaining:
+        # Try to find next formatting pattern
+        bold_match = re.search(r'\*\*(.+?)\*\*', remaining)
+        italic_match = re.search(r'\*(.+?)\*', remaining)
+        code_match = re.search(r'`(.+?)`', remaining)
+        link_match = re.search(r'\[(.+?)\]\((.+?)\)', remaining)
+
+        # Find earliest match
+        matches = []
+        if bold_match:
+            matches.append(('bold', bold_match))
+        if italic_match and (not bold_match or italic_match.start() < bold_match.start()):
+            matches.append(('italic', italic_match))
+        if code_match and code_match.start() < (bold_match.start() if bold_match else float('inf')):
+            matches.append(('code', code_match))
+        if link_match and link_match.start() < (bold_match.start() if bold_match else float('inf')):
+            matches.append(('link', link_match))
+
+        if not matches:
+            # No more formatting, add remaining text as plain
+            if remaining:
+                nodes.append({"type": "text", "text": remaining})
+            break
+
+        # Sort matches by position and get earliest
+        matches.sort(key=lambda m: m[1].start())
+        match_type, match = matches[0]
+
+        # Add text before match as plain
+        if match.start() > 0:
+            nodes.append({"type": "text", "text": remaining[:match.start()]})
+
+        # Add formatted text
+        if match_type == 'bold':
+            nodes.append({
+                "type": "text",
+                "text": match.group(1),
+                "marks": [{"type": "bold"}]
+            })
+            remaining = remaining[match.end():]
+        elif match_type == 'italic':
+            nodes.append({
+                "type": "text",
+                "text": match.group(1),
+                "marks": [{"type": "italic"}]
+            })
+            remaining = remaining[match.end():]
+        elif match_type == 'code':
+            nodes.append({
+                "type": "text",
+                "text": match.group(1),
+                "marks": [{"type": "code"}]
+            })
+            remaining = remaining[match.end():]
+        elif match_type == 'link':
+            nodes.append({
+                "type": "text",
+                "text": match.group(1),
+                "marks": [{
+                    "type": "link",
+                    "attrs": {"href": match.group(2)}
+                }]
+            })
+            remaining = remaining[match.end():]
+
+    return nodes
