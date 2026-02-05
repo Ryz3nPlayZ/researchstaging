@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, memo } from 'react';
+import React, { useCallback, useEffect, useMemo, memo, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
@@ -34,11 +34,14 @@ import {
   Redo,
   Save,
   Loader2,
-  History as HistoryIcon
+  History as HistoryIcon,
+  Quote as QuoteIcon
 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
+import { CitationPicker } from './CitationPicker';
+import { Bibliography } from './Bibliography';
 
-const MenuBar = memo(({ editor, canUndo, canRedo, isSaving, onShowVersionHistory }) => {
+const MenuBar = memo(({ editor, canUndo, canRedo, isSaving, onShowVersionHistory, onInsertCitation }) => {
   if (!editor) return null;
 
   return (
@@ -217,6 +220,19 @@ const MenuBar = memo(({ editor, canUndo, canRedo, isSaving, onShowVersionHistory
         <TableIcon className="h-4 w-4" />
       </Button>
 
+      <Separator orientation="vertical" className="h-6 mx-2" />
+
+      {/* Insert Citation */}
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-8 w-8 p-0"
+        onClick={onInsertCitation}
+        title="Insert Citation"
+      >
+        <QuoteIcon className="h-4 w-4" />
+      </Button>
+
       <div className="flex-1" />
 
       {/* Save indicator */}
@@ -232,10 +248,13 @@ const MenuBar = memo(({ editor, canUndo, canRedo, isSaving, onShowVersionHistory
 
 MenuBar.displayName = 'MenuBar';
 
-export const DocumentEditor = ({ documentId, initialContent, onSave, onShowVersionHistory }) => {
+export const DocumentEditor = ({ documentId, projectId, initialContent, onSave, onShowVersionHistory, citationStyle = 'APA' }) => {
   const { toast } = useToast();
-  const [isSaving, setIsSaving] = React.useState(false);
-  const [lastSavedHash, setLastSavedHash] = React.useState('');
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSavedHash, setLastSavedHash] = useState('');
+  const [showCitationPicker, setShowCitationPicker] = useState(false);
+  const [bibliographyKey, setBibliographyKey] = useState(0);
+  const [currentCitationStyle, setCurrentCitationStyle] = useState(citationStyle);
 
   // Compute content hash for change detection
   const computeContentHash = useCallback((content) => {
@@ -379,6 +398,29 @@ export const DocumentEditor = ({ documentId, initialContent, onSave, onShowVersi
     }
   }, [editor, onSave, computeContentHash, lastSavedHash, toast]);
 
+  // Handle citation insertion
+  const handleCitationInsert = useCallback(() => {
+    setShowCitationPicker(true);
+  }, []);
+
+  // Handle citation picker close
+  const handleCitationPickerClose = useCallback(() => {
+    setShowCitationPicker(false);
+  }, []);
+
+  // Handle citation inserted
+  const handleCitationInserted = useCallback(() => {
+    // Trigger bibliography refresh
+    setBibliographyKey(prev => prev + 1);
+  }, []);
+
+  // Handle citation style change
+  const handleCitationStyleChange = useCallback((newStyle) => {
+    setCurrentCitationStyle(newStyle);
+    // Optionally save the new style to the document
+    setBibliographyKey(prev => prev + 1);
+  }, []);
+
   if (!editor) {
     return (
       <div className="h-full flex items-center justify-center text-muted-foreground">
@@ -399,12 +441,21 @@ export const DocumentEditor = ({ documentId, initialContent, onSave, onShowVersi
         canRedo={canRedo}
         isSaving={isSaving}
         onShowVersionHistory={onShowVersionHistory}
+        onInsertCitation={handleCitationInsert}
       />
 
       {/* Editor Content */}
       <ScrollArea className="flex-1">
         <EditorContent editor={editor} />
       </ScrollArea>
+
+      {/* Bibliography */}
+      <Bibliography
+        key={bibliographyKey}
+        documentId={documentId}
+        style={currentCitationStyle}
+        onStyleChange={handleCitationStyleChange}
+      />
 
       {/* Save indicator */}
       <div className="px-3 py-2 border-t border-border bg-muted/30 flex items-center justify-between">
@@ -431,6 +482,17 @@ export const DocumentEditor = ({ documentId, initialContent, onSave, onShowVersi
           )}
         </Button>
       </div>
+
+      {/* Citation Picker Dialog */}
+      {showCitationPicker && (
+        <CitationPicker
+          documentId={documentId}
+          projectId={projectId}
+          editor={editor}
+          onInsert={handleCitationInserted}
+          onClose={handleCitationPickerClose}
+        />
+      )}
     </div>
   );
 };
