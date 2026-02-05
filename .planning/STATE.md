@@ -10,16 +10,16 @@ See: .planning/PROJECT.md (updated 2025-02-01)
 ## Current Position
 
 Phase: 7 of 8 (Data Analysis) - In Progress
-Plan: 01 of 3 (AI-Powered Code Generation)
-Status: Plan 07-01 complete. Code generation API, AnalysisAgent, CodeEditor component implemented.
-Last activity: 2026-02-05 — Completed Phase 7 Plan 01 (AI-Powered Code Generation)
+Plan: 02 of 3 (Sandboxed Code Execution)
+Status: Plan 07-02 complete. Sandboxed code execution service with Python/R support and automatic memory storage implemented.
+Last activity: 2026-02-05 — Completed Phase 7 Plan 02 (Sandboxed Code Execution)
 
-Progress: ██████████░ 79% (20/25 plans complete; 6.3/8 phases complete)
+Progress: ██████████░ 84% (21/25 plans complete; 6.3/8 phases complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 20
+- Total plans completed: 21
 - Average duration: 5 min
 - Total execution time: ~1.9 hours
 
@@ -33,7 +33,7 @@ Progress: ██████████░ 79% (20/25 plans complete; 6.3/8 pha
 | 04-document-editor | 6 | ~6 | 6 min |
 | 05-literature | 3 | ~3 | 5 min |
 | 06-ai-agent | 3 | ~3 | 5 min |
-| 07-data-analysis | 1 | ~3 | 4 min |
+| 07-data-analysis | 2 | ~3 | 4 min |
 | 08 | — | — | — |
 
 **Recent Trend:**
@@ -204,6 +204,19 @@ Recent decisions affecting current work:
 104. **Text suggestions displayed above messages** — Separate section in AISidebar for active text suggestions. Prevents cluttering message history and makes suggestions more discoverable/accessible.
 105. **Apply suggestion triggers auto-save** — Applying AI suggestion uses existing TipTap replaceWith transaction, which triggers the editor's onUpdate handler and auto-save. No additional save logic needed.
 
+**From 07-01 (AI-Powered Code Generation):**
+106. **Code generation service pattern** — AnalysisAgent.generate_code() returns structured dict with code, language, and explanation. LLM returns formatted response that's parsed to extract code blocks.
+107. **Language-specific prompts** — Separate system prompts for Python vs R with library recommendations (pandas/numpy/matplotlib vs tidyverse/ggplot2/dplyr). Ensures generated code uses appropriate idioms.
+108. **CodeEditor component with syntax highlighting** — Uses CodeMirror 6 with language extensions (python, r). Integrated Monaco-style experience with "Generate Code" and "Insert" buttons.
+
+**From 07-02 (Sandboxed Code Execution):**
+109. **Subprocess-based sandboxing (MVP)** — Used subprocess.run() with isolated environment and /tmp working directory for MVP simplicity. Production should use Docker containers or cloud execution environments for stronger isolation.
+110. **Timeout protection (60 seconds default)** — Prevents runaway code from hanging server. subprocess.run(timeout=60) with TimeoutExpired exception handling. Configurable parameter for flexibility.
+111. **Output length limits (100000 characters)** — Prevents resource exhaustion from excessive output. Truncated output includes notice message when limit exceeded.
+112. **Code length validation (10000 characters max)** — Pydantic Field validation prevents abuse and token limit issues. Returns 400 error with descriptive message.
+113. **Execution service pattern** — ExecutionService with async methods, comprehensive error handling (timeout, subprocess errors), and structured ExecutionResult model (success, output, error, execution_time, return_code).
+114. **Automatic memory persistence** — Successful executions automatically saved to memory as Finding objects with full provenance (code, language, output, execution_time). No manual save required.
+
 ### Pending Todos
 
 **P0 - Critical:**
@@ -365,6 +378,6 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Completed Phase 7 Plan 01 (AI-Powered Code Generation)
-Resume file: .planning/phases/07-data-analysis/07-01-SUMMARY.md
+Stopped at: Completed Phase 7 Plan 02 (Sandboxed Code Execution)
+Resume file: .planning/phases/07-data-analysis/07-02-SUMMARY.md
 Next: Phase 7 Plan 02 (Code Execution)
