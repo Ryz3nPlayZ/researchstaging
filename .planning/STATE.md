@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2025-02-01)
 ## Current Position
 
 Phase: 5 of 8 (Literature Search & Review) - 🔄 IN PROGRESS
-Plan: 01 of 3 (Literature Search & Unpaywall Integration) - ✓ COMPLETE
-Status: Literature search API, UI, and Unpaywall integration complete. Ready for: paper management, claim extraction, citation integration
-Last activity: 2026-02-05 — Completed Phase 5 Plan 01 (Literature Search & Unpaywall Integration)
+Plan: 02 of 3 (AI-Powered Claim Extraction) - ✓ COMPLETE
+Status: Claim extraction from PDF papers with LLM, API endpoint, and UI integration complete. Ready for: citation management, claim visualization
+Last activity: 2026-02-05 — Completed Phase 5 Plan 02 (AI-Powered Claim Extraction)
 
-Progress: ███████░░ 53% (9/19 plans complete; 4/8 phases complete; 1/3 plans in Phase 5)
+Progress: ███████░░ 58% (11/19 plans complete; 4/8 phases complete; 2/3 plans in Phase 5)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 14
+- Total plans completed: 15
 - Average duration: 6 min
-- Total execution time: 1.4 hours
+- Total execution time: 1.5 hours
 
 **By Phase:**
 
@@ -31,11 +31,11 @@ Progress: ███████░░ 53% (9/19 plans complete; 4/8 phases compl
 | 02-file-management | 4 | 4 | 5 min |
 | 03-memory-backend | 4 | 4 | 3 min |
 | 04-rich-text-editor | 3 | ~6 | 6 min |
-| 05-literature | 1 | ~3 | 6 min |
+| 05-literature | 2 | ~3 | 5 min |
 | 06-08 | — | — | — |
 
 **Recent Trend:**
-- Last 5 plans: 4 min, 8 min, 4 min, 4 min, 6 min (04-01, 04-03, 04-02, 04-06, 05-01)
+- Last 5 plans: 4 min, 8 min, 4 min, 4 min, 6 min, 4 min (04-01, 04-03, 04-02, 04-06, 05-01, 05-02)
 - Trend: Steady (consistent execution speed)
 
 *Updated after each plan completion*
@@ -167,6 +167,14 @@ Recent decisions affecting current work:
 79. **Graceful Unpaywall degradation** — Search continues even if Unpaywall fails. Logs warnings but returns results without OA enrichment.
 80. **Multi-source literature aggregation** — Semantic Scholar (citations) + arXiv (preprints) + Unpaywall (OA PDFs). Comprehensive coverage with deduplication.
 
+**From 05-02 (AI-Powered Claim Extraction):**
+81. **Separate PDF claim extraction method** — Created `extract_claims_from_pdf()` separate from `extract_claims_from_paper()` to handle full PDF text with different requirements (longer context, more claims).
+82. **Confidence threshold filtering** — Implemented 0.5 minimum confidence to ensure only significant claims are stored in memory.
+83. **Partial result handling** — Individual claim creation failures don't abort entire extraction; failed claims are logged and skipped.
+84. **Project ID flexibility** — Frontend accepts projectId as prop or falls back to selectedProject from ProjectContext for maximum flexibility.
+85. **Automatic paper addition** — Claims extraction automatically adds paper to project (via onAddToProject callback) for seamless workflow.
+86. **Prompt template file pattern** — Store prompts in `backend/prompts/` directory with placeholder replacement for max_claims and other parameters.
+
 ### Pending Todos
 
 **P0 - Critical:**
@@ -227,6 +235,9 @@ Recent decisions affecting current work:
 
 **From 05-01 (Literature Search & Unpaywall Integration):**
 - No blockers identified. Literature search API, UI component, and Unpaywall integration fully functional.
+
+**From 05-02 (AI-Powered Claim Extraction):**
+- No blockers identified. Claim extraction service, API endpoint, and UI integration fully functional.
 
 ### Patterns Established
 
@@ -301,6 +312,6 @@ Recent decisions affecting current work:
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Completed Phase 5 Plan 01 (Literature Search & Unpaywall Integration)
-Resume file: .planning/phases/05-literature/05-01-SUMMARY.md
-Next: Phase 5 Plan 02 (Paper Management) or continue with remaining plans
+Stopped at: Completed Phase 5 Plan 02 (AI-Powered Claim Extraction)
+Resume file: .planning/phases/05-literature/05-02-SUMMARY.md
+Next: Phase 5 Plan 03 (Citation Management and Claim Visualization) or continue with remaining plans
