@@ -17,7 +17,7 @@ The Research Workspace delivers stateful research intelligence — a single work
 - [x] **Phase 6: AI Agent & Sidebar Chat** - Interactive AI research assistant
 - [x] **Phase 7: Data Analysis** - Execute R/Python analyses in cloud sandbox
 - [x] **Phase 8: Document Export** - Export papers to PDF and DOCX
-- [ ] **Phase 9: File Content Loading** - Gap closure: Fix file opening from File Explorer
+- [x] **Phase 9: File Content Loading** - Gap closure: Fix file opening from File Explorer
 
 ## Phase Details
 
@@ -250,11 +250,13 @@ The Research Workspace delivers stateful research intelligence — a single work
 
 **Research**: Unlikely (follow established file service and document editor patterns)
 
+**Completed**: 2026-02-05
+
 **Plans**:
-- [ ] 09-01: File Content API — GET /files/{id}/content endpoint with raw file return
-- [ ] 09-02: Markdown to TipTap Parser — Convert Markdown to TipTap JSON structure
-- [ ] 09-03: DOCX to TipTap Parser — Extract DOCX content and convert to TipTap JSON
-- [ ] 09-04: Workspace Content Loading — Fetch and load file content when opening from File Explorer
+- [x] 09-01: File Content API — GET /files/{id}/content endpoint with raw file return
+- [x] 09-02: Markdown to TipTap Parser — Convert Markdown to TipTap JSON structure
+- [x] 09-03: DOCX to TipTap Parser — Extract DOCX content and convert to TipTap JSON
+- [x] 09-04: Workspace Content Loading — Fetch and load file content when opening from File Explorer
 
 ## Progress
 
@@ -271,4 +273,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 6. AI Agent & Sidebar Chat | 3/3 | ✓ Complete | 2026-02-05 |
 | 7. Data Analysis | 3/3 | ✓ Complete | 2026-02-05 |
 | 8. Document Export | 2/2 | ✓ Complete | 2026-02-05 |
-| 9. File Content Loading | 0/4 | Gap Closure | Pending |
+| 9. File Content Loading | 4/4 | ✓ Complete | 2026-02-05 |
