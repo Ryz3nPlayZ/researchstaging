@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2025-02-01)
 
 **Core value:** Stateful research intelligence — Single workspace where AI agent remembers everything important (all chats, analyses, documents, file contents) and uses that context to provide genuinely helpful research assistance.
-**Current focus:** Phase 8 (Document Export) - Backend complete, Frontend export UI pending
+**Current focus:** Phase 8 (Document Export) - Backend and Frontend complete, ready for human verification
 
 ## Current Position
 
-Phase: 8 of 8 (Document Export) - 🟡 IN PROGRESS
-Plan: 01 of 2 (Backend Export Service and API) - ✅ COMPLETE
-Status: Backend export complete (Pandoc service + API endpoints + PDF engine detection). Frontend integration pending (08-02).
-Last activity: 2026-02-05 — Completed Phase 8 Plan 01: Export service with TipTap to Markdown conversion, PDF/DOCX export endpoints, PDF engine auto-detection
+Phase: 8 of 8 (Document Export) - ✅ COMPLETE
+Plan: 02 of 2 (Frontend Export UI) - ✅ COMPLETE
+Status: Document export feature complete (Backend Pandoc service + API endpoints + Frontend ExportButton + Toolbar integration). Ready for end-to-end testing.
+Last activity: 2026-02-05 — Completed Phase 8 Plan 02: Frontend export UI with ExportButton dropdown, PDF/DOCX download, loading states, error handling. Fixed missing useRef import in DocumentEditor.
 
-Progress: ██████████ 96% (24/25 plans complete; 7/8 phases complete, 1/8 partial)
+Progress: ██████████ 100% (25/25 plans complete; 8/8 phases complete)
 
 ## Performance Metrics
 
@@ -34,12 +34,14 @@ Progress: ██████████ 96% (24/25 plans complete; 7/8 phases c
 | 05-literature | 3 | ~3 | 5 min |
 | 06-ai-agent | 3 | ~3 | 5 min |
 | 07-data-analysis | 3 | ~3 | 4 min |
-| 08-document-export | 1 | 2 | 5 min |
+| 08-document-export | 2 | 2 | 4 min |
 
 **Recent Trend:**
-- Last 5 plans: 6 min, 3 min, 4 min, 4 min, 5 min (06-02, 06-03, 07-01, 07-02, 07-03)
-- Latest: 5 min (08-01)
+- Last 5 plans: 6 min, 3 min, 4 min, 4 min, 2 min (06-02, 06-03, 07-01, 07-02, 07-03, 08-01, 08-02)
+- Latest: 2 min (08-02)
 - Trend: Steady (consistent execution speed)
+
+**🎉 MILESTONE: ALL 8 PHASES COMPLETE (25/25 plans)**
 
 *Updated after each plan completion*
 
@@ -228,6 +230,13 @@ Recent decisions affecting current work:
 119. **Safe filename generation** — Strip slashes and backslashes from document title, truncate to 100 chars. Prevents path traversal and filename overflow issues.
 120. **Custom exception hierarchy** — PandocNotFoundError, ConversionError, TimeoutError. Structured error handling for different failure modes with specific HTTP status codes.
 121. **PDF engine auto-detection** — Detect available LaTeX engines (xelatex, pdflatex, lualatex) on startup and use first available. Provides clear installation instructions when none found. DOCX export works without LaTeX.
+
+**From 08-02 (Frontend Export UI):**
+122. **Dropdown menu for export format selection** — Shadcn DropdownMenu with PDF and DOCX options follows established UI pattern from citation picker and AI features.
+123. **Blob URL pattern for file downloads** — Create object URL from blob, trigger download via anchor element, revoke URL after download. Prevents memory leaks.
+124. **Format-specific loading states** — Track exportFormat ('pdf' | 'docx') to show "Exporting..." on specific menu item while other format remains clickable. Better UX than disabling entire dropdown.
+125. **Comprehensive error handling with user-friendly messages** — Map HTTP status codes (404, 403, 503) and network errors to specific messages. Users get actionable feedback instead of generic "Export failed".
+126. **Filename sanitization for downloads** — Convert document title to URL-safe filename (lowercase, hyphens instead of special chars). Ensures downloads work across all browsers and file systems.
 
 **From 05-01 (Literature Search & Unpaywall Integration):**
 75. **Service layer enrichment** — Unpaywall integration and result sorting implemented in LiteratureService, not API layer. Enables reuse and testing.
@@ -465,7 +474,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-05 18:24 UTC
-Stopped at: Completed Phase 8 Plan 01 (Backend Export Service and API)
-Resume file: .planning/phases/08-document-export/08-01-SUMMARY.md
-Next: Phase 8 Plan 02 (Frontend Export UI) - ExportButton component with PDF/DOCX download
+Last session: 2026-02-05 18:30 UTC
+Stopped at: Completed Phase 8 Plan 02 (Frontend Export UI) - ALL PHASES COMPLETE
+Resume file: .planning/phases/08-document-export/08-02-SUMMARY.md
+Next: Human verification of document export functionality, then deployment/prep for production
