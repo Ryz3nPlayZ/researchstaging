@@ -14,7 +14,7 @@ The Research Workspace delivers stateful research intelligence — a single work
 - [x] **Phase 2: File & Project Management** - Upload and organize research files
 - [x] **Phase 3: Memory & Information Graph Backend** - Store research information and relationships
 - [x] **Phase 4: Rich Text Document Editor** - Write papers with citations and version history
-- [x] **Phase 5: Literature Search & Review** - AI-powered paper discovery and analysis
+- [x] **Phase 6: AI Agent & Sidebar Chat** - Interactive AI research assistant
 - [ ] **Phase 6: AI Agent & Sidebar Chat** - Interactive AI research assistant
 - [ ] **Phase 7: Data Analysis** - Execute R/Python analyses in cloud sandbox
 - [ ] **Phase 8: Document Export** - Export papers to PDF and DOCX
@@ -174,13 +174,15 @@ The Research Workspace delivers stateful research intelligence — a single work
   9. User can approve or reject AI-proposed plans
   10. AI agent executes plan only after user approval
 
-**Research**: Likely (multi-agent orchestration, proposal-based interaction)
+**Research**: Complete - Multi-agent patterns and proposal-based UX follow established LLM service patterns
 **Research topics**: Multi-agent orchestration patterns, proposal-based UX, router/planner/evaluator agent architecture
 
-**Plans**: TBD
+**Completed**: 2026-02-05
 
-Plans:
-- [ ] 06-01: [Brief description]
+**Plans**:
+- [x] 06-01: Persistent Sidebar Chat — Chat panel, API endpoints, message history, workspace integration
+- [x] 06-02: Context Injection & Multi-Agent Orchestration — Agent router, specialized agents, context loading
+- [x] 06-03: Plan Proposal & Text Refinement — Plan generation, approval UI, text refinement integration
 
 ### Phase 7: Data Analysis
 
@@ -241,6 +243,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 3. Memory & Information Graph Backend | 4/4 | ✓ Complete | 2026-02-04 |
 | 4. Rich Text Document Editor | 6/6 | ✓ Complete | 2026-02-05 |
 | 5. Literature Search & Review | 3/3 | ✓ Complete | 2026-02-05 |
-| 6. AI Agent & Sidebar Chat | 0/0 | Not started | - |
+| 6. AI Agent & Sidebar Chat | 3/3 | ✓ Complete | 2026-02-05 |
 | 7. Data Analysis | 0/0 | Not started | - |
 | 8. Document Export | 0/0 | Not started | - |

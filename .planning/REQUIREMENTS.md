@@ -34,16 +34,16 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### AI Agent & Sidebar Chat
 
-- [ ] **AI-01**: User sees persistent sidebar panel for AI interaction
-- [ ] **AI-02**: User can send chat messages to AI agent
-- [ ] **AI-03**: AI agent has read access to current document content
-- [ ] **AI-04**: AI agent has read access to analysis results
-- [ ] **AI-05**: AI agent has read access to stored claims and findings
-- [ ] **AI-06**: AI agent has read access to user preferences
-- [ ] **AI-07**: AI agent can refine text directly (simple changes like "make this sentence more formal")
-- [ ] **AI-08**: AI agent presents plan for complex actions before execution
-- [ ] **AI-09**: User can approve or reject AI-proposed plans
-- [ ] **AI-10**: AI agent executes plan only after user approval
+- [x] **AI-01**: User sees persistent sidebar panel for AI interaction
+- [x] **AI-02**: User can send chat messages to AI agent
+- [x] **AI-03**: AI agent has read access to current document content
+- [x] **AI-04**: AI agent has read access to analysis results
+- [x] **AI-05**: AI agent has read access to stored claims and findings
+- [x] **AI-06**: AI agent has read access to user preferences
+- [x] **AI-07**: AI agent can refine text directly (simple changes like "make this sentence more formal")
+- [x] **AI-08**: AI agent presents plan for complex actions before execution
+- [x] **AI-09**: User can approve or reject AI-proposed plans
+- [x] **AI-10**: AI agent executes plan only after user approval
 
 ### Memory & Information Graph
 
@@ -195,16 +195,16 @@ Which phases cover which requirements. Updated by create-roadmap.
 | LIT-05 | Phase 5 | Complete |
 | LIT-06 | Phase 5 | Complete |
 | LIT-07 | Phase 5 | Complete |
-| AI-01 | Phase 6 | Pending |
-| AI-02 | Phase 6 | Pending |
-| AI-03 | Phase 6 | Pending |
-| AI-04 | Phase 6 | Pending |
-| AI-05 | Phase 6 | Pending |
-| AI-06 | Phase 6 | Pending |
-| AI-07 | Phase 6 | Pending |
-| AI-08 | Phase 6 | Pending |
-| AI-09 | Phase 6 | Pending |
-| AI-10 | Phase 6 | Pending |
+| AI-01 | Phase 6 | Complete |
+| AI-02 | Phase 6 | Complete |
+| AI-03 | Phase 6 | Complete |
+| AI-04 | Phase 6 | Complete |
+| AI-05 | Phase 6 | Complete |
+| AI-06 | Phase 6 | Complete |
+| AI-07 | Phase 6 | Complete |
+| AI-08 | Phase 6 | Complete |
+| AI-09 | Phase 6 | Complete |
+| AI-10 | Phase 6 | Complete |
 | ANA-01 | Phase 7 | Pending |
 | ANA-02 | Phase 7 | Pending |
 | ANA-03 | Phase 7 | Pending |
