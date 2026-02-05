@@ -115,10 +115,17 @@ The Research Workspace delivers stateful research intelligence — a single work
 **Research**: Likely (TipTap editor setup, citation management patterns)
 **Research topics**: TipTap editor with React, citation management architecture, document versioning strategy
 
-**Plans**: TBD
+**Completed**: 2026-02-04 (Wave 1), In Progress (Waves 2-3 verification)
 
-Plans:
-- [ ] 04-01: [Brief description]
+**Plans**:
+- [x] 04-01: Document Backend Foundation (Database models, CRUD API, migration)
+- [x] 04-02: TipTap Editor Frontend (Editor component, toolbar, auto-save)
+- [x] 04-03: Citation Management Backend (Model, formatting service, API)
+- [ ] 04-04: Document Version History (Version UI, diff view, restore)
+- [ ] 04-05: Citation UI and Bibliography (Insertion UI, bibliography generation)
+- [ ] 04-06: AI Text Assistance (Rewrite, grammar check)
+
+**Progress**: Wave 1 COMPLETE (3/6 plans = 50%), Waves 2-3 code complete pending verification
 
 ### Phase 5: Literature Search & Review
 
@@ -229,7 +236,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 1. Authentication & User Management | 2/2 | ✓ Complete | 2025-02-01 |
 | 2. File & Project Management | 4/4 | ✓ Complete | 2025-02-03 |
 | 3. Memory & Information Graph Backend | 4/4 | ✓ Complete | 2026-02-04 |
-| 4. Rich Text Document Editor | 0/0 | Not started | - |
+| 4. Rich Text Document Editor | 3/6 | 🔄 In Progress | 2026-02-04 (Wave 1) |
 | 5. Literature Search & Review | 0/0 | Not started | - |
 | 6. AI Agent & Sidebar Chat | 0/0 | Not started | - |
 | 7. Data Analysis | 0/0 | Not started | - |
