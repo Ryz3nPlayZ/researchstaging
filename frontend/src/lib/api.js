@@ -54,6 +54,16 @@ export const papersApi = {
   get: (id) => api.get(`/papers/${id}`),
 };
 
+// Memory API
+export const memoryApi = {
+  listClaims: (projectId) => api.get(`/memory/projects/${projectId}/claims`),
+  createClaim: (projectId, data) => api.post(`/memory/projects/${projectId}/claims`, data),
+  extractClaims: (projectId, data) => api.post(`/memory/projects/${projectId}/extract-claims`, data),
+  searchClaims: (projectId, query) => api.get(`/memory/projects/${projectId}/claims/search`, {
+    params: { q: query }
+  }),
+};
+
 // Literature API
 export const literatureApi = {
   search: (query, limit = 20) => api.get(`/literature/search`, {

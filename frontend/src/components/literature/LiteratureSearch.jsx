@@ -7,7 +7,8 @@ import {
   BadgeCheck,
   Loader2,
   AlertCircle,
-  Plus
+  Plus,
+  Quote
 } from 'lucide-react';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
@@ -20,11 +21,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../ui/dialog';
-import { literatureApi } from '../../lib/api';
+import { literatureApi, memoryApi } from '../../lib/api';
 import { useToast } from '../../hooks/use-toast';
+import { useProject } from '../../context/ProjectContext';
+import PropTypes from 'prop-types';
 
-export const LiteratureSearch = ({ onAddToProject }) => {
+export const LiteratureSearch = ({ onAddToProject, onInsertCitation, currentStyle, documentId, projectId }) => {
   const { toast } = useToast();
+  const { selectedProject } = useProject();
 
   // Search state
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,6 +39,16 @@ export const LiteratureSearch = ({ onAddToProject }) => {
   // Details modal state
   const [selectedPaper, setSelectedPaper] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+
+  // Paper processing state
+  const [processingPaperIds, setProcessingPaperIds] = useState(new Set());
+  const [extractedClaimCounts, setExtractedClaimCounts] = useState({});
+
+  // Citation insertion state
+  const [insertingPaperIds, setInsertingPaperIds] = useState(new Set());
+
+  // Get projectId from prop or context
+  const currentProjectId = projectId || selectedProject?.id;
 
   // Debounced search
   useEffect(() => {
@@ -96,6 +110,79 @@ export const LiteratureSearch = ({ onAddToProject }) => {
       toast({
         title: 'Paper added',
         description: `"${paper.title.substring(0, 50)}..." has been added to your project.`,
+      });
+    }
+  };
+
+  const handleExtractClaims = async (paper, e) => {
+    e.stopPropagation(); // Prevent opening modal
+
+    // Check if paper has PDF URL
+    const pdfUrl = paper.open_access_pdf_url || paper.pdf_url;
+    if (!pdfUrl) {
+      toast({
+        variant: 'destructive',
+        title: 'No PDF available',
+        description: 'This paper does not have a PDF available for claim extraction.',
+      });
+      return;
+    }
+
+    // Check if project is selected
+    if (!currentProjectId) {
+      toast({
+        variant: 'destructive',
+        title: 'No project selected',
+        description: 'Please select a project before extracting claims.',
+      });
+      return;
+    }
+
+    // Add to processing set
+    setProcessingPaperIds(prev => new Set([...prev, paper.external_id]));
+
+    try {
+      // Call API to extract claims
+      const result = await memoryApi.extractClaims(currentProjectId, {
+        paper_id: paper.external_id,
+        pdf_url: pdfUrl,
+        paper_metadata: {
+          title: paper.title,
+          authors: paper.authors,
+          year: paper.year,
+          abstract: paper.abstract,
+        },
+        max_claims: 20,
+      });
+
+      // Update extracted claim counts
+      setExtractedClaimCounts(prev => ({
+        ...prev,
+        [paper.external_id]: result.data.length,
+      }));
+
+      toast({
+        title: 'Claims extracted',
+        description: `Successfully extracted ${result.data.length} claims from "${paper.title.substring(0, 40)}..."`,
+      });
+
+      // Also add to project if callback exists
+      if (onAddToProject) {
+        onAddToProject(paper);
+      }
+    } catch (error) {
+      console.error('Claim extraction failed:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Extraction failed',
+        description: error.response?.data?.detail || 'Failed to extract claims from paper. Please try again.',
+      });
+    } finally {
+      // Remove from processing set
+      setProcessingPaperIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(paper.external_id);
+        return newSet;
       });
     }
   };
@@ -262,6 +349,12 @@ export const LiteratureSearch = ({ onAddToProject }) => {
                           <span>{paper.citation_count} citations</span>
                         </div>
                       )}
+                      {extractedClaimCounts[paper.external_id] && (
+                        <div className="flex items-center gap-1 text-blue-600">
+                          <Quote className="w-3 h-3" />
+                          <span>{extractedClaimCounts[paper.external_id]} claims extracted</span>
+                        </div>
+                      )}
                       {paper.url && (
                         <a
                           href={paper.url}
@@ -276,18 +369,44 @@ export const LiteratureSearch = ({ onAddToProject }) => {
                       )}
                     </div>
 
-                    {/* Add to project button */}
-                    {onAddToProject && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 px-2 text-xs hover:bg-blue-50 hover:text-blue-600"
-                        onClick={(e) => handleAddToProject(paper, e)}
-                      >
-                        <Plus className="w-3 h-3 mr-1" />
-                        Add to Project
-                      </Button>
-                    )}
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-2">
+                      {/* Extract claims button */}
+                      {(paper.pdf_url || paper.open_access_pdf_url) && currentProjectId && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-xs hover:bg-green-50 hover:text-green-600"
+                          onClick={(e) => handleExtractClaims(paper, e)}
+                          disabled={processingPaperIds.has(paper.external_id)}
+                        >
+                          {processingPaperIds.has(paper.external_id) ? (
+                            <>
+                              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                              Extracting...
+                            </>
+                          ) : (
+                            <>
+                              <Quote className="w-3 h-3 mr-1" />
+                              Extract Claims
+                            </>
+                          )}
+                        </Button>
+                      )}
+
+                      {/* Add to project button */}
+                      {onAddToProject && !extractedClaimCounts[paper.external_id] && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-7 px-2 text-xs hover:bg-blue-50 hover:text-blue-600"
+                          onClick={(e) => handleAddToProject(paper, e)}
+                        >
+                          <Plus className="w-3 h-3 mr-1" />
+                          Add to Project
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -409,4 +528,20 @@ export const LiteratureSearch = ({ onAddToProject }) => {
       </Dialog>
     </div>
   );
+};
+
+LiteratureSearch.propTypes = {
+  onAddToProject: PropTypes.func,
+  onInsertCitation: PropTypes.func,
+  currentStyle: PropTypes.string,
+  documentId: PropTypes.string,
+  projectId: PropTypes.string,
+};
+
+LiteratureSearch.defaultProps = {
+  onAddToProject: null,
+  onInsertCitation: null,
+  currentStyle: 'apa',
+  documentId: null,
+  projectId: null,
 };
