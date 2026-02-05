@@ -4,10 +4,21 @@ import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { Badge } from '../ui/badge';
 import { Card } from '../ui/card';
-import { Loader2, Send, X, Bot, User, ChevronLeft, ChevronRight, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import { Loader2, Send, X, Bot, User, ChevronLeft, ChevronRight, Trash2, CheckCircle, XCircle, Code, Play } from 'lucide-react';
 import { toast } from 'sonner';
 import Markdown from 'react-markdown';
-import api from '../../lib/api';
+import api, { analysisApi } from '../../lib/api';
+import { CodeEditor } from '../analysis/CodeEditor';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '../ui/dialog';
+import { Label } from '../ui/label';
+import { Textarea } from '../ui/textarea';
 
 export const AISidebar = () => {
   const { selectedProject, selectedDocument, applyAISuggestion } = useProject();
@@ -24,6 +35,13 @@ export const AISidebar = () => {
 
   // Text refinement state
   const [textSuggestions, setTextSuggestions] = useState([]);
+
+  // Code generation state
+  const [codeDialogOpen, setCodeDialogOpen] = useState(false);
+  const [codeTask, setCodeTask] = useState('');
+  const [codeLanguage, setCodeLanguage] = useState('python');
+  const [generatedCode, setGeneratedCode] = useState(null);
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
 
   const scrollRef = useRef(null);
   const textareaRef = useRef(null);
@@ -243,6 +261,53 @@ export const AISidebar = () => {
     setTextSuggestions(prev => prev.filter(s => s.id !== suggestionId));
   }, []);
 
+  // Handle code generation
+  const handleGenerateCode = useCallback(async () => {
+    if (!codeTask.trim() || !selectedProject) return;
+
+    setIsGeneratingCode(true);
+    try {
+      const response = await analysisApi.generateCode(
+        selectedProject.id,
+        codeTask,
+        codeLanguage
+      );
+
+      setGeneratedCode({
+        code: response.data.code,
+        language: response.data.language,
+        explanation: response.data.explanation
+      });
+
+      toast.success('Code generated successfully');
+    } catch (error) {
+      console.error('Failed to generate code:', error);
+      toast.error(error.response?.data?.detail || 'Failed to generate code');
+    } finally {
+      setIsGeneratingCode(false);
+    }
+  }, [codeTask, codeLanguage, selectedProject]);
+
+  // Handle opening code dialog
+  const handleOpenCodeDialog = useCallback(() => {
+    setCodeTask('');
+    setCodeLanguage('python');
+    setGeneratedCode(null);
+    setCodeDialogOpen(true);
+  }, []);
+
+  // Handle closing code dialog
+  const handleCloseCodeDialog = useCallback(() => {
+    setCodeDialogOpen(false);
+    setCodeTask('');
+    setGeneratedCode(null);
+  }, []);
+
+  // Handle code execution (placeholder for Plan 07-02)
+  const handleExecuteCode = useCallback(async (code, language) => {
+    toast.info(`Code execution will be implemented in Plan 07-02. (${language})`);
+  }, []);
+
   // Check if query needs plan proposal before sending
   const handleSendWithPlanCheck = useCallback(async () => {
     if (!inputText.trim() || isSending || !selectedProject) return;
@@ -351,6 +416,115 @@ export const AISidebar = () => {
           <h3 className="font-semibold">AI Assistant</h3>
         </div>
         <div className="flex items-center gap-1">
+          <Dialog open={codeDialogOpen} onOpenChange={setCodeDialogOpen}>
+            <DialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleOpenCodeDialog}
+                title="Generate Analysis Code"
+              >
+                <Code className="h-4 w-4 mr-1" />
+                Generate Code
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle>Generate Analysis Code</DialogTitle>
+                <DialogDescription>
+                  Describe your analysis task and AI will generate Python or R code for you.
+                </DialogDescription>
+              </DialogHeader>
+
+              {!generatedCode ? (
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="code-task">Analysis Task</Label>
+                    <Textarea
+                      id="code-task"
+                      placeholder="e.g., Create a scatter plot showing the relationship between study size and effect size, colored by research method"
+                      value={codeTask}
+                      onChange={(e) => setCodeTask(e.target.value)}
+                      rows={4}
+                      className="mt-2"
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="code-language">Language</Label>
+                    <div className="flex gap-2 mt-2">
+                      <Button
+                        type="button"
+                        variant={codeLanguage === 'python' ? 'default' : 'outline'}
+                        onClick={() => setCodeLanguage('python')}
+                      >
+                        Python
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={codeLanguage === 'r' ? 'default' : 'outline'}
+                        onClick={() => setCodeLanguage('r')}
+                      >
+                        R
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-2">
+                    <Button variant="outline" onClick={handleCloseCodeDialog}>
+                      Cancel
+                    </Button>
+                    <Button
+                      onClick={handleGenerateCode}
+                      disabled={!codeTask.trim() || isGeneratingCode}
+                    >
+                      {isGeneratingCode ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        'Generate Code'
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {generatedCode.explanation && (
+                    <div className="p-3 bg-muted rounded-lg">
+                      <p className="text-sm">{generatedCode.explanation}</p>
+                    </div>
+                  )}
+
+                  <CodeEditor
+                    code={generatedCode.code}
+                    language={generatedCode.language}
+                    onChange={(code) => setGeneratedCode({ ...generatedCode, code })}
+                    onExecute={handleExecuteCode}
+                    height="300px"
+                  />
+
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setGeneratedCode(null);
+                        setCodeTask('');
+                      }}
+                    >
+                      Back
+                    </Button>
+                    <Button onClick={() => handleExecuteCode(generatedCode.code, generatedCode.language)}>
+                      <Play className="h-4 w-4 mr-2" />
+                      Run Code
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+
           <Button
             variant="ghost"
             size="icon"

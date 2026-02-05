@@ -185,6 +185,16 @@ export const chatApi = {
     api.delete(`/chat/projects/${projectId}/history`),
 };
 
+// Analysis API
+export const analysisApi = {
+  generateCode: (projectId, task, language, dataContext = null) =>
+    api.post(`/analysis/projects/${projectId}/generate-code`, {
+      task,
+      language,
+      data_context: dataContext
+    }),
+};
+
 // WebSocket connection for real-time updates
 export const createWebSocketConnection = (projectId, onEvent, onError) => {
   const wsUrl = BACKEND_URL.replace('http', 'ws').replace('https', 'wss');
