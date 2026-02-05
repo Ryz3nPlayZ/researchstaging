@@ -92,8 +92,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Document Export
 
-- [ ] **EXP-01**: User can export document as PDF
-- [ ] **EXP-02**: User can export document as DOCX
+- [x] **EXP-01**: User can export document as PDF
+- [x] **EXP-02**: User can export document as DOCX
 
 ## v2 Requirements
 
@@ -214,8 +214,8 @@ Which phases cover which requirements. Updated by create-roadmap.
 | ANA-07 | Phase 7 | Complete |
 | ANA-08 | Phase 7 | Complete |
 | ANA-09 | Phase 7 | Complete |
-| EXP-01 | Phase 8 | Pending |
-| EXP-02 | Phase 8 | Pending |
+| EXP-01 | Phase 8 | Complete |
+| EXP-02 | Phase 8 | Complete |
 
 **Coverage:**
 - v1 requirements: 64 total

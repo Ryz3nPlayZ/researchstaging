@@ -15,9 +15,8 @@ The Research Workspace delivers stateful research intelligence — a single work
 - [x] **Phase 3: Memory & Information Graph Backend** - Store research information and relationships
 - [x] **Phase 4: Rich Text Document Editor** - Write papers with citations and version history
 - [x] **Phase 6: AI Agent & Sidebar Chat** - Interactive AI research assistant
-- [ ] **Phase 6: AI Agent & Sidebar Chat** - Interactive AI research assistant
-- [ ] **Phase 7: Data Analysis** - Execute R/Python analyses in cloud sandbox
-- [ ] **Phase 8: Document Export** - Export papers to PDF and DOCX
+- [x] **Phase 7: Data Analysis** - Execute R/Python analyses in cloud sandbox
+- [x] **Phase 8: Document Export** - Export papers to PDF and DOCX
 
 ## Phase Details
 
@@ -228,10 +227,11 @@ The Research Workspace delivers stateful research intelligence — a single work
 **Research**: Likely (Pandoc integration or TipTap export)
 **Research topics**: TipTap export to PDF/DOCX, Pandoc integration, format fidelity
 
-**Plans**: TBD
+**Completed**: 2026-02-05
 
-Plans:
-- [ ] 08-01: [Brief description]
+**Plans**:
+- [x] 08-01: Backend Export Service and API — Pandoc-based export service with TipTap to Markdown conversion, PDF engine auto-detection, and export API endpoints
+- [x] 08-02: Frontend Export UI — ExportButton component with dropdown menu, blob download handling, loading states, and error handling
 
 ## Progress
 
@@ -247,4 +247,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
 | 5. Literature Search & Review | 3/3 | ✓ Complete | 2026-02-05 |
 | 6. AI Agent & Sidebar Chat | 3/3 | ✓ Complete | 2026-02-05 |
 | 7. Data Analysis | 3/3 | ✓ Complete | 2026-02-05 |
-| 8. Document Export | 0/0 | Not started | - |
+| 8. Document Export | 2/2 | ✓ Complete | 2026-02-05 |
