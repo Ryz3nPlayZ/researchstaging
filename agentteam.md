@@ -1,376 +1,278 @@
-# Agent Team Collaboration Guide
+# AI Agent Team Collaboration
 
-**Purpose:** Coordinate multiple AI agents working on the Research Workspace project
-
-## Overview
-
-This project uses AI agents (Claude Code instances) for task execution. Each agent operates independently but coordinates through this document.
-
-## Agent Roles
-
-### 1. Orchestrator (Main Session)
-- **Responsibility:** Overall project coordination, planning, and delegation
-- **Tools Available:** All tools (Bash, Read, Write, Edit, Task, etc.)
-- **Activities:**
-  - Create and execute phase plans
-  - Spawn sub-agents for parallel work
-  - Review and approve completed work
-  - Manage git commits and state tracking
-  - Coordinate verification and gap closure
-
-### 2. Executor Agents (gsd-executor)
-- **Responsibility:** Execute PLAN.md files with specific tasks
-- **Tools Available:** Execution tools (Bash, Read, Write, Edit, Task)
-- **Activities:**
-  - Read plan objectives and context
-  - Execute tasks atomically (one task = one git commit)
-  - Create SUMMARY.md upon completion
-  - Update STATE.md with decisions
-  - Handle checkpoints by returning to orchestrator
-
-### 3. Verifier Agents (gsd-verifier)
-- **Responsibility:** Verify phase goals against actual codebase
-- **Tools Available:** Inspection tools (Read, Grep, Glob, Bash)
-- **Activities:**
-  - Check must_haves from PLAN.md frontmatter
-  - Verify artifacts exist and aren't stubs
-  - Trace key_links between components
-  - Create VERIFICATION.md with pass/fail status
-  - Identify gaps for /gsd:plan-phase --gaps
-
-### 4. Specialist Agents (on-demand)
-- **Mapper (gsd-codebase-mapper):** Explore and document codebase structure
-- **Researcher (gsd-research-phase):** Research unknown domains before planning
-- **Debugger (systematic-debugging):** Investigate bugs and failures
-
-## Collaboration Protocol
-
-### Task Delegation
-
-**When Orchestrator delegates work:**
-
-1. **Identify independent tasks** that can run in parallel
-2. **Create Task calls** with specific prompts:
-   ```
-   Task(prompt="Execute plan at {plan_path}
-
-   Plan: @{plan_path}
-   Project state: @.planning/STATE.md
-   Commit each task atomically. Create SUMMARY.md.",
-          subagent_type="gsd-executor")
-   ```
-
-3. **Wait for completion** - Task tool blocks until agent finishes
-4. **Review SUMMARY.md** - Check what was accomplished
-5. **Verify and integrate** - Review commits, update state if needed
-
-### Example: Parallel Execution
-
-**Scenario:** Phase has 3 independent plans
-
-```
-# Orchestrator spawns 3 agents in parallel:
-Task(prompt="Execute plan 01-01", subagent_type="gsd-executor")
-Task(prompt="Execute plan 01-02", subagent_type="gsd-executor")
-Task(prompt="Execute plan 01-03", subagent_type="gsd-executor")
-
-# All 3 run in parallel
-# Orchestrator waits for all to complete
-# Reviews 3 SUMMARY.md files
-# Continues to next wave
-```
-
-### Agent Communication
-
-**Through Files:**
-- **PLAN.md:** Orchestrator → Executor (task specification)
-- **SUMMARY.md:** Executor → Orchestrator (task completion report)
-- **VERIFICATION.md:** Verifier → Orchestrator (gap findings)
-- **STATE.md:** All agents → Orchestrator (decisions, context)
-
-**Direct Agent Interaction:** Rare - typically through orchestrator, not agent-to-agent
-
-### Work Marking Convention
-
-**To mark work as done in agentteam.md:**
-
-When an agent completes work, update this file:
-
-```markdown
-## Work Completed
-
-### [Date YYYY-MM-DD]
-
-**Agent:** Executor (01-01)
-**Plan:** 01-01 Mock Authentication
-**Status:** ✓ Complete
-**Commit:** 6931ffc, 800e0ea, etc.
-**Summary:** .planning/phases/01-authentication/01-01-SUMMARY.md
+**Project:** Research Pilot (https://github.com/Ryz3nPlayZ/research)
+**Orchestrator:** Claude Code (GSD-powered)
+**Team Members:** Claude Code, Google Antigravity, GitHub Copilot, Google Jules
+**Last Updated:** 2026-02-04
 
 ---
 
-**Agent:** Verifier (01-01)
-**Plan:** Phase 1 verification
-**Status:** ✓ Complete
-**Commit:** (verification committed by orchestrator)
-**Summary:** .planning/phases/01-authentication/01-authentication-VERIFICATION.md
-```
+## Team Overview
 
-## Task Assignment Patterns
+We are a multi-AI team working on the Research Pilot project. Each AI agent operates independently with unique capabilities, coordinating through this document and the GitHub repository.
 
-### Pattern 1: Sequential Plans
+### Agent Roles
 
-```
-Phase with 3 sequential plans:
-- Plan 01 (autonomous) → Spawns executor, wait for SUMMARY
-- Plan 02 (depends on 01) → Spawn executor after 01 complete
-- Plan 03 (depends on 02, has checkpoint) → Spawn executor, handle checkpoint, resume
-```
+#### 1. Claude Code (Orchestrator) - ME
+- **Capabilities:** GSD workflows, planning, execution coordination, full codebase access
+- **Location:** This session, `agentteam.md` owner
+- **Responsibilities:**
+  - Overall project planning and roadmap management
+  - Breaking down phases into executable plans
+  - Coordinating task delegation to external agents
+  - Managing git commits and repository state
+  - Verification and gap analysis
+  - Creating/maintaining planning files (PLAN.md, SUMMARY.md)
 
-### Pattern 2: Parallel Wave
+#### 2. Google Antigravity
+- **Capabilities:** Powerful coding + **vision** + **browser automation**
+- **Location:** External (Google's infrastructure)
+- **Strengths:**
+  - Can see and interact with UI like a human user
+  - Can run browser tests and verify functionality
+  - Can take screenshots and analyze visual issues
+  - Strong coding capabilities for frontend/backend
+- **Best For:**
+  - UI testing and verification
+  - Visual regression testing
+  - End-to-end testing with browser automation
+  - Screenshot-based bug analysis
+  - Frontend styling and layout fixes
 
-```
-Wave 1 (3 autonomous plans):
-- Spawn 3 executors in parallel
-- Wait for all 3
-- Review all SUMMARYs
-- Proceed to Wave 2
-```
+#### 3. GitHub Copilot
+- **Capabilities:** Advanced coding models, GitHub integration
+- **Location:** GitHub Code Suggestions/Chat
+- **Strengths:**
+  - Strong code completion and generation
+  - Good at refactoring and code improvements
+  - Familiar with many codebases and patterns
+  - Can suggest fixes for common issues
+- **Best For:**
+  - Code refactoring and optimization
+  - Bug fixes and patches
+  - Implementing standard patterns
+  - Code review suggestions
+  - Writing boilerplate and tests
 
-### Pattern 3: Gap Closure
-
-```
-Verification found gaps:
-1. Spawn verifier to check must_haves
-2. VERIFICATION.md shows gaps
-3. Orchestrator creates gap closure plan (01-02)
-4. Spawn executor to fix gaps
-5. Spawn verifier to re-check
-6. Loop until passed
-```
-
-## Agent Independence
-
-Each executor agent:
-- Gets fresh 200k context window
-- Loads plan and context independently
-- Works autonomously on its tasks
-- Creates SUMMARY.md for orchestrator to review
-- Returns to orchestrator when complete (or checkpoint)
-
-No agent "manages" another agent directly. All coordination happens through:
-1. Plan files (orchestrator → executor)
-2. Summary files (executor → orchestrator)
-3. State updates (all → orchestrator)
-
-## Error Handling
-
-### Executor Fails Mid-Task
-
-**If executor crashes/errors:**
-1. SUMMARY.md won't exist or is incomplete
-2. Orchestrator detects missing SUMMARY
-3. Orchestrator reviews git commits to see what was done
-4. Decides: retry with fix instructions, or spawn debugger agent
-5. Updates STATE.md with blocker if needed
-
-### Verification Finds Gaps
-
-**If verifier finds gaps:**
-1. VERIFICATION.md created with `gaps: [...]`
-2. Orchestrator presents gaps to user
-3. Offers: `/gsd:plan-phase {phase} --gaps`
-4. Gap closure plan created
-5. Executor fixes gaps
-6. Re-verify → loop until passed
-
-## Current Project Context
-
-**Project:** Research Workspace
-**Current Phase:** 2 (File & Project Management)
-**Last Completed:** Phase 1 (Authentication & User Management)
-
-### Recent Agent Activity
-
-**2025-02-01:**
-- **Executor (01-01):** Completed mock authentication system (16 min)
-- **Executor (01-02):** Fixed AppContent integration (4 min)
-- **Verifier (01-01):** Verified phase goals (4/4 passed)
-
-### Work Queue
-
-**Ready to start:**
-- Phase 2 planning (/gsd:plan-phase 2)
-- Phase 2 execution (/gsd:execute-phase 2)
-
-**Blocked:** None
-
-## Communication Summary
-
-**Total agents spawned:** 4 (3 executors, 1 verifier)
-**Successful parallel waves:** 1
-**Gap closure cycles:** 1 (found and fixed 2 gaps)
-**Average plan duration:** 10 minutes
+#### 4. Google Jules
+- **Capabilities:** Autonomous task execution, direct GitHub access
+- **Location:** Separate computer (independent "employee")
+- **Strengths:**
+  - Takes a task, works independently, commits to GitHub
+  - Can work on entire features end-to-end
+  - Operates autonomously without supervision
+  - Direct repository access
+- **Best For:**
+  - Complete feature implementation
+  - Multi-file tasks that need coordination
+  - Independent work on isolated features
+  - Tasks that need full ownership
 
 ---
 
-## Notes
+## Repository Information
 
-- Agents don't "talk" to each other - they communicate through files
-- Orchestrator is always in main session, never delegates overall control
-- Executor agents are temporary - spawned for a plan, terminated after
-- Verifier agents are temporary - spawned for verification, terminated after
-- No "agent manager" - the STATE.md file serves this purpose
+**GitHub:** https://github.com/Ryz3nPlayZ/research.git
+**Local Path:** /home/zemul/Programming/research
+**Remote:** origin
+
+### Setup for External Agents
+
+All agents should:
+1. Clone repository: `git clone https://github.com/Ryz3nPlayZ/research.git`
+2. Read `agentteam.md` for context
+3. Check assigned tasks in "Current Work" section
+4. Create branches for their work: `git checkout -b agent/NAME/task-description`
+5. Commit with clear messages: `[AGENT NAME] task-description`
+6. Push and create pull requests for review
 
 ---
 
-# Phase 4 Delegation Plan
+## Current Project Status
 
-**Date:** 2026-02-04
-**Phase:** 04 - Rich Text Document Editor
-**Status:** Wave 1 Complete, Waves 2-3 Code Complete Need Verification
+### Phase: 04 - Rich Text Document Editor
 
-## Executive Summary
+**Status:** Wave 1 COMPLETE, Waves 2-3 Code Complete Need Verification
 
-Phase 4 has 3 waves of implementation. Wave 1 (Plans 01-03) is complete. Waves 2-3 (Plans 04-06) have code complete but need verification. **Critical bug:** File content loading broken - MD/DOCX files open blank instead of showing content.
+#### Completed (Wave 1)
+- ✅ 04-01: Document Backend (models, API, migration)
+- ✅ 04-02: TipTap Editor (component, toolbar, auto-save)
+- ✅ 04-03: Citation Backend (model, service, endpoints)
 
-**Orchestrator:** Claude (Sonnet 4.5) - nearing usage limits, delegating to specialist agents
+#### Code Complete, Need Testing (Waves 2-3)
+- ⏸️ 04-04: Version History (code ready, needs testing)
+- ⏸️ 04-05: Citation UI (code ready, needs testing)
+- ⏸️ 04-06: AI Text Assistance (code ready, needs testing)
 
-## Progress Summary
-
-### Completed (Wave 1)
-| Plan | Name | Status | Summary |
-|------|------|--------|---------|
-| 04-01 | Document Backend | ✅ COMPLETE | Document/DocumentVersion models, CRUD API, migration |
-| 04-02 | TipTap Editor | ✅ COMPLETE | DocumentEditor component, toolbar, auto-save |
-| 04-03 | Citation Backend | ✅ COMPLETE | DocumentCitation model, CitationService, API endpoints |
-
-### Code Complete, Needs Verification (Waves 2-3)
-| Plan | Name | Status | Issues |
-|------|------|--------|--------|
-| 04-04 | Version History | ⏸️ VERIFY | Code complete, needs testing |
-| 04-05 | Citation UI | ⏸️ VERIFY | Code complete, bibliography path fixed, needs testing |
-| 04-06 | AI Text Assistance | ⏸️ VERIFY | Code complete, needs LLM API key + testing |
-
-### Bugs Fixed
-- ✅ Router prefix (duplicate /api removed)
-- ✅ Citation style case (APA → apa)
-- ✅ Duplicate History extension
-- ✅ Bibliography API path (/memory prefix added)
-
-### Known Critical Issues
-- ❌ **File content loading broken** - MD/DOCX files create blank document
+#### Critical Bugs
+- ❌ **File content loading broken** - Opening `.md`/`.docx` files shows blank editor instead of file content
 - ⚠️ ESLint warnings in AIAssistant.jsx, Bibliography.jsx, CitationPicker.jsx
 
-## Delegated Tasks
+---
+
+## Current Work - Task Assignments
 
 ### Task 1: Fix File Content Loading (P0 - CRITICAL)
+**Assigned to:** Google Jules (autonomous feature work)
+**Priority:** BLOCKING - Must fix first
 
-**Agent:** Antigravity or Jules
-**Priority:** BLOCKING basic functionality
-**Files:**
-- `frontend/src/components/layout/Workspace.jsx` (lines 194-247)
-- `frontend/src/lib/api.js` (documentsApi section)
-- May need new endpoint in `backend/file_api.py`
+**Problem:** When users open `.md` or `.docx` files from File Explorer, the editor opens blank instead of showing file content.
 
-**Problem:** Opening `.md` or `.docx` files creates empty Document instead of loading file content
+**What needs to be done:**
+1. Add backend endpoint to read file content: `GET /api/files/files/{id}/content`
+2. Convert file content to TipTap JSON format:
+   - For `.md` files: Parse markdown to TipTap JSON
+   - For `.docx` files: Extract text and convert to TipTap JSON
+3. Update `Workspace.jsx` to load file content when creating documents
 
-**Steps:**
-1. Add backend endpoint: `GET /api/files/files/{id}/content`
-2. Convert content to TipTap JSON:
-   - Markdown: Parse → TipTap JSON format
-   - DOCX: Extract → TipTap JSON format
-3. Update Workspace.jsx to load file content when creating document
-
-**TipTap JSON Format:**
+**TipTap JSON Format Example:**
 ```json
 {
   "type": "doc",
   "content": [
     {
       "type": "paragraph",
-      "content": [{"type": "text", "text": "Hello from file content!"}]
+      "content": [{"type": "text", "text": "Hello from file!"}]
     }
   ]
 }
 ```
 
-**Success:** Opening MD/DOCX files shows file content in editor
+**Files to modify:**
+- `backend/file_api.py` - Add content endpoint
+- `frontend/src/components/layout/Workspace.jsx` (lines 194-247) - Load content
+- `frontend/src/lib/api.js` - Add client function
+
+**Success criteria:** Opening a `.md` or `.docx` file shows its content in the editor, not a blank page.
+
+**Branch:** `agent/jules/fix-file-content-loading`
 
 ---
 
-### Task 2: Test Citation System (P1)
+### Task 2: UI Testing & Verification (P1)
+**Assigned to:** Google Antigravity (vision + browser testing)
+**Priority:** HIGH - Verify Wave 2-3 features work
 
-**Agent:** Copilot or Jules
-**Files:** CitationPicker.jsx, Bibliography.jsx, memory_api.py, citation_service.py
+**What needs to be tested:**
 
-**Test Plan:**
-1. Insert citation from memory search
-2. Insert manual citation
-3. Switch citation styles (APA/MLA/Chicago)
-4. Verify bibliography generates and updates
-5. Test copy to clipboard
+1. **Version History Testing:**
+   - Create a document
+   - Make multiple edits (wait for auto-save)
+   - Click History icon in toolbar
+   - Verify version list displays correctly
+   - Click a version to view diff
+   - Test restore functionality
+   - Take screenshots of each step
+   - Report any visual bugs or UX issues
 
-**Write results to:** agentteam.md under "### Test Results - Citations"
+2. **Citation System Testing:**
+   - Test "Insert Citation" button
+   - Test memory search tab
+   - Test manual entry tab
+   - Verify citations insert as `[Author, Year]`
+   - Test style switching (APA/MLA/Chicago)
+   - Verify bibliography generates at bottom
+   - Take screenshots showing the flow
+   - Report any issues
 
----
+3. **AI Assistant Testing** (if LLM key configured):
+   - Select text, right-click
+   - Test "Rewrite with AI" - all tones
+   - Test "Check Grammar"
+   - Verify suggestions display correctly
+   - Report any UX issues
 
-### Task 3: Test Version History (P1)
+**What Antigravity should do:**
+- Use browser automation to test the actual running app
+- Take screenshots at key steps
+- Write test results in `agentteam.md` under "### Test Results - Antigravity"
+- Create GitHub issues for any bugs found
+- If comfortable, fix simple UI bugs directly
 
-**Agent:** Copilot or Antigravity
-**Files:** VersionHistory.jsx, document_api.py
-
-**Test Plan:**
-1. Create document, make multiple edits (wait 4s for auto-save)
-2. Open version history (History icon in toolbar)
-3. View version list (verify timestamps)
-4. Click version to view diff (side-by-side JSON)
-5. Test restore (verify confirmation dialog)
-6. Verify audit trail (pre-restore saved as new version)
-
-**Write results to:** agentteam.md under "### Test Results - Version History"
-
----
-
-### Task 4: Test AI Text Assistance (P2)
-
-**Agent:** Any agent
-**Prerequisite:** LLM API key in backend/.env
-**Files:** AIAssistant.jsx, document_api.py
-
-**Test Plan:**
-1. Verify LLM provider configured (check backend/.env)
-2. Select text, right-click → "Rewrite with AI"
-3. Test all tones (formal, casual, concise, elaborate)
-4. Select text → "Check Grammar"
-5. Verify suggestions display with explanations
-6. Test "Apply All" button
-
-**If no LLM key:** Document in agentteam.md, skip testing
-
-**Write results to:** agentteam.md under "### Test Results - AI Assistant"
+**Branch:** `agent/antigravity/ui-testing`
 
 ---
 
-### Task 5: Fix ESLint Warnings (P2)
+### Task 3: ESLint Warning Fixes (P2)
+**Assigned to:** GitHub Copilot
+**Priority:** MEDIUM - Code quality
 
-**Agent:** Any agent
-**Files:** AIAssistant.jsx, Bibliography.jsx, CitationPicker.jsx
+**ESLint Warnings to Fix:**
+```
+frontend/src/components/editor/AIAssistant.jsx
+  Line 72:6:   React Hook useCallback has missing dependency: 'handleClose'
+  Line 219:6:  React Hook useCallback has missing dependency: 'handleClose'
 
-**Warnings to fix:**
-- AIAssistant.jsx:72 - useCallback missing 'handleClose'
-- AIAssistant.jsx:219 - useCallback missing 'handleClose'
-- Bibliography.jsx:78 - useEffect missing 'fetchBibliography'
-- CitationPicker.jsx:141 - useEffect missing 'handleSearch'
+frontend/src/components/editor/Bibliography.jsx
+  Line 78:6:  React Hook useEffect has missing dependency: 'fetchBibliography'
 
-**Fix options:**
-1. Add missing dependencies to arrays
-2. Use `// eslint-disable-next-line react-hooks/exhaustive-deps` if intentional
-3. Refactor to avoid circular dependencies
+frontend/src/components/editor/CitationPicker.jsx
+  Line 141:6:  React Hook useEffect has missing dependency: 'handleSearch'
+```
 
-**Success:** `npm run build` completes without ESLint warnings
+**What needs to be done:**
+1. Fix each warning by either:
+   - Adding missing dependencies to arrays
+   - Using `// eslint-disable-next-line react-hooks/exhaustive-deps` with explanation
+   - Refactoring to avoid dependency issues
 
-**Write results to:** agentteam.md under "### ESLint Fixes Applied"
+2. Verify fixes: `cd frontend && npm run build` (should complete without warnings)
+
+3. Commit changes with clear message
+
+**Files:**
+- `frontend/src/components/editor/AIAssistant.jsx`
+- `frontend/src/components/editor/Bibliography.jsx`
+- `frontend/src/components/editor/CitationPicker.jsx`
+
+**Branch:** `agent/copilot/eslint-fixes`
+
+---
+
+## Communication Protocol
+
+### How We Coordinate
+
+**Claude Code (Orchestrator):**
+- Updates `agentteam.md` with task assignments
+- Monitors GitHub for commits/PRs from external agents
+- Reviews and merges pull requests
+- Plans next phase work
+- Maintains planning files
+
+**External Agents (Antigravity, Copilot, Jules):**
+1. Read `agentteam.md` for current tasks
+2. Create feature branch from `master`
+3. Complete assigned work
+4. Write results in `agentteam.md` (commit this file too)
+5. Push to GitHub, create pull request
+6. Add comment to PR describing what was done
+
+### Handoff Protocol
+
+When an agent completes work:
+1. Update `agentteam.md` with results under appropriate section
+2. Commit changes: `git commit -m "[AGENT] Completed task X"`
+3. Push and create PR
+4. Claude Code reviews and merges
+
+When Claude Code assigns new work:
+1. Update `agentteam.md` with new task
+2. Tag relevant agent in commit message or PR description
+3. Agent checks `agentteam.md` for instructions
+
+### Conflict Resolution
+
+**If multiple agents work on same files:**
+- Coordinate in `agentteam.md` - add "Working on:" notes
+- Use separate branches
+- Create PRs for review
+- Claude Code merges and resolves conflicts
+
+**If agents get stuck:**
+- Document blocker in `agentteam.md` with "BLOCKER:" prefix
+- Create GitHub issue for visibility
+- Claude Code helps unblock or reassigns
 
 ---
 
@@ -386,107 +288,95 @@ Phase 4 has 3 waves of implementation. Wave 1 (Plans 01-03) is complete. Waves 2
 ├── 04-04-PLAN.md           # Version History (code complete)
 ├── 04-05-PLAN.md           # Citation UI (code complete)
 ├── 04-06-PLAN.md           # AI Text Assistance (code complete)
-└── 0X-XX-SUMMARY.md        # Create these after testing
+├── 04-01-SUMMARY.md        # Completed
+├── 04-02-SUMMARY.md        # Completed
+└── 04-03-SUMMARY.md        # Completed
 ```
 
-### Backend Files
+### Key Implementation Files
 ```
 backend/
 ├── document_api.py          # Document CRUD, versions, AI endpoints
 ├── memory_api.py            # Citations, bibliography endpoints
-├── citation_service.py      # APA/MLA/Chicago formatting (NEW)
-├── database/models.py       # Document, DocumentVersion, DocumentCitation
-└── scripts/migrate_add_document_tables.py  # Migration run
-```
+├── citation_service.py      # APA/MLA/Chicago formatting
+├── database/models.py       # Document, DocumentVersion models
+└── file_api.py              # File operations (needs content endpoint)
 
-### Frontend Files
-```
 frontend/src/
-├── lib/api.js               # Document API client functions
+├── lib/api.js               # API client functions
 ├── components/editor/
-│   ├── DocumentEditor.jsx   # TipTap editor with toolbar (420+ lines)
-│   ├── VersionHistory.jsx   # Version list, diff, restore (364 lines)
-│   ├── CitationPicker.jsx   # Insert citations UI
-│   ├── Bibliography.jsx     # Display formatted bibliography
-│   └── AIAssistant.jsx      # Rewrite + grammar dialogs
+│   ├── DocumentEditor.jsx   # TipTap editor (420+ lines)
+│   ├── VersionHistory.jsx   # Version list, diff, restore
+│   ├── CitationPicker.jsx   # Insert citations
+│   ├── Bibliography.jsx     # Display bibliography
+│   └── AIAssistant.jsx      # Rewrite + grammar
 └── components/layout/
-    └── Workspace.jsx        # File Explorer integration (loads .md/.docx)
+    └── Workspace.jsx        # File Explorer integration (BROKEN - blank editor)
 ```
-
----
-
-## Agent Instructions
-
-### When Starting Work
-
-1. **Read this file** (agentteam.md) - all context is here
-2. **Read relevant PLAN.md** files for detailed task context
-3. **Check existing SUMMARY.md** files for completed work
-4. **Verify current code state** before making changes
-
-### When Completing Work
-
-1. **Write results in agentteam.md** under appropriate section:
-   - Add "### Test Results - [Feature Name]" sections
-   - Document bugs found, fixes applied
-   - Note any deviations from plans
-
-2. **Create SUMMARY.md** files for completed plans:
-   - Follow format from 04-01-SUMMARY.md
-   - Include: tasks completed, commits, deviations, next steps
-
-3. **Commit all changes** with clear messages:
-   ```
-   fix(04-XX): brief description
-   ```
-
-4. **Document handoff** if passing to another agent:
-   - Update agentteam.md with "Handed off to: [Agent]"
-   - Note what's done and what remains
-
-### Communication Protocol
-
-- **Progress updates:** Add comments to agentteam.md
-- **Blockers:** Document with "BLOCKER:" prefix
-- **Questions:** If orchestrator returns, read agentteam.md for context
-- **Completion:** Mark task with "✅ COMPLETE"
 
 ---
 
 ## Success Criteria
 
 Phase 4 complete when:
-- ✅ File content loading works (P0)
-- ✅ Citation system tested and working (P1)
-- ✅ Version history tested and working (P1)
-- ✅ AI assistant tested or documented as blocked (P2)
-- ✅ ESLint build clean (P2)
-- ✅ All 6 plans have SUMMARY.md files
+- ✅ File content loading works (P0) - **JULES**
+- ✅ UI tested and working (P1) - **ANTIGRAVITY**
+- ✅ ESLint clean (P2) - **COPILOT**
+- ✅ All 6 plans have SUMMARY.md files - **CLAUDE**
 - ✅ User can: create doc, write content, insert citations, view versions
+- ✅ All pull requests reviewed and merged
 
 ---
 
-## Quick Commands
+## Quick Reference
 
+### Commands
 ```bash
-# Start servers
+# Clone repository
+git clone https://github.com/Ryz3nPlayZ/research.git
+cd research
+
+# Create feature branch
+git checkout -b agent/NAME/task-description
+
+# Start development servers
 ./run-all.sh
-
-# Backend only
-cd backend && source venv/bin/activate && python server.py
-
-# Frontend only
-cd frontend && yarn start
 
 # Check ESLint
 cd frontend && npm run build
 
-# Git status
-git status
-git log --oneline -10
+# Commit work
+git add .
+git commit -m "[AGENT] task description"
+git push origin agent/NAME/task-description
+
+# Create pull request
+gh pr create --title "[AGENT] Task title" --body "Description of work done"
 ```
+
+### Resources
+- **Agent Instructions:** Always start here (agentteam.md)
+- **Planning:** `.planning/phases/04-document-editor/*.md`
+- **Project Status:** `.planning/STATE.md`, `.planning/ROADMAP.md`
+- **Documentation:** `README.md`, `SETUP.md`
 
 ---
 
-**Last updated:** 2026-02-04 by Claude (Sonnet 4.5)
-**Status:** Delegated to specialist agents - file content loading is critical blocker (P0)
+## Test Results Section
+
+(External agents add their results here)
+
+### Test Results - Antigravity
+*Pending UI testing*
+
+### ESLint Fixes - Copilot
+*Pending ESLint fixes*
+
+### File Content Loading - Jules
+*Pending implementation*
+
+---
+
+**Last Updated:** 2026-02-04 by Claude Code
+**Next Review:** After all P0-P2 tasks complete
+**Status:** Awaiting external agent contributions
