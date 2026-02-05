@@ -230,39 +230,27 @@ export const Workspace = () => {
           setDocumentData(doc);
           setSelectedDocument(doc);
         } else {
-          // Get file content first
-          let fileContent = '';
-          try {
-            const contentResponse = await filesApi.getFileContent(selectedFile.id, selectedProject.id);
-            fileContent = contentResponse.data.content || '';
-          } catch (contentError) {
-            console.warn('Could not load file content, creating empty document:', contentError);
-            fileContent = '';
-          }
-
-          // Convert file content to TipTap JSON format
-          // For markdown, we'll create simple paragraph structure
-          // Each line becomes a paragraph
-          const paragraphs = fileContent.split('\n\n').filter(p => p.trim());
-          const tipTapContent = {
+          // Parse file content to TipTap JSON format
+          let tipTapContent = {
             type: 'doc',
-            content: paragraphs.length > 0
-              ? paragraphs.map(para => ({
-                  type: 'paragraph',
-                  content: [{ type: 'text', text: para.trim() }]
-                }))
-              : [{ type: 'paragraph', content: [] }] // Empty document
+            content: [{ type: 'paragraph', content: [] }] // Default empty document
           };
 
-          // Create new document for this file with content
+          try {
+            const parseResponse = await filesApi.parseToTipTap(selectedFile.id, selectedProject.id);
+            tipTapContent = parseResponse.data.tiptap || tipTapContent;
+          } catch (parseError) {
+            console.warn('Could not parse file content, creating empty document:', parseError);
+            // Continue with empty document
+          }
+
+          // Create new document for this file with parsed TipTap content
           const response = await documentsApi.createDocument(
             selectedProject.id,
             selectedFile.name.replace(/\.(md|docx)$/, ''),
-            'apa'
+            'apa',
+            tipTapContent  // Pass TipTap content
           );
-
-          // Update document with file content
-          await documentsApi.updateDocument(response.data.id, tipTapContent);
 
           const doc = {
             id: response.data.id,
@@ -271,7 +259,13 @@ export const Workspace = () => {
           };
           setDocumentData(doc);
           setSelectedDocument(doc);
-          // Note: In a full implementation, you'd update the file's tags with document_id
+
+          // Update file tags with document_id for future reference
+          try {
+            await filesApi.updateFileTags(selectedFile.id, { document_id: response.data.id });
+          } catch (tagError) {
+            console.warn('Could not update file tags:', tagError);
+          }
         }
       } catch (error) {
         console.error('Failed to load/create document:', error);

@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from sqlalchemy import select
 from datetime import datetime, timezone
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from database import get_db
 from database.models import Document, DocumentVersion, CitationStyle
@@ -26,6 +26,7 @@ class DocumentRequest(BaseModel):
     """Request model for creating a document."""
     title: str
     citation_style: Optional[str] = "apa"
+    content: Optional[dict] = Field(None, description="Initial TipTap JSON content")
 
 
 class DocumentUpdateRequest(BaseModel):
@@ -114,19 +115,21 @@ async def create_document(
             detail=f"Invalid citation_style: {document_request.citation_style}. Must be one of: apa, mla, chicago"
         )
 
-    # Create document with empty TipTap structure
+    # Create document with content (or empty TipTap structure if not provided)
+    empty_content = {
+        "type": "doc",
+        "content": [
+            {
+                "type": "paragraph",
+                "content": []
+            }
+        ]
+    }
+
     document = Document(
         project_id=project_id,
         title=document_request.title,
-        content={
-            "type": "doc",
-            "content": [
-                {
-                    "type": "paragraph",
-                    "content": []
-                }
-            ]
-        },
+        content=document_request.content if document_request.content else empty_content,
         citation_style=citation_style,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),

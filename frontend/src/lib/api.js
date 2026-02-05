@@ -136,6 +136,7 @@ export const filesApi = {
 
   deleteFile: (fileId) => api.delete(`/files/files/${fileId}`),
   moveFile: (fileId, folderId) => api.patch(`/files/files/${fileId}/move`, { folder_id: folderId }),
+  updateFileTags: (fileId, tags) => api.patch(`/files/files/${fileId}/tags`, { tags }),
 };
 
 // Documents API
@@ -153,11 +154,15 @@ export const documentsApi = {
   loadDocument: (documentId) => api.get(`/documents/${documentId}`),
 
   // Create new document
-  createDocument: (projectId, title, citationStyle = 'apa') => {
-    return api.post(`/projects/${projectId}/documents`, {
+  createDocument: (projectId, title, citationStyle = 'apa', content = null) => {
+    const data = {
       title,
       citation_style: citationStyle.toLowerCase(),
-    });
+    };
+    if (content !== null) {
+      data.content = content;
+    }
+    return api.post(`/projects/${projectId}/documents`, data);
   },
 
   // List documents for a project

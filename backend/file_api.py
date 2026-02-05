@@ -6,6 +6,7 @@ REST API for file and folder operations.
 import os
 import logging
 from typing import Optional
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
@@ -566,4 +567,53 @@ async def move_project_file(
         raise _handle_file_service_error(e)
     except Exception as e:
         logger.error(f"Failed to move file: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.patch(
+    "/files/{file_id}/tags",
+    response_model=FileResponse,
+    responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}}
+)
+async def update_file_tags(
+    file_id: str,
+    data: dict,
+    db: AsyncSession = Depends(get_db)
+):
+    """Update file tags metadata."""
+    try:
+        from database.models import File
+        from sqlalchemy import update
+
+        # Get file
+        result = await db.execute(select(File).where(File.id == file_id))
+        file = result.scalar_one_or_none()
+
+        if not file:
+            raise HTTPException(status_code=404, detail="File not found")
+
+        # Update tags
+        new_tags = data.get("tags", {})
+        file.tags = new_tags
+        file.updated_at = datetime.now(timezone.utc)
+
+        await db.flush()
+
+        logger.info(f"Updated tags for file {file_id}")
+
+        return FileResponse(
+            id=file.id,
+            name=file.name,
+            file_type=file.file_type,
+            path=file.path,
+            description=file.description,
+            size_bytes=file.size_bytes,
+            mime_type=file.mime_type,
+            created_at=file.created_at.isoformat(),
+            metadata=file.tags if file.tags else None
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update file tags: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
