@@ -56,13 +56,13 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Literature Review & Search
 
-- [ ] **LIT-01**: AI agent can search for papers via Semantic Scholar API
-- [ ] **LIT-02**: AI agent uses Unpaywall to find open-access PDFs
-- [ ] **LIT-03**: System prioritizes papers with full PDF access in search results
-- [ ] **LIT-04**: AI agent extracts key claims and statements from papers
-- [ ] **LIT-05**: AI agent saves extracted claims to memory
-- [ ] **LIT-06**: System auto-formats citations during literature review
-- [ ] **LIT-07**: User can upload PDF files to project
+- [x] **LIT-01**: AI agent can search for papers via Semantic Scholar API
+- [x] **LIT-02**: AI agent uses Unpaywall to find open-access PDFs
+- [x] **LIT-03**: System prioritizes papers with full PDF access in search results
+- [x] **LIT-04**: AI agent extracts key claims and statements from papers
+- [x] **LIT-05**: AI agent saves extracted claims to memory
+- [x] **LIT-06**: System auto-formats citations during literature review
+- [x] **LIT-07**: User can upload PDF files to project
 
 ### Data Analysis
 
@@ -188,13 +188,13 @@ Which phases cover which requirements. Updated by create-roadmap.
 | EDIT-13 | Phase 4 | Pending |
 | EDIT-14 | Phase 4 | Pending |
 | EDIT-15 | Phase 4 | Pending |
-| LIT-01 | Phase 5 | Pending |
-| LIT-02 | Phase 5 | Pending |
-| LIT-03 | Phase 5 | Pending |
-| LIT-04 | Phase 5 | Pending |
-| LIT-05 | Phase 5 | Pending |
-| LIT-06 | Phase 5 | Pending |
-| LIT-07 | Phase 5 | Pending |
+| LIT-01 | Phase 5 | Complete |
+| LIT-02 | Phase 5 | Complete |
+| LIT-03 | Phase 5 | Complete |
+| LIT-04 | Phase 5 | Complete |
+| LIT-05 | Phase 5 | Complete |
+| LIT-06 | Phase 5 | Complete |
+| LIT-07 | Phase 5 | Complete |
 | AI-01 | Phase 6 | Pending |
 | AI-02 | Phase 6 | Pending |
 | AI-03 | Phase 6 | Pending |
