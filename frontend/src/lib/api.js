@@ -107,7 +107,12 @@ export const filesApi = {
   listFiles: (projectId) => api.get(`/files/projects/${projectId}/files`),
   getFileTree: (projectId) => api.get(`/files/projects/${projectId}/files/tree`),
   getFile: (fileId) => api.get(`/files/files/${fileId}`),
-  getFileContent: (fileId) => api.get(`/files/files/${fileId}/content`),
+  getFileContent: (fileId, projectId) => api.get(`/files/files/${fileId}/content`, {
+    params: { project_id: projectId }
+  }),
+  parseToTipTap: (fileId, projectId) => api.get(`/files/files/${fileId}/content`, {
+    params: { project_id: projectId }
+  }),
 
   // Download file - returns Promise that resolves to either:
   // - { download_url: string, filename: string } for S3/R2 (presigned URL)

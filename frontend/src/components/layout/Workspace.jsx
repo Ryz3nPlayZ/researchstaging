@@ -233,7 +233,7 @@ export const Workspace = () => {
           // Get file content first
           let fileContent = '';
           try {
-            const contentResponse = await filesApi.getFileContent(selectedFile.id);
+            const contentResponse = await filesApi.getFileContent(selectedFile.id, selectedProject.id);
             fileContent = contentResponse.data.content || '';
           } catch (contentError) {
             console.warn('Could not load file content, creating empty document:', contentError);
