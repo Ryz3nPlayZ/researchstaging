@@ -3,13 +3,11 @@ Literature Search API - REST endpoints for discovering and acquiring research pa
 Integrates with Semantic Scholar, arXiv, and Unpaywall for comprehensive literature search.
 """
 import logging
-import asyncio
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, HTTPException, Query, BackgroundTasks
 from pydantic import BaseModel, Field
 import httpx
-import os
 
 from literature_service import LiteratureService
 
@@ -70,45 +68,6 @@ class DownloadResponse(BaseModel):
     message: str = "PDF downloaded successfully"
 
 
-# ============== Helper Functions ==============
-
-def extract_doi_from_paper(paper: Dict[str, Any]) -> Optional[str]:
-    """Extract DOI from paper metadata."""
-    # Try common DOI fields
-    if 'doi' in paper:
-        return paper.get('doi')
-
-    # Try to extract from URL (Semantic Scholar pattern)
-    url = paper.get('url', '')
-    if 'doi.org' in url:
-        return url.split('doi.org/')[-1]
-
-    # Try citation styles (Semantic Scholar provides this)
-    citation_styles = paper.get('citation_styles', {})
-    if citation_styles and isinstance(citation_styles, dict):
-        doi_style = citation_styles.get('doi', '')
-        if doi_style and 'doi.org' in doi_style:
-            return doi_style.split('doi.org/')[-1]
-
-    return None
-
-
-def sort_papers_by_priority(papers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """
-    Sort papers by priority:
-    1. Has open-access PDF (first priority)
-    2. Citation count (descending, second priority)
-    3. Year (descending, third priority)
-    """
-    def sort_key(paper):
-        has_pdf = 1 if paper.get('open_access_pdf_url') or paper.get('pdf_url') else 0
-        citations = paper.get('citation_count') or 0
-        year = paper.get('year') or 0
-        return (-has_pdf, -citations, -year)  # Negative for descending
-
-    return sorted(papers, key=sort_key)
-
-
 # ============== API Endpoints ==============
 
 @router.get("/search", response_model=List[PaperSearchResult])
@@ -145,12 +104,9 @@ async def search_literature(
             logger.warning(f"No papers found for query: '{query}'")
             return []
 
-        # Enrich with Unpaywall for papers with DOIs
+        # Enrich with Unpaywall for papers with DOIs and sort by priority
         logger.info(f"Enriching {len(papers)} papers with Unpaywall...")
-        enriched_papers = await enrich_with_open_access(papers)
-
-        # Sort by priority (PDF access, citations, year)
-        sorted_papers = sort_papers_by_priority(enriched_papers)
+        sorted_papers = await literature_service.enrich_with_open_access(papers)
 
         logger.info(f"Returning {len(sorted_papers)} papers for query: '{query}'")
         return sorted_papers
@@ -161,78 +117,6 @@ async def search_literature(
             status_code=500,
             detail=f"Search failed: {str(e)}"
         )
-
-
-async def enrich_with_open_access(papers: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """
-    Enrich papers with open-access PDF URLs from Unpaywall.
-
-    For papers with DOIs, queries Unpaywall API to find free versions.
-    Adds open_access_pdf_url field if found.
-    """
-    # Collect papers with DOIs
-    papers_with_doi = []
-    for paper in papers:
-        doi = extract_doi_from_paper(paper)
-        if doi:
-            paper['doi'] = doi
-            papers_with_doi.append(paper)
-
-    if not papers_with_doi:
-        logger.info("No papers with DOIs found, skipping Unpaywall enrichment")
-        return papers
-
-    logger.info(f"Looking up open access for {len(papers_with_doi)} papers via Unpaywall...")
-
-    # Parallel Unpaywall lookups with rate limiting
-    async def lookup_paper(paper):
-        doi = paper.get('doi')
-        if not doi:
-            return paper
-
-        try:
-            # Rate limiting: small delay between requests
-            await asyncio.sleep(0.1)
-
-            oa_result = await literature_service.unpaywall.find_open_access(doi)
-            if oa_result and oa_result.get('oa_url'):
-                paper['open_access_pdf_url'] = oa_result['oa_url']
-                logger.debug(f"Found OA PDF for DOI {doi}: {oa_result['oa_url']}")
-            else:
-                logger.debug(f"No OA PDF found for DOI {doi}")
-
-        except Exception as e:
-            logger.warning(f"Unpaywall lookup failed for DOI {doi}: {e}")
-            # Don't fail the entire search if Unpaywall is down
-
-        return paper
-
-    # Process lookups in parallel with concurrency limit
-    semaphore = asyncio.Semaphore(5)  # Max 5 concurrent Unpaywall requests
-
-    async def bounded_lookup(paper):
-        async with semaphore:
-            return await lookup_paper(paper)
-
-    enriched_papers = await asyncio.gather(
-        *[bounded_lookup(paper) for paper in papers_with_doi],
-        return_exceptions=True
-    )
-
-    # Handle exceptions and merge back with papers without DOIs
-    result = []
-    enriched_map = {p['external_id']: p for p in enriched_papers if not isinstance(p, Exception)}
-
-    for paper in papers:
-        if paper.get('doi') and paper.get('external_id') in enriched_map:
-            result.append(enriched_map[paper['external_id']])
-        else:
-            result.append(paper)
-
-    oa_count = sum(1 for p in result if p.get('open_access_pdf_url'))
-    logger.info(f"Unpaywall enrichment complete: {oa_count}/{len(papers)} papers have OA PDFs")
-
-    return result
 
 
 @router.get("/papers/{paper_id}", response_model=PaperDetail)
