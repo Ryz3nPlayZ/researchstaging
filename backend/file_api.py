@@ -21,6 +21,7 @@ from file_service import (
     rename_folder,
     delete_folder,
     move_file,
+    read_file_content,
     markdown_to_tiptap,
     docx_to_tiptap,
     FileServiceError,
@@ -321,38 +322,56 @@ async def download_file(
 @router.get("/files/{file_id}/content", responses={404: {"model": ErrorResponse}, 400: {"model": ErrorResponse}})
 async def get_file_content(
     file_id: str,
+    project_id: str = Query(..., description="Project ID for ownership validation"),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Get file content as text for document editor.
 
-    Supports .md and .docx files. Returns text content that can be converted to TipTap JSON.
-    For .docx files, returns the raw file as bytes for docx_to_tiptap() processing.
+    Supports .md and .docx files. Returns TipTap JSON format for editor initialization.
+    Validates project ownership before returning content.
+
+    Query parameters:
+    - project_id: Required for ownership validation
     """
     try:
-        file = await get_file(db, file_id)
+        # Import functions from file_service
+        from file_service import read_file_content, FileServiceError, markdown_to_tiptap, docx_to_tiptap
 
-        # Check file extension
+        # Read file content (validates ownership internally)
+        content_data = await read_file_content(db, file_id, project_id)
+
+        # Get file details to determine extension
+        file = await get_file(db, file_id)
         ext = file.name.split('.')[-1].lower() if '.' in file.name else ''
 
-        if ext not in ['md', 'docx']:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Unsupported file type for content extraction: {ext}. Only .md and .docx are supported."
-            )
+        # For .md files, convert Markdown to TipTap JSON
+        if ext == 'md':
+            tiptap_json = markdown_to_tiptap(content_data["content"])
 
-        # Read file from storage
-        from storage_service import get_storage
-        storage = get_storage()
+            logger.info(f"Retrieved and converted Markdown content for file: {file.name}")
 
-        # For local storage, read file directly
-        if hasattr(storage, '__class__') and 'LocalStorage' in storage.__class__.__name__:
-            if not os.path.exists(file.storage_path):
-                logger.error(f"File not found on disk: {file.storage_path}")
-                raise HTTPException(status_code=404, detail="File not found on disk")
+            return {
+                "file_id": file_id,
+                "content": content_data["content"],
+                "tiptap": tiptap_json,
+                "extension": ext,
+                "encoding": content_data.get("encoding", "utf-8"),
+                "format": "tiptap"
+            }
 
-            # For DOCX files, read as bytes for docx_to_tiptap processing
-            if ext == 'docx':
+        # For .docx files, we need special handling (binary format)
+        elif ext == 'docx':
+            # For DOCX, we need to read the file as bytes
+            from storage_service import get_storage
+            storage = get_storage()
+
+            if hasattr(storage, '__class__') and 'LocalStorage' in storage.__class__.__name__:
+                if not os.path.exists(file.storage_path):
+                    logger.error(f"File not found on disk: {file.storage_path}")
+                    raise HTTPException(status_code=404, detail="File not found on disk")
+
+                # Read DOCX as bytes
                 with open(file.storage_path, 'rb') as f:
                     content_bytes = f.read()
 
@@ -362,36 +381,27 @@ async def get_file_content(
                 logger.info(f"Retrieved and parsed DOCX content for file: {file.name}")
 
                 return {
-                    "file_id": file.id,
-                    "name": file.name,
+                    "file_id": file_id,
                     "tiptap": tiptap_json,
                     "extension": ext,
                     "format": "tiptap"
                 }
             else:
-                # For Markdown files, read as text
-                with open(file.storage_path, 'r', encoding='utf-8') as f:
-                    content = f.read()
+                # Cloud storage DOCX handling
+                raise HTTPException(
+                    status_code=501,
+                    detail="DOCX file content extraction not yet implemented for cloud storage. Please use local storage."
+                )
 
-                # Convert Markdown to TipTap JSON
-                tiptap_json = markdown_to_tiptap(content)
-
-                logger.info(f"Retrieved and parsed Markdown content for file: {file.name}")
-
-                return {
-                    "file_id": file.id,
-                    "name": file.name,
-                    "tiptap": tiptap_json,
-                    "extension": ext,
-                    "format": "tiptap"
-                }
         else:
-            # For S3/R2 storage, would need to download file first
-            # For now, return error for cloud storage
-            raise HTTPException(
-                status_code=501,
-                detail="File content extraction not yet implemented for cloud storage. Please use local storage."
-            )
+            # For other text file types, return raw content
+            return {
+                "file_id": file_id,
+                "content": content_data["content"],
+                "extension": ext,
+                "encoding": content_data.get("encoding", "utf-8"),
+                "format": "raw"
+            }
 
     except FileServiceError as e:
         raise _handle_file_service_error(e)
