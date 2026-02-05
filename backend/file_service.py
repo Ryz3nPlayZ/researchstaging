@@ -1168,3 +1168,116 @@ async def get_file_download_url(
     else:
         # Local storage - return None to indicate direct file serving
         return None
+
+
+async def read_file_content(
+    db: AsyncSession,
+    file_id: str,
+    project_id: str
+) -> dict:
+    """
+    Read file content from storage.
+
+    Validates project ownership and reads file content as text.
+    Supports .md, .txt, .csv, .json, .py, .r, .js files.
+
+    Args:
+        db: Database session
+        file_id: File ID
+        project_id: Project ID for ownership validation
+
+    Returns:
+        Dict with 'content' (str) and 'encoding' (str, default 'utf-8')
+
+    Raises:
+        FileServiceError: If file not found, ownership invalid, or read fails
+    """
+    import aiofiles
+
+    # Validate file exists and belongs to project
+    file = await db.get(File, file_id)
+    if not file:
+        raise FileServiceError(status_code=404, detail=f"File {file_id} not found")
+
+    # Verify project ownership
+    if file.project_id != project_id:
+        raise FileServiceError(
+            status_code=403,
+            detail=f"File {file_id} does not belong to project {project_id}"
+        )
+
+    # Get storage backend
+    storage = get_storage()
+    backend_type = type(storage).__name__
+
+    # Text file extensions we support
+    text_extensions = {'.md', '.txt', '.csv', '.json', '.py', '.r', '.js'}
+    file_ext = f".{file.file_type}" if file.file_type else ''
+
+    if file_ext not in text_extensions:
+        raise FileServiceError(
+            status_code=400,
+            detail=f"Unsupported file type for content reading: {file_ext}. "
+                   f"Supported types: {', '.join(text_extensions)}"
+        )
+
+    try:
+        if backend_type == "S3StorageBackend":
+            # For cloud storage, download file bytes
+            storage_key = file.storage_path.replace("uploads/", "") if file.storage_path.startswith("uploads/") else file.storage_path
+
+            # Download file bytes
+            content_bytes = await storage.download_file(storage_key)
+
+            # Decode as UTF-8
+            content = content_bytes.decode('utf-8')
+
+            return {
+                "content": content,
+                "encoding": "utf-8"
+            }
+
+        elif backend_type == "LocalStorageBackend":
+            # For local storage, read file directly from disk
+            if not os.path.exists(file.storage_path):
+                raise FileServiceError(
+                    status_code=404,
+                    detail=f"File not found on disk: {file.storage_path}"
+                )
+
+            # Read file asynchronously
+            async with aiofiles.open(file.storage_path, mode='r', encoding='utf-8') as f:
+                content = await f.read()
+
+            return {
+                "content": content,
+                "encoding": "utf-8"
+            }
+
+        else:
+            raise FileServiceError(
+                status_code=500,
+                detail=f"Unknown storage backend type: {backend_type}"
+            )
+
+    except UnicodeDecodeError as e:
+        raise FileServiceError(
+            status_code=400,
+            detail=f"Failed to decode file content as UTF-8: {str(e)}"
+        )
+    except FileNotFoundError:
+        raise FileServiceError(
+            status_code=404,
+            detail=f"File not found: {file.storage_path}"
+        )
+    except PermissionError as e:
+        raise FileServiceError(
+            status_code=403,
+            detail=f"Permission denied reading file: {str(e)}"
+        )
+    except Exception as e:
+        logger.error(f"Unexpected error reading file content: {e}", exc_info=True)
+        raise FileServiceError(
+            status_code=500,
+            detail=f"Failed to read file content: {str(e)}"
+        )
