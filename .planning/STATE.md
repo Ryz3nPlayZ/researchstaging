@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2025-02-01)
 ## Current Position
 
 Phase: 9 of 9 (File Content Loading) - Gap Closure Phase
-Plan: 01 of 4 (File Content API) - ✅ COMPLETE
-Status: File content retrieval endpoint with project ownership validation complete. Added read_file_content() function, updated endpoint to require project_id, integrated frontend API. Markdown and DOCX to TipTap conversion already exists from previous work.
-Last activity: 2026-02-05 — Completed Phase 9 Plan 01: File content API with async file reading, ownership validation, TipTap JSON conversion.
+Plan: 04 of 4 (Workspace Content Loading) - ✅ COMPLETE
+Status: File content loading integration complete. Workspace.jsx now calls parseToTipTap() for .md/.docx files, backend accepts optional content parameter on document creation, file-document association via tags.metadata working. P0 bug from v1.0 milestone audit RESOLVED at code level.
+Last activity: 2026-02-05 — Completed Phase 9 Plan 04: Integrated file content loading into Workspace component with single-API-call optimization.
 
-Progress: █████████░ 97% (29/30 plans complete; 8/8 phases complete; Phase 9: 1/4 plans complete)
+Progress: ██████████ 100% (30/30 plans complete; 8/8 production phases complete; Phase 9 gap closure complete)
 
 ## Performance Metrics
 
@@ -245,6 +245,12 @@ Recent decisions affecting current work:
 134. **Storage backend abstraction for file content** — Use get_storage() to support both local and cloud storage (S3/R2) in read_file_content(). Future-proof for cloud migration.
 135. **Maintain existing TipTap conversion** — Kept markdown_to_tiptap() and docx_to_tiptap() functions from previous work instead of returning raw text only. Better UX - editor receives pre-formatted JSON.
 
+**From 09-04 (Workspace Content Loading):**
+136. **Pass TipTap content on document creation** — Single API call optimization: createDocument() accepts optional content parameter, reducing document initialization from 2 API calls to 1. Better performance and cleaner workflow.
+137. **File-document association via tags JSONB** — Store document_id in file.tags metadata field for lightweight cross-reference without schema migration. Sufficient for MVP one-to-one relationship.
+138. **Graceful degradation on parse failure** — Create empty document if file content parsing fails instead of blocking editor. Better UX with console warnings for debugging. Could improve with user-facing toast notification.
+139. **Backend tags update endpoint** — Added PATCH /files/files/{file_id}/tags for file metadata updates. Enables file-document linkage and future metadata operations.
+
 **From 09-03 (DOCX to TipTap Parser):**
 127. **python-docx library for Word document parsing** — Handles Word 2007+ format, no external Word installation required, well-documented and stable. Chosen over manual DOCX parsing with zipfile (too complex).
 128. **Return TipTap JSON directly from content endpoint** — GET /files/{file_id}/content now returns TipTap format directly, simplifying frontend integration. Workspace.jsx can use response without additional conversion.
@@ -319,9 +325,10 @@ Recent decisions affecting current work:
 ### Pending Todos
 
 **P0 - Critical:**
-1. Fix file content loading from File Explorer - Opening `.md`/`.docx` files shows blank editor
+~1. Fix file content loading from File Explorer - Opening `.md`/`.docx` files shows blank editor~ ✅ RESOLVED (2026-02-05) - Code complete, pending manual browser testing
 
 **P1 - High:**
+1. Manual browser testing for Phase 9 file content loading (.md and .docx files)
 2. Manual browser testing for Wave 2-3 features (version history, citations, AI features)
 
 **P2 - Medium:**
@@ -403,6 +410,11 @@ Recent decisions affecting current work:
 
 **From 08-01 (Document Export Backend):**
 - No blockers identified. Pandoc-based export service with PDF engine auto-detection, ownership validation, and comprehensive error handling fully functional.
+
+**From 09-04 (Workspace Content Loading):**
+- **Manual testing required** - Code complete but needs browser verification that .md and .docx files open with actual content in DocumentEditor. Edge cases (large files, complex formatting) need validation.
+- **Silent failure on parse error** - File content parsing failures create empty document without user-facing error notification. Should add toast warning in production polish.
+- **No duplicate detection** - If file tags update fails, reopening file creates duplicate documents. Not blocking for MVP but should add checks in future.
 
 ### Patterns Established
 
@@ -488,7 +500,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-05 22:34 UTC
-Stopped at: Completed Phase 9 Plan 01 (File Content API)
-Resume file: .planning/phases/09-file-content-loading/09-01-SUMMARY.md
-Next: Continue Phase 9 gap closure with remaining plans (09-02, 09-03, 09-04) though TipTap conversion already exists
+Last session: 2026-02-05 22:37 UTC
+Stopped at: Completed Phase 9 Plan 04 (Workspace Content Loading) - Phase 9 COMPLETE
+Resume file: .planning/phases/09-file-content-loading/09-04-SUMMARY.md
+Next: Manual browser testing of file content loading feature, then begin v1.0 production release preparation
