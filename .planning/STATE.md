@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2025-02-01)
 ## Current Position
 
 Phase: 9 of 9 (File Content Loading) - Gap Closure Phase
-Plan: 03 of 4 (DOCX to TipTap Parser) - ✅ COMPLETE
-Status: DOCX to TipTap conversion complete. Added python-docx dependency, created docx_to_tiptap() and markdown_to_tiptap() functions, enhanced content API to return TipTap JSON directly. Ready for Workspace integration (plan 09-04).
-Last activity: 2026-02-05 — Completed Phase 9 Plan 03: DOCX to TipTap parser with python-docx library, heading/style detection, inline formatting preservation, enhanced content API.
+Plan: 01 of 4 (File Content API) - ✅ COMPLETE
+Status: File content retrieval endpoint with project ownership validation complete. Added read_file_content() function, updated endpoint to require project_id, integrated frontend API. Markdown and DOCX to TipTap conversion already exists from previous work.
+Last activity: 2026-02-05 — Completed Phase 9 Plan 01: File content API with async file reading, ownership validation, TipTap JSON conversion.
 
-Progress: █████████░ 97% (28/29 plans complete; 8/8 phases complete; Phase 9: 3/4 plans complete)
+Progress: █████████░ 97% (29/30 plans complete; 8/8 phases complete; Phase 9: 1/4 plans complete)
 
 ## Performance Metrics
 
@@ -238,6 +238,12 @@ Recent decisions affecting current work:
 124. **Format-specific loading states** — Track exportFormat ('pdf' | 'docx') to show "Exporting..." on specific menu item while other format remains clickable. Better UX than disabling entire dropdown.
 125. **Comprehensive error handling with user-friendly messages** — Map HTTP status codes (404, 403, 503) and network errors to specific messages. Users get actionable feedback instead of generic "Export failed".
 126. **Filename sanitization for downloads** — Convert document title to URL-safe filename (lowercase, hyphens instead of special chars). Ensures downloads work across all browsers and file systems.
+
+**From 09-01 (File Content API):**
+132. **Project ownership validation via project_id** — File content endpoint requires project_id query parameter to prevent cross-project data access. Critical security improvement over previous implementation.
+133. **Async file reading with aiofiles** — Non-blocking file I/O using aiofiles library for better performance under concurrent load. Follows FastAPI async patterns.
+134. **Storage backend abstraction for file content** — Use get_storage() to support both local and cloud storage (S3/R2) in read_file_content(). Future-proof for cloud migration.
+135. **Maintain existing TipTap conversion** — Kept markdown_to_tiptap() and docx_to_tiptap() functions from previous work instead of returning raw text only. Better UX - editor receives pre-formatted JSON.
 
 **From 09-03 (DOCX to TipTap Parser):**
 127. **python-docx library for Word document parsing** — Handles Word 2007+ format, no external Word installation required, well-documented and stable. Chosen over manual DOCX parsing with zipfile (too complex).
@@ -482,7 +488,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-02-05 18:30 UTC
-Stopped at: Completed Phase 8 Plan 02 (Frontend Export UI) - ALL PHASES COMPLETE
-Resume file: .planning/phases/08-document-export/08-02-SUMMARY.md
-Next: Human verification of document export functionality, then deployment/prep for production
+Last session: 2026-02-05 22:34 UTC
+Stopped at: Completed Phase 9 Plan 01 (File Content API)
+Resume file: .planning/phases/09-file-content-loading/09-01-SUMMARY.md
+Next: Continue Phase 9 gap closure with remaining plans (09-02, 09-03, 09-04) though TipTap conversion already exists
