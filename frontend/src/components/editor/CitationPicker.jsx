@@ -96,10 +96,10 @@ export const CitationPicker = ({ documentId, projectId, onInsert, onClose, edito
 
     setIsLoading(true);
     try {
-      // Search papers via memory API
+      // Search papers via API
       const apiUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
       const response = await fetch(
-        `${apiUrl}/api/memory/projects/${projectId}/papers?search=${encodeURIComponent(searchQuery)}&limit=20`,
+        `${apiUrl}/api/projects/${projectId}/papers?search=${encodeURIComponent(searchQuery)}&limit=20`,
         {
           headers: {
             'Content-Type': 'application/json',
@@ -113,7 +113,7 @@ export const CitationPicker = ({ documentId, projectId, onInsert, onClose, edito
       }
 
       const data = await response.json();
-      setSearchResults(data.papers || []);
+      setSearchResults(data || []);
     } catch (error) {
       console.error('Search error:', error);
       toast({
@@ -199,6 +199,9 @@ export const CitationPicker = ({ documentId, projectId, onInsert, onClose, edito
     }
 
     try {
+      // Get cursor position before insertion
+      const { from } = editor.state.selection;
+
       // Format in-text citation based on style
       const authors = citationData.citation_data.authors || [];
       const year = citationData.citation_data.year;
@@ -224,15 +227,16 @@ export const CitationPicker = ({ documentId, projectId, onInsert, onClose, edito
 
       // Call backend to save citation
       const apiUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
-      const { from } = editor.state.selection;
-      await fetch(`${apiUrl}/api/documents/${documentId}/citations`, {
+      await fetch(`${apiUrl}/api/memory/documents/${documentId}/citations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
         },
         body: JSON.stringify({
-          ...citationData,
+          source_type: citationData.source_type,
+          source_id: citationData.source_id,
+          citation_data: citationData.citation_data,
           citation_position: { from },
         }),
       });

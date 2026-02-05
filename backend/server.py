@@ -948,13 +948,37 @@ async def export_artifact(artifact_id: str, request: ExportRequest, db: AsyncSes
 # ============== Papers Endpoints ==============
 
 @api_router.get("/projects/{project_id}/papers", response_model=List[PaperResponse])
-async def list_project_papers(project_id: str, db: AsyncSession = Depends(get_db)):
-    """List all papers for a project."""
-    result = await db.execute(
-        select(Paper).where(Paper.project_id == project_id)
-    )
+async def list_project_papers(
+    project_id: str,
+    search: Optional[str] = None,
+    limit: int = 100,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    List all papers for a project with optional search.
+
+    Args:
+        project_id: Project ID
+        search: Optional search query to filter papers by title/authors
+        limit: Maximum number of results (default: 100)
+    """
+    # Build query
+    query = select(Paper).where(Paper.project_id == project_id)
+
+    # Add search filter if provided
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.where(
+            (Paper.title.ilike(search_pattern)) |
+            (Paper.abstract.ilike(search_pattern))
+        )
+
+    # Apply limit
+    query = query.limit(limit)
+
+    result = await db.execute(query)
     papers = result.scalars().all()
-    
+
     return [
         PaperResponse(
             id=p.id,
