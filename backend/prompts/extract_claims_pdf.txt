@@ -1,0 +1,48 @@
+Extract the most important claims from the following research paper.
+
+Focus on:
+- Primary hypotheses and research questions
+- Key findings and contributions (novel results)
+- Methodological claims (approach effectiveness)
+- Statistical results with significance levels
+- Conclusions well-supported by evidence
+- Claims about causal relationships or correlations
+- Comparative claims (X outperforms Y)
+
+For each claim, provide:
+1. claim_text: The exact claim statement (1-2 sentences, clear and specific)
+2. claim_type: One of: assertion, fact, finding, hypothesis, method
+   - assertion: A confident statement or proposition
+   - fact: A verifiable statement or established result
+   - finding: A research result or discovery
+   - hypothesis: A proposed explanation or prediction
+   - method: A claim about methodology effectiveness
+3. confidence: How confident you are this is a core claim (0.5-1.0, be selective)
+4. section: Which section this claim comes from (Introduction, Methods, Results, Discussion, Conclusion)
+5. quote: A brief quote or paraphrase from the paper supporting this claim
+6. page_number: Approximate page number if evident from the text
+
+Quality guidelines:
+- Extract only significant, non-trivial claims that contribute to the paper's main contributions
+- Avoid generic statements like "we conducted a study" or "more research is needed"
+- Prefer specific, testable claims with clear supporting evidence
+- Include statistical significance when available (p-values, confidence intervals)
+- Capture comparative and superlative claims
+
+Return up to {max_claims} significant claims. Format as JSON:
+
+{
+  "claims": [
+    {
+      "claim_text": "Our proposed attention mechanism reduces computational complexity by 40% while maintaining model accuracy",
+      "claim_type": "finding",
+      "confidence": 0.95,
+      "section": "Results",
+      "quote": "Experiments show our method achieves 92% accuracy with 40% fewer FLOPs compared to baseline",
+      "page_number": 6
+    }
+  ]
+}
+
+Paper to analyze:
+{paper_content}

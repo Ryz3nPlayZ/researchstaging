@@ -587,6 +587,112 @@ class MemoryService:
 
         return claims
 
+    async def extract_claims_from_pdf(
+        self,
+        project_id: str,
+        paper_id: str,
+        pdf_text: str,
+        paper_metadata: Dict[str, Any],
+        max_claims: int = 20
+    ) -> List[Claim]:
+        """
+        Extract claims from a research paper PDF using LLM.
+
+        Args:
+            project_id: Project to associate claims with
+            paper_id: ID of the paper being processed
+            pdf_text: Full text extracted from PDF
+            paper_metadata: Paper metadata (title, authors, year, etc.)
+            max_claims: Maximum number of claims to extract
+
+        Returns:
+            List of extracted Claim objects
+
+        Raises:
+            ClaimCreationError: If claim extraction fails completely
+        """
+        try:
+            # Load extraction prompt
+            prompt = self._load_pdf_claim_extraction_prompt(max_claims)
+
+            # Prepare input with metadata
+            paper_content = f"Title: {paper_metadata.get('title', 'Unknown')}\n"
+            if paper_metadata.get('authors'):
+                authors = paper_metadata['authors']
+                if isinstance(authors, list):
+                    authors = ', '.join(authors)
+                paper_content += f"Authors: {authors}\n"
+            if paper_metadata.get('year'):
+                paper_content += f"Year: {paper_metadata['year']}\n"
+            if paper_metadata.get('abstract'):
+                paper_content += f"Abstract: {paper_metadata['abstract']}\n\n"
+
+            # Add PDF text (truncate if too long for LLM context)
+            # Use first 15000 chars for initial extraction to get core claims
+            paper_content += f"Full Text:\n{pdf_text[:15000]}"
+
+            # Extract claims using LLM
+            response = await self.llm_service.generate(
+                prompt=prompt.format(paper_content=paper_content, max_claims=max_claims),
+                system_message="You are a research assistant extracting key claims from academic papers.",
+                provider="openai" if "openai" in self.llm_service.available_providers else None,
+            )
+
+            # Parse JSON response
+            claims_data = self._parse_json_response(response)
+
+            if not claims_data.get("claims"):
+                logger.warning(f"No claims extracted from paper {paper_id}")
+                return []
+
+            # Create Claim objects
+            claims = []
+            for claim_data in claims_data.get("claims", []):
+                claim_text = claim_data.get("claim_text", "").strip()
+
+                # Skip empty claims
+                if not claim_text:
+                    continue
+
+                # Filter by confidence threshold
+                confidence = claim_data.get("confidence", 0.8)
+                if confidence < 0.5:
+                    continue
+
+                # Prepare claim metadata with provenance
+                claim_metadata = {
+                    "section": claim_data.get("section"),
+                    "quote": claim_data.get("quote"),
+                    "page_number": claim_data.get("page_number"),
+                    "authors": paper_metadata.get("authors", []),
+                    "year": paper_metadata.get("year"),
+                    "title": paper_metadata.get("title"),
+                }
+
+                try:
+                    claim = await self.create_claim(
+                        project_id=project_id,
+                        claim_text=claim_text,
+                        claim_type=claim_data.get("claim_type"),
+                        claim_data=claim_metadata,
+                        source_type=ClaimSourceType.PAPER,
+                        source_id=paper_id,
+                        confidence=confidence,
+                        extracted_by="system",
+                    )
+                    claims.append(claim)
+                except Exception as e:
+                    logger.error(f"Failed to create claim from paper {paper_id}: {e}")
+                    # Continue with other claims
+                    continue
+
+            logger.info(f"Extracted {len(claims)} claims from paper {paper_id}")
+            return claims
+
+        except Exception as e:
+            logger.error(f"Claim extraction failed for paper {paper_id}: {e}")
+            raise ClaimCreationError(f"Failed to extract claims from paper: {str(e)}")
+
     async def extract_claims_from_papers(
         self,
         project_id: str,
@@ -684,6 +790,50 @@ Return only significant claims (5-10 max). Format as JSON:
         "sample_size": 50000,
         "p_value": "<0.001"
       }}
+    }}
+  ]
+}}
+
+Paper to analyze:
+{paper_content}
+"""
+
+    def _load_pdf_claim_extraction_prompt(self, max_claims: int = 20) -> str:
+        """Load PDF claim extraction prompt template."""
+        try:
+            with open("backend/prompts/extract_claims_pdf.txt", "r") as f:
+                prompt_template = f.read()
+                return prompt_template.replace("{max_claims}", str(max_claims))
+        except FileNotFoundError:
+            # Return default prompt if file doesn't exist yet
+            return """Extract the most important claims from the following research paper.
+
+Focus on:
+- Primary hypotheses and research questions
+- Key findings and contributions
+- Methodological claims
+- Statistical results with significance
+- Conclusions supported by evidence
+
+For each claim, provide:
+1. claim_text: The exact claim statement (1-2 sentences)
+2. claim_type: One of: assertion, fact, finding, hypothesis, method
+3. confidence: How confident this is a core claim (0.5-1.0)
+4. section: Which section this claim comes from (Introduction, Methods, Results, Discussion)
+5. quote: A brief quote or paraphrase from the paper supporting this claim
+6. page_number: Approximate page number if available
+
+Return up to {max_claims} significant claims. Format as JSON:
+
+{{
+  "claims": [
+    {{
+      "claim_text": "Deep learning models outperform traditional methods on image classification tasks",
+      "claim_type": "finding",
+      "confidence": 0.95,
+      "section": "Results",
+      "quote": "Our proposed model achieved 95% accuracy compared to 82% for baseline methods",
+      "page_number": 5
     }}
   ]
 }}
