@@ -40,6 +40,7 @@ import {
 import { useToast } from '../../hooks/use-toast';
 import { CitationPicker } from './CitationPicker';
 import { Bibliography } from './Bibliography';
+import { RewriteDialog, GrammarDialog } from './AIAssistant';
 
 const MenuBar = memo(({ editor, canUndo, canRedo, isSaving, onShowVersionHistory, onInsertCitation }) => {
   if (!editor) return null;
@@ -256,6 +257,11 @@ export const DocumentEditor = ({ documentId, projectId, initialContent, onSave, 
   const [bibliographyKey, setBibliographyKey] = useState(0);
   const [currentCitationStyle, setCurrentCitationStyle] = useState(citationStyle);
 
+  // AI Assistant state
+  const [showRewriteDialog, setShowRewriteDialog] = useState(false);
+  const [showGrammarDialog, setShowGrammarDialog] = useState(false);
+  const [selectedText, setSelectedText] = useState('');
+
   // Compute content hash for change detection
   const computeContentHash = useCallback((content) => {
     return JSON.stringify(content);
@@ -421,6 +427,99 @@ export const DocumentEditor = ({ documentId, projectId, initialContent, onSave, 
     setBibliographyKey(prev => prev + 1);
   }, []);
 
+  // Handle context menu for AI assistance
+  useEffect(() => {
+    if (!editor) return;
+
+    const handleContextMenu = (event) => {
+      // Check if text is selected
+      const { from, to, empty } = editor.state.selection;
+      if (!empty) {
+        // Get selected text
+        const { state } = editor;
+        const text = state.doc.textBetween(from, to, ' ');
+
+        if (text.trim().length > 0) {
+          event.preventDefault();
+
+          // Create custom context menu
+          const menu = document.createElement('div');
+          menu.className = 'fixed bg-popover border border-border rounded-md shadow-lg z-50 py-1 min-w-[200px]';
+          menu.style.left = `${event.clientX}px`;
+          menu.style.top = `${event.clientY}px`;
+
+          const rewriteBtn = document.createElement('button');
+          rewriteBtn.className = 'w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground flex items-center gap-2';
+          rewriteBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg> Rewrite with AI';
+          rewriteBtn.onclick = () => {
+            setSelectedText(text);
+            setShowRewriteDialog(true);
+            menu.remove();
+          };
+
+          const grammarBtn = document.createElement('button');
+          grammarBtn.className = 'w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground flex items-center gap-2';
+          grammarBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg> Check Grammar';
+          grammarBtn.onclick = () => {
+            setSelectedText(text);
+            setShowGrammarDialog(true);
+            menu.remove();
+          };
+
+          menu.appendChild(rewriteBtn);
+          menu.appendChild(grammarBtn);
+          document.body.appendChild(menu);
+
+          // Remove menu on click outside
+          const removeMenu = () => {
+            menu.remove();
+            document.removeEventListener('click', removeMenu);
+          };
+          setTimeout(() => {
+            document.addEventListener('click', removeMenu);
+          }, 0);
+        }
+      }
+    };
+
+    // Add context menu listener to editor element
+    const editorElement = editor.options.element;
+    if (editorElement) {
+      editorElement.addEventListener('contextmenu', handleContextMenu);
+    }
+
+    return () => {
+      if (editorElement) {
+        editorElement.removeEventListener('contextmenu', handleContextMenu);
+      }
+    };
+  }, [editor]);
+
+  // Handle AI text replacement
+  const handleAIReplace = useCallback((newText) => {
+    if (!editor) return;
+
+    // Insert the new text at current selection
+    editor.chain().focus().insertContent(newText).run();
+
+    toast({
+      title: 'Text replaced',
+      description: 'AI-generated text has been inserted',
+    });
+  }, [editor, toast]);
+
+  // Handle rewrite dialog close
+  const handleRewriteClose = useCallback(() => {
+    setShowRewriteDialog(false);
+    setSelectedText('');
+  }, []);
+
+  // Handle grammar dialog close
+  const handleGrammarClose = useCallback(() => {
+    setShowGrammarDialog(false);
+    setSelectedText('');
+  }, []);
+
   if (!editor) {
     return (
       <div className="h-full flex items-center justify-center text-muted-foreground">
@@ -493,6 +592,23 @@ export const DocumentEditor = ({ documentId, projectId, initialContent, onSave, 
           onClose={handleCitationPickerClose}
         />
       )}
+
+      {/* AI Assistant Dialogs */}
+      <RewriteDialog
+        isOpen={showRewriteDialog}
+        onClose={handleRewriteClose}
+        documentId={documentId}
+        selection={selectedText}
+        onReplace={handleAIReplace}
+      />
+
+      <GrammarDialog
+        isOpen={showGrammarDialog}
+        onClose={handleGrammarClose}
+        documentId={documentId}
+        text={selectedText}
+        onReplace={handleAIReplace}
+      />
     </div>
   );
 };
