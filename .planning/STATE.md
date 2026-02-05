@@ -5,23 +5,23 @@
 See: .planning/PROJECT.md (updated 2025-02-01)
 
 **Core value:** Stateful research intelligence — Single workspace where AI agent remembers everything important (all chats, analyses, documents, file contents) and uses that context to provide genuinely helpful research assistance.
-**Current focus:** Phase 4 — Rich Text Document Editor
+**Current focus:** Phase 5 PLANNED - Literature Search & Review ready for execution
 
 ## Current Position
 
-Phase: 4 of 8 (Rich Text Document Editor)
-Plan: 02 of ~6 (TipTap Editor Frontend)
-Status: Phase 4 in progress, Plan 02 complete
-Last activity: 2026-02-05 — Completed Phase 4 Plan 02 (TipTap Editor Frontend)
+Phase: 5 of 8 (Literature Search & Review) - 🔄 IN PROGRESS
+Plan: 01 of 3 (Literature Search & Unpaywall Integration) - ✓ COMPLETE
+Status: Literature search API, UI, and Unpaywall integration complete. Ready for: paper management, claim extraction, citation integration
+Last activity: 2026-02-05 — Completed Phase 5 Plan 01 (Literature Search & Unpaywall Integration)
 
-Progress: ██████░░░ 43.75% (7/16 plans complete; 3/8 phases complete, 1 phase in progress)
+Progress: ███████░░ 53% (9/19 plans complete; 4/8 phases complete; 1/3 plans in Phase 5)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 13
+- Total plans completed: 14
 - Average duration: 6 min
-- Total execution time: 1.3 hours
+- Total execution time: 1.4 hours
 
 **By Phase:**
 
@@ -31,10 +31,11 @@ Progress: ██████░░░ 43.75% (7/16 plans complete; 3/8 phases co
 | 02-file-management | 4 | 4 | 5 min |
 | 03-memory-backend | 4 | 4 | 3 min |
 | 04-rich-text-editor | 3 | ~6 | 6 min |
-| 05-08 | — | — | — |
+| 05-literature | 1 | ~3 | 6 min |
+| 06-08 | — | — | — |
 
 **Recent Trend:**
-- Last 5 plans: 2 min, 1 min, 4 min, 4 min, 8 min (03-03, 03-04, 04-01, 04-03, 04-02)
+- Last 5 plans: 4 min, 8 min, 4 min, 4 min, 6 min (04-01, 04-03, 04-02, 04-06, 05-01)
 - Trend: Steady (consistent execution speed)
 
 *Updated after each plan completion*
@@ -141,9 +142,41 @@ Recent decisions affecting current work:
 62. **Content hash-based change detection** — JSON.stringify content to compute hash, only save if hash changed. Avoids unnecessary saves when user only moves cursor.
 63. **Named imports for TipTap extensions** — TipTap v3 uses named exports `import { Table } from '@tiptap/extension-table'` not default imports. Required for table-related extensions.
 
+**From 04-04 (Version History):**
+64. **Side-by-side diff view for versions** — Shows original and selected version content together for easy comparison. More intuitive than unified diff for non-technical users.
+65. **Restore confirmation dialog** — Prevents accidental data loss by requiring user confirmation before restoring to previous version.
+66. **Version list with timestamps** — Chronological list of all versions with human-readable timestamps helps users navigate document history.
+
+**From 04-05 (Citation UI):**
+67. **Debounced search (500ms) for paper lookup** — Prevents excessive API calls while typing. Balances responsiveness with server load.
+68. **Live citation preview as user types** — Real-time formatting feedback helps users verify citation correctness before inserting.
+69. **Dual-mode citation insertion** — Memory search (for existing papers) and manual entry (for new citations) provides flexibility in workflow.
+70. **Hanging indent for bibliography** — CSS `pl-8 -indent-8` creates proper hanging indent for all citation styles (APA/MLA/Chicago).
+
+**From 04-06 (AI Text Assistance):**
+71. **Four rewrite tones for different contexts** — Formal (academic), Casual (blog), Concise (email), Elaborate (detailed report) covers most use cases.
+72. **Grammar check returns suggestions with explanations** — Educational feedback helps users understand and learn from corrections, not just apply them.
+73. **Context menu integration for AI features** — Right-click on selected text shows "Rewrite with AI" and "Check Grammar" options. Discoverable and follows common UX patterns.
+74. **Graceful 503 when no LLM configured** — Clear error message "AI service unavailable" when API keys not set. Prevents confusion about broken functionality.
+
+**From 05-01 (Literature Search & Unpaywall Integration):**
+75. **Service layer enrichment** — Unpaywall integration and result sorting implemented in LiteratureService, not API layer. Enables reuse and testing.
+76. **DOI extraction fallback chain** — Try direct field, then URL parsing, then citation styles. Maximizes DOI discovery rate.
+77. **Concurrent Unpaywall lookups with semaphore** — Parallel lookups with max 5 concurrent requests. Balances speed with rate limit compliance.
+78. **Priority-based result sorting** — Has PDF (first), citations (second), year (third). Ensures most accessible/relevant papers appear first.
+79. **Graceful Unpaywall degradation** — Search continues even if Unpaywall fails. Logs warnings but returns results without OA enrichment.
+80. **Multi-source literature aggregation** — Semantic Scholar (citations) + arXiv (preprints) + Unpaywall (OA PDFs). Comprehensive coverage with deduplication.
+
 ### Pending Todos
 
-None yet.
+**P0 - Critical:**
+1. Fix file content loading from File Explorer - Opening `.md`/`.docx` files shows blank editor
+
+**P1 - High:**
+2. Manual browser testing for Wave 2-3 features (version history, citations, AI features)
+
+**P2 - Medium:**
+3. Fix ESLint warnings in AIAssistant.jsx, Bibliography.jsx, CitationPicker.jsx
 
 ### Blockers/Concerns
 
@@ -177,8 +210,23 @@ None yet.
 **From 04-01:**
 - No blockers identified. Document backend complete with models, migration, and API endpoints.
 
+**From 04-02:**
+- No blockers identified. TipTap editor complete with toolbar, auto-save, and localStorage backup.
+
 **From 04-03:**
 - No blockers identified. Citation management backend complete with APA/MLA/Chicago formatting and bibliography generation.
+
+**From 04-04 (Version History):**
+- No blockers identified. Version history API verified working, component integrated.
+
+**From 04-05 (Citation UI):**
+- No blockers identified. Citation and bibliography APIs verified working. Minor formatting quirks (extra commas in author names) are non-blocking.
+
+**From 04-06 (AI Text Assistance):**
+- No blockers identified. AI rewrite and grammar endpoints verified working with LLM provider configured. Features gracefully handle missing API keys.
+
+**From 05-01 (Literature Search & Unpaywall Integration):**
+- No blockers identified. Literature search API, UI component, and Unpaywall integration fully functional.
 
 ### Patterns Established
 
@@ -253,6 +301,6 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Completed Phase 4 Plan 02 (TipTap Editor Frontend)
-Resume file: .planning/phases/04-document-editor/04-02-SUMMARY.md
-Next: Phase 4 Plan 04 (Version History UI) or continue with remaining plans
+Stopped at: Completed Phase 5 Plan 01 (Literature Search & Unpaywall Integration)
+Resume file: .planning/phases/05-literature/05-01-SUMMARY.md
+Next: Phase 5 Plan 02 (Paper Management) or continue with remaining plans
