@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useProject } from '../../context/ProjectContext';
-import { projectsApi, tasksApi, artifactsApi, filesApi, createWebSocketConnection } from '../../lib/api';
+import { projectsApi, tasksApi, artifactsApi, filesApi, documentsApi, createWebSocketConnection } from '../../lib/api';
 import api from '../../lib/api';
 import { ScrollArea } from '../ui/scroll-area';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { RichTextEditor } from '../editor/RichTextEditor';
+import { DocumentEditor } from '../editor/DocumentEditor';
 import { TaskGraph, AgentGraph } from '../graphs/TaskGraph';
 import { FileExplorer } from '../explorer/FileExplorer';
 import { TaskErrorRecovery } from '../tasks/TaskErrorRecovery';
@@ -60,6 +61,8 @@ export const Workspace = () => {
   const [saving, setSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [saveTimeout, setSaveTimeout] = useState(null);
+  const [documentData, setDocumentData] = useState(null);
+  const [loadingDocument, setLoadingDocument] = useState(false);
 
   const fetchGraphs = useCallback(async () => {
     if (!selectedProject) return;
@@ -186,6 +189,66 @@ export const Workspace = () => {
     }
   }, [selectedFile, activeTab]);
 
+  // Load document when .md or .docx file is selected
+  useEffect(() => {
+    const loadDocumentForFile = async () => {
+      if (!selectedFile || !selectedProject) {
+        setDocumentData(null);
+        return;
+      }
+
+      const ext = selectedFile.name.split('.').pop()?.toLowerCase() || '';
+
+      // Only process .md and .docx files
+      if (!['md', 'docx'].includes(ext)) {
+        setDocumentData(null);
+        return;
+      }
+
+      setLoadingDocument(true);
+      try {
+        // Try to load existing document by file ID (using file's document_id if available)
+        // For now, we'll create a simple content structure from the file
+        // In a full implementation, you'd check if a document exists for this file
+
+        // Check if file has associated document_id in tags
+        const tags = selectedFile.tags || {};
+        const documentId = tags.document_id;
+
+        if (documentId) {
+          // Load existing document
+          const response = await documentsApi.loadDocument(documentId);
+          setDocumentData({
+            id: response.data.id,
+            content: response.data.content,
+            title: response.data.title,
+          });
+        } else {
+          // Create new document for this file
+          const response = await documentsApi.createDocument(
+            selectedProject.id,
+            selectedFile.name.replace(/\.(md|docx)$/, ''),
+            'APA'
+          );
+          setDocumentData({
+            id: response.data.id,
+            content: response.data.content,
+            title: response.data.title,
+          });
+          // Note: In a full implementation, you'd update the file's tags with document_id
+        }
+      } catch (error) {
+        console.error('Failed to load/create document:', error);
+        toast.error('Failed to open document editor');
+        setDocumentData(null);
+      } finally {
+        setLoadingDocument(false);
+      }
+    };
+
+    loadDocumentForFile();
+  }, [selectedFile, selectedProject]);
+
   const handleExecuteAll = useCallback(async () => {
     if (!selectedProject) return;
     
@@ -271,6 +334,20 @@ export const Workspace = () => {
     }
     saveContent(editedContent || content?.content || '');
   }, [saveTimeout, saveContent, editedContent, content]);
+
+  // Handle document save from DocumentEditor
+  const handleDocumentSave = useCallback(async (content) => {
+    if (!documentData) return;
+
+    try {
+      await documentsApi.saveDocument(documentData.id, content);
+      // Update local document data
+      setDocumentData(prev => ({ ...prev, content }));
+    } catch (error) {
+      console.error('Failed to save document:', error);
+      throw error;
+    }
+  }, [documentData]);
 
   // Empty state - no project selected
   if (!selectedProject) {
@@ -425,7 +502,45 @@ export const Workspace = () => {
 
               {/* File Preview - Main Area */}
               <div className="flex-1 min-h-0 overflow-hidden">
-                <FileViewer file={selectedFile} />
+                {(() => {
+                  const ext = selectedFile?.name.split('.').pop()?.toLowerCase() || '';
+
+                  // Show DocumentEditor for .md and .docx files
+                  if (['md', 'docx'].includes(ext)) {
+                    if (loadingDocument) {
+                      return (
+                        <div className="h-full flex items-center justify-center">
+                          <div className="flex items-center gap-2 text-muted-foreground">
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                            <span className="text-sm">Loading document...</span>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    if (documentData) {
+                      return (
+                        <DocumentEditor
+                          documentId={documentData.id}
+                          initialContent={documentData.content}
+                          onSave={handleDocumentSave}
+                        />
+                      );
+                    }
+
+                    return (
+                      <div className="h-full flex items-center justify-center">
+                        <div className="text-center">
+                          <FileText className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground">Unable to load document</p>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  // Show FileViewer for other file types
+                  return <FileViewer file={selectedFile} />;
+                })()}
               </div>
             </div>
           </TabsContent>
