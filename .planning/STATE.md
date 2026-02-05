@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2025-02-01)
 ## Current Position
 
 Phase: 6 of 8 (AI Agent & Sidebar Chat) - 🔄 IN PROGRESS
-Plan: 02 of 3 (Multi-Agent Orchestration)
-Status: Plan 02 complete. Multi-agent routing with context injection implemented
-Last activity: 2026-02-05 — Completed Phase 6 Plan 02 (Multi-Agent Orchestration)
+Plan: 03 of 3 (Advanced AI Features)
+Status: Plan 03 complete. Plan proposal and text refinement implemented
+Last activity: 2026-02-05 — Completed Phase 6 Plan 03 (Advanced AI Features)
 
-Progress: ████████░░ 68% (18/25 plans complete; 5/8 phases complete, 1 in progress)
+Progress: █████████ 72% (19/25 plans complete; 5/8 phases complete, 1 in progress)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 18
+- Total plans completed: 19
 - Average duration: 5 min
-- Total execution time: ~1.7 hours
+- Total execution time: ~1.8 hours
 
 **By Phase:**
 
@@ -32,11 +32,11 @@ Progress: ████████░░ 68% (18/25 plans complete; 5/8 phases c
 | 03-memory-backend | 4 | 4 | 3 min |
 | 04-document-editor | 6 | ~6 | 6 min |
 | 05-literature | 3 | ~3 | 5 min |
-| 06-ai-agent | 2 | ~3 | 5 min |
+| 06-ai-agent | 3 | ~3 | 5 min |
 | 07-08 | — | — | — |
 
 **Recent Trend:**
-- Last 5 plans: 6 min, 4 min, 5 min, 5 min, 6 min, 3 min (04-06, 05-01, 05-02, 05-03, 06-01, 06-02)
+- Last 5 plans: 6 min, 4 min, 5 min, 5 min, 6 min, 3 min, 4 min (04-06, 05-01, 05-02, 05-03, 06-01, 06-02, 06-03)
 - Trend: Steady (consistent execution speed)
 
 *Updated after each plan completion*
@@ -196,6 +196,13 @@ Recent decisions affecting current work:
 99. **Agent base class with abstraction pattern** — Base Agent class defines handle() and can_handle() methods. Specialized agents (DocumentAgent, LiteratureAgent, MemoryAgent, GeneralAgent) inherit and implement. Clean extensibility.
 100. **inject_context() loads all relevant data once** — Single database session loads document, claims (20 recent with min confidence 0.5), findings (10 recent), and user preferences. Context reused across agents for efficiency.
 
+**From 06-03 (Advanced AI Features):**
+101. **Complex query detection by heuristic** — Queries over 50 characters containing action verbs (analyze, compare, extract, generate, search, synthesize) trigger plan proposal. Simple queries skip planning for faster response.
+102. **Plan proposal returns 404 for simple queries** — Frontend receives 404 when query doesn't need planning, then falls back to normal message send. Clean separation of complex vs simple flows.
+103. **Editor ref shared via ProjectContext** — Instead of prop drilling editor ref through multiple components, stored in ProjectContext where both Workspace (sets it) and AISidebar (uses it) can access. Follows established pattern for cross-component state.
+104. **Text suggestions displayed above messages** — Separate section in AISidebar for active text suggestions. Prevents cluttering message history and makes suggestions more discoverable/accessible.
+105. **Apply suggestion triggers auto-save** — Applying AI suggestion uses existing TipTap replaceWith transaction, which triggers the editor's onUpdate handler and auto-save. No additional save logic needed.
+
 ### Pending Todos
 
 **P0 - Critical:**
@@ -269,6 +276,9 @@ Recent decisions affecting current work:
 **From 06-02 (Multi-Agent Orchestration):**
 - No blockers identified. Multi-agent routing, context injection, and visual indicators fully functional.
 
+**From 06-03 (Advanced AI Features):**
+- No blockers identified. Plan proposal, approval UI, and text refinement fully functional.
+
 ### Patterns Established
 
 **From 01-01 & 01-02 (Authentication):**
@@ -339,9 +349,15 @@ Recent decisions affecting current work:
 47. **Auto-version on content change** — PUT endpoint creates DocumentVersion when content_hash changes. Preserves history without explicit version creation calls.
 48. **Document API prefix pattern** — Document endpoints use /api/documents prefix for clear namespacing. Project-scoped endpoints use /api/projects/{id}/documents.
 
+**From 06-03 (Advanced AI Features):**
+49. **Plan proposal pattern** — Propose → Approve/Reject → Execute workflow for complex multi-step AI actions. User controls before execution.
+50. **Editor ref sharing pattern** — Store editor ref in ProjectContext for cross-component access. Enables AI features to modify editor without prop drilling.
+51. **Text suggestion pattern** — Show original (strikethrough) and revised text with Apply button. Clear UX for AI-assisted editing.
+52. **Graceful degradation for plan failures** — If plan proposal fails, fallback to direct message handling. No blocking errors for users.
+
 ## Session Continuity
 
 Last session: 2026-02-05
-Stopped at: Completed Phase 6 Plan 02 (Multi-Agent Orchestration)
-Resume file: .planning/phases/06-ai-agent/06-02-SUMMARY.md
-Next: Phase 6 Plan 03 (Advanced AI Features) or other planned features
+Stopped at: Completed Phase 6 Plan 03 (Advanced AI Features)
+Resume file: .planning/phases/06-ai-agent/06-03-SUMMARY.md
+Next: Phase 7 (Task Execution Enhancement) or other planned features
