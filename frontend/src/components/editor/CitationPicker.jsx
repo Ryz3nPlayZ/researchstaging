@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -29,11 +29,16 @@ import { useToast } from '../../hooks/use-toast';
  */
 export const CitationPicker = ({ documentId, projectId, onInsert, onClose, editor }) => {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState('memory');
+  const [activeTab, setActiveTab] = useState('literature');
   const [citationStyle, setCitationStyle] = useState('APA');
   const [isLoading, setIsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Literature search state
+  const [literaturePapers, setLiteraturePapers] = useState([]);
+  const [literatureQuery, setLiteratureQuery] = useState('');
+  const [isSearchingLiterature, setIsSearchingLiterature] = useState(false);
 
   // Manual citation form state
   const [manualCitation, setManualCitation] = useState({
@@ -88,7 +93,7 @@ export const CitationPicker = ({ documentId, projectId, onInsert, onClose, edito
   /**
    * Search for papers in memory backend
    */
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async () => {
     if (!searchQuery.trim()) {
       setSearchResults([]);
       return;
@@ -125,7 +130,34 @@ export const CitationPicker = ({ documentId, projectId, onInsert, onClose, edito
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [projectId, searchQuery, toast]);
+
+  /**
+   * Search literature databases (Semantic Scholar + arXiv)
+   */
+  const handleLiteratureSearch = useCallback(async () => {
+    if (!literatureQuery.trim()) {
+      setLiteraturePapers([]);
+      return;
+    }
+
+    setIsSearchingLiterature(true);
+    try {
+      const { literatureApi } = await import('../../lib/api');
+      const response = await literatureApi.search(literatureQuery, 20);
+      setLiteraturePapers(response.data || []);
+    } catch (error) {
+      console.error('Literature search error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Literature search failed',
+        description: error.response?.data?.detail || error.message || 'Failed to search literature databases',
+      });
+      setLiteraturePapers([]);
+    } finally {
+      setIsSearchingLiterature(false);
+    }
+  }, [literatureQuery, toast]);
 
   /**
    * Debounced search
@@ -138,7 +170,20 @@ export const CitationPicker = ({ documentId, projectId, onInsert, onClose, edito
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, activeTab]);
+  }, [searchQuery, activeTab, handleSearch]);
+
+  /**
+   * Debounced literature search
+   */
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (activeTab === 'literature' && literatureQuery.trim()) {
+        handleLiteratureSearch();
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [literatureQuery, activeTab, handleLiteratureSearch]);
 
   /**
    * Insert citation from search result
@@ -158,6 +203,72 @@ export const CitationPicker = ({ documentId, projectId, onInsert, onClose, edito
     };
 
     insertCitation(citationData);
+  };
+
+  /**
+   * Insert citation from literature search
+   */
+  const handleInsertFromLiterature = async (paper) => {
+    try {
+      // Format citation using backend API
+      const apiUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/citations/format-paper`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('auth_token')}`,
+        },
+        body: JSON.stringify({
+          paper: {
+            title: paper.title,
+            authors: paper.authors || [],
+            year: paper.year,
+            venue: paper.venue || '',
+            doi: paper.doi || '',
+            url: paper.url || '',
+            source: paper.source,
+          },
+          styles: [citationStyle.toLowerCase()],
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to format citation');
+      }
+
+      const data = await response.json();
+
+      // Get formatted citation for current style
+      const formattedCitation = data[citationStyle.toLowerCase()];
+
+      if (!formattedCitation) {
+        throw new Error(`Citation not formatted for ${citationStyle} style`);
+      }
+
+      // Create citation data structure
+      const citationData = {
+        source_type: 'literature',
+        source_id: paper.external_id || paper.doi || paper.url,
+        citation_data: {
+          authors: paper.authors || [],
+          title: paper.title,
+          year: paper.year,
+          venue: paper.venue || '',
+          url: paper.url || '',
+          doi: paper.doi || '',
+          formatted_text: formattedCitation,
+        },
+      };
+
+      insertCitation(citationData);
+    } catch (error) {
+      console.error('Insert literature citation error:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Insert failed',
+        description: error.message || 'Failed to insert citation',
+      });
+    }
   };
 
   /**
@@ -284,7 +395,11 @@ export const CitationPicker = ({ documentId, projectId, onInsert, onClose, edito
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="literature" className="flex items-center gap-2">
+              <Search className="h-4 w-4" />
+              Literature Search
+            </TabsTrigger>
             <TabsTrigger value="memory" className="flex items-center gap-2">
               <BookOpen className="h-4 w-4" />
               From Memory
@@ -295,7 +410,77 @@ export const CitationPicker = ({ documentId, projectId, onInsert, onClose, edito
             </TabsTrigger>
           </TabsList>
 
-          {/* Tab 1: Search from Memory */}
+          {/* Tab 1: Literature Search */}
+          <TabsContent value="literature" className="flex-1 overflow-hidden flex flex-col mt-2">
+            <div className="flex items-center gap-2 pb-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search Semantic Scholar & arXiv..."
+                  value={literatureQuery}
+                  onChange={(e) => setLiteratureQuery(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+              {isSearchingLiterature && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+            </div>
+
+            <ScrollArea className="flex-1 border rounded-md">
+              {literaturePapers.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground">
+                  {literatureQuery.trim() ? (
+                    <>
+                      <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>No papers found. Try a different search term.</p>
+                    </>
+                  ) : (
+                    <>
+                      <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>Search academic literature databases to find papers.</p>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className="p-2 space-y-2">
+                  {literaturePapers.map((paper, index) => (
+                    <div
+                      key={`${paper.source}-${paper.external_id || index}`}
+                      className="p-3 border rounded-md hover:bg-accent transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm mb-1 line-clamp-2">{paper.title}</div>
+                          <div className="text-xs text-muted-foreground mb-2">
+                            {paper.authors && paper.authors.length > 0
+                              ? paper.authors.slice(0, 3).join(', ') +
+                                (paper.authors.length > 3 ? ' et al.' : '')
+                              : 'Unknown authors'}
+                            {paper.year && ` • ${paper.year}`}
+                          </div>
+                          {(paper.pdf_url || paper.open_access_pdf_url) && (
+                            <Badge variant="secondary" className="text-xs bg-green-100 text-green-800 hover:bg-green-200">
+                              <BadgeCheck className="h-3 w-3 mr-1" />
+                              PDF Available
+                            </Badge>
+                          )}
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 px-2 text-xs"
+                          onClick={() => handleInsertFromLiterature(paper)}
+                        >
+                          Insert
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+          </TabsContent>
+
+          {/* Tab 2: Search from Memory */}
           <TabsContent value="memory" className="flex-1 overflow-hidden flex flex-col mt-2">
             <div className="flex items-center gap-2 pb-4">
               <div className="relative flex-1">
