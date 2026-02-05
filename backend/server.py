@@ -79,6 +79,10 @@ logger.info(f"Loaded document router with {len(document_router.routes)} routes")
 from literature_api import router as literature_router
 logger.info(f"Loaded literature router with {len(literature_router.routes)} routes")
 
+# Citation API imports
+from citation_api import router as citation_router
+logger.info(f"Loaded citation router with {len(citation_router.routes)} routes")
+
 
 # ============== Pydantic Models ==============
 
@@ -1207,6 +1211,8 @@ api_router.include_router(document_router)
 logger.info("Included document router in api_router")
 api_router.include_router(literature_router)
 logger.info("Included literature router in api_router")
+api_router.include_router(citation_router)
+logger.info("Included citation router in api_router")
 app.include_router(api_router)
 logger.info("Included api_router in app")
 
