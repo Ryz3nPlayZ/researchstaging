@@ -54,6 +54,18 @@ export const papersApi = {
   get: (id) => api.get(`/papers/${id}`),
 };
 
+// Literature API
+export const literatureApi = {
+  search: (query, limit = 20) => api.get(`/literature/search`, {
+    params: { query, limit }
+  }),
+  getPaper: (paperId) => api.get(`/literature/papers/${paperId}`),
+  downloadPaper: (paperId, pdfUrl) => api.post(`/literature/papers/${paperId}/download`, null, {
+    params: { pdf_url: pdfUrl }
+  }),
+  health: () => api.get('/literature/health'),
+};
+
 // Stats API
 export const statsApi = {
   getGlobal: () => api.get('/stats'),
@@ -85,6 +97,7 @@ export const filesApi = {
   listFiles: (projectId) => api.get(`/files/projects/${projectId}/files`),
   getFileTree: (projectId) => api.get(`/files/projects/${projectId}/files/tree`),
   getFile: (fileId) => api.get(`/files/files/${fileId}`),
+  getFileContent: (fileId) => api.get(`/files/files/${fileId}/content`),
 
   // Download file - returns Promise that resolves to either:
   // - { download_url: string, filename: string } for S3/R2 (presigned URL)
