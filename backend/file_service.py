@@ -12,6 +12,7 @@ import mmap
 import re
 from typing import Optional, List, Dict, Any
 from pathlib import Path
+from io import BytesIO
 from fastapi import UploadFile, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -387,6 +388,181 @@ def _extract_file_metadata(filepath: str, extension: str) -> Dict[str, Any]:
         metadata = {}
 
     return metadata
+
+
+# ============== Document Content Conversion ==============
+
+def markdown_to_tiptap(markdown_content: str) -> dict:
+    """
+    Convert Markdown content to TipTap JSON structure.
+
+    Args:
+        markdown_content: Markdown text content
+
+    Returns:
+        TipTap JSON document structure
+    """
+    import re
+
+    content_nodes = []
+    lines = markdown_content.split('\n')
+
+    i = 0
+    while i < len(lines):
+        line = lines[i].rstrip()
+
+        # Check for headings
+        if line.startswith('#'):
+            heading_match = re.match(r'^(#{1,6})\s+(.*)', line)
+            if heading_match:
+                level = len(heading_match.group(1))
+                text = heading_match.group(2)
+                content_nodes.append({
+                    "type": "heading",
+                    "attrs": {"level": level},
+                    "content": [{"type": "text", "text": text}]
+                })
+                i += 1
+                continue
+
+        # Check for unordered lists
+        if line.startswith('- ') or line.startswith('* '):
+            list_items = []
+            while i < len(lines) and (lines[i].startswith('- ') or lines[i].startswith('* ')):
+                list_items.append({
+                    "type": "listItem",
+                    "content": [{"type": "paragraph", "content": [{"type": "text", "text": lines[i][2:].strip()}]}]
+                })
+                i += 1
+            content_nodes.append({
+                "type": "bulletList",
+                "content": list_items
+            })
+            continue
+
+        # Check for ordered lists
+        if re.match(r'^\d+\.\s+', line):
+            list_items = []
+            while i < len(lines) and re.match(r'^\d+\.\s+', lines[i]):
+                list_items.append({
+                    "type": "listItem",
+                    "content": [{"type": "paragraph", "content": [{"type": "text", "text": re.sub(r'^\d+\.\s+', '', lines[i]).strip()}]}]
+                })
+                i += 1
+            content_nodes.append({
+                "type": "orderedList",
+                "content": list_items
+            })
+            continue
+
+        # Regular paragraph
+        if line.strip():
+            content_nodes.append({
+                "type": "paragraph",
+                "content": [{"type": "text", "text": line}]
+            })
+
+        i += 1
+
+    return {
+        "type": "doc",
+        "content": content_nodes if content_nodes else [{"type": "paragraph"}]
+    }
+
+
+def docx_to_tiptap(docx_bytes: bytes) -> dict:
+    """
+    Convert DOCX file content to TipTap JSON structure.
+
+    Args:
+        docx_bytes: DOCX file content as bytes
+
+    Returns:
+        TipTap JSON document structure
+    """
+    try:
+        from docx import Document
+
+        # Load DOCX from bytes
+        doc = Document(BytesIO(docx_bytes))
+
+        content_nodes = []
+
+        for para in doc.paragraphs:
+            if not para.text.strip():
+                continue  # Skip empty paragraphs
+
+            # Check if this is a heading (Word styles)
+            style_name = para.style.name.lower() if para.style else ""
+
+            if "heading 1" in style_name or "title" in style_name:
+                node_type = "heading"
+                attrs = {"level": 1}
+            elif "heading 2" in style_name:
+                node_type = "heading"
+                attrs = {"level": 2}
+            elif "heading 3" in style_name:
+                node_type = "heading"
+                attrs = {"level": 3}
+            elif "heading 4" in style_name:
+                node_type = "heading"
+                attrs = {"level": 4}
+            elif "heading 5" in style_name:
+                node_type = "heading"
+                attrs = {"level": 5}
+            elif "heading 6" in style_name:
+                node_type = "heading"
+                attrs = {"level": 6}
+            else:
+                node_type = "paragraph"
+                attrs = None
+
+            # Extract inline formatting from runs
+            text_content = []
+            for run in para.runs:
+                if not run.text:
+                    continue
+
+                marks = []
+                if run.bold:
+                    marks.append({"type": "bold"})
+                if run.italic:
+                    marks.append({"type": "italic"})
+                if run.underline:
+                    marks.append({"type": "underline"})
+
+                text_node = {"type": "text", "text": run.text}
+                if marks:
+                    text_node["marks"] = marks
+
+                text_content.append(text_node)
+
+            # Create paragraph/heading node
+            if attrs:
+                content_nodes.append({
+                    "type": node_type,
+                    "attrs": attrs,
+                    "content": text_content if text_content else [{"type": "text", "text": ""}]
+                })
+            else:
+                content_nodes.append({
+                    "type": node_type,
+                    "content": text_content if text_content else [{"type": "text", "text": ""}]
+                })
+
+        # Return TipTap document structure
+        return {
+            "type": "doc",
+            "content": content_nodes if content_nodes else [{"type": "paragraph", "content": [{"type": "text", "text": ""}]}]
+        }
+
+    except Exception as e:
+        logger.error(f"Error parsing DOCX: {e}")
+        # Return empty document on error
+        return {
+            "type": "doc",
+            "content": [{"type": "paragraph", "content": [{"type": "text", "text": ""}]}]
+        }
 
 
 # ============== CRUD Operations ==============
@@ -771,6 +947,7 @@ async def get_project_file_tree(
         "name": "Project Files",
         "type": "folder",
         "path": f"project_{project_id}",
+        "description": None,
         "children": []
     }
 
