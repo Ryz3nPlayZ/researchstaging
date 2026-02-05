@@ -213,6 +213,240 @@ async def execute_code(
         )
 
 
+@router.get("/results/{finding_id}/download")
+async def download_analysis_result(
+    finding_id: str,
+    format: str = "txt",
+    db = Depends(get_db)
+):
+    """
+    Download analysis result in various formats.
+
+    Args:
+        finding_id: ID of the finding to download
+        format: Download format (csv, txt, json)
+        db: Database session
+
+    Returns:
+        File download with appropriate Content-Type header
+
+    Raises:
+        404: Finding not found
+        400: Invalid format parameter
+    """
+    # Validate format
+    if format not in ["csv", "txt", "json"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid format '{format}'. Supported: csv, txt, json"
+        )
+
+    try:
+        # Retrieve finding from memory
+        memory_service = MemoryService(db)
+        finding = await memory_service.get_finding(finding_id)
+
+        if not finding:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Finding {finding_id} not found"
+            )
+
+        # Extract output data
+        finding_data = finding.finding_data or {}
+        output = finding_data.get("output", "")
+
+        # Format response based on requested format
+        if format == "json":
+            from fastapi.responses import JSONResponse
+            return JSONResponse(
+                content={
+                    "id": finding.id,
+                    "finding_text": finding.finding_text,
+                    "finding_type": finding.finding_type,
+                    "analysis_type": finding.analysis_type,
+                    "data": finding_data,
+                    "created_at": finding.created_at.isoformat(),
+                }
+            )
+
+        elif format == "csv":
+            # Try to parse output as CSV data
+            import io
+            import csv
+
+            # Check if output contains structured data
+            if "output" in finding_data:
+                output_text = finding_data["output"]
+
+                # Try to parse as CSV
+                try:
+                    reader = csv.reader(io.StringIO(output_text))
+                    rows = list(reader)
+
+                    if rows:
+                        from fastapi.responses import Response
+                        csv_output = io.StringIO()
+                        writer = csv.writer(csv_output)
+                        writer.writerows(rows)
+
+                        return Response(
+                            content=csv_output.getvalue(),
+                            media_type="text/csv",
+                            headers={
+                                "Content-Disposition": f"attachment; filename=analysis_{finding_id}.csv"
+                            }
+                        )
+                except Exception:
+                    pass
+
+            # Fallback: return as text
+            from fastapi.responses import Response
+            return Response(
+                content=output_text,
+                media_type="text/csv",
+                headers={
+                    "Content-Disposition": f"attachment; filename=analysis_{finding_id}.csv"
+                }
+            )
+
+        else:  # format == "txt"
+            # Return raw output as text
+            from fastapi.responses import Response
+            content = output if output else finding.finding_text
+
+            return Response(
+                content=content,
+                media_type="text/plain",
+                headers={
+                    "Content-Disposition": f"attachment; filename=analysis_{finding_id}.txt"
+                }
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Download failed for finding {finding_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to download result: {str(e)}"
+        )
+
+
+@router.get("/results/{finding_id}/visualize")
+async def visualize_analysis_result(
+    finding_id: str,
+    db = Depends(get_db)
+):
+    """
+    Get structured visualization data for an analysis result.
+
+    Args:
+        finding_id: ID of the finding to visualize
+        db: Database session
+
+    Returns:
+        Structured data with visualization type, data, and chart config
+
+    Raises:
+        404: Finding not found
+    """
+    try:
+        # Retrieve finding from memory
+        memory_service = MemoryService(db)
+        finding = await memory_service.get_finding(finding_id)
+
+        if not finding:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Finding {finding_id} not found"
+            )
+
+        # Extract data from finding
+        finding_data = finding.finding_data or {}
+        output = finding_data.get("output", "")
+
+        # Detect visualization type from output
+        viz_type = "text"
+        viz_data = {"output": output}
+        chart_config = None
+
+        # Try to parse as CSV
+        import csv
+        import io
+        try:
+            reader = csv.DictReader(io.StringIO(output))
+            rows = list(reader)
+
+            if rows and len(rows) > 0:
+                viz_type = "table"
+                viz_data = {
+                    "headers": reader.fieldnames or [],
+                    "rows": rows,
+                    "rowCount": len(rows),
+                }
+
+                # Suggest chart type if numeric data present
+                numeric_cols = []
+                for col in (reader.fieldnames or []):
+                    if any(row.get(col) and str(row.get(col)).replace(".", "").replace("-", "").isdigit() for row in rows[:10]):
+                        numeric_cols.append(col)
+
+                if numeric_cols:
+                    chart_config = {
+                        "recommendedType": "scatter",
+                        "xColumn": (reader.fieldnames or [])[0],
+                        "yColumns": numeric_cols[:5],
+                        "availableTypes": ["scatter", "line", "bar", "histogram"],
+                    }
+
+        except Exception:
+            # Not CSV, check for JSON
+            try:
+                import json
+                json_data = json.loads(output)
+
+                if isinstance(json_data, list) and len(json_data) > 0:
+                    viz_type = "table"
+                    viz_data = {
+                        "headers": list(json_data[0].keys()) if isinstance(json_data[0], dict) else [],
+                        "rows": json_data,
+                        "rowCount": len(json_data),
+                    }
+                elif isinstance(json_data, dict):
+                    viz_type = "chart"
+                    viz_data = json_data
+                    chart_config = {"recommendedType": "auto"}
+                else:
+                    viz_data = {"data": json_data}
+
+            except Exception:
+                # Default to text
+                viz_type = "text"
+                viz_data = {"output": output}
+
+        return {
+            "type": viz_type,
+            "data": viz_data,
+            "chart_config": chart_config,
+            "finding": {
+                "id": finding.id,
+                "type": finding.finding_type,
+                "analysis_type": finding.analysis_type,
+                "created_at": finding.created_at.isoformat(),
+            }
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Visualization failed for finding {finding_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to visualize result: {str(e)}"
+        )
+
+
 @router.get("/health")
 async def health_check():
     """Health check endpoint for analysis service."""
