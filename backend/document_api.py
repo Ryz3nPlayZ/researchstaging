@@ -13,6 +13,7 @@ from pydantic import BaseModel
 
 from database import get_db
 from database.models import Document, DocumentVersion, CitationStyle
+from llm_service import llm_service
 
 logger = logging.getLogger(__name__)
 
@@ -432,3 +433,189 @@ async def restore_document_version(
         created_at=document.created_at,
         updated_at=document.updated_at,
     )
+
+
+# ============== AI Text Assistance Endpoints ==============
+
+class RewriteRequest(BaseModel):
+    """Request model for AI text rewrite."""
+    selection: str
+    tone: str
+
+
+class GrammarRequest(BaseModel):
+    """Request model for AI grammar check."""
+    text: str
+
+
+class RewriteResponse(BaseModel):
+    """Response model for AI rewrite."""
+    rewritten: str
+
+
+class GrammarSuggestion(BaseModel):
+    """Single grammar suggestion."""
+    original: str
+    correction: str
+    explanation: str
+
+
+class GrammarResponse(BaseModel):
+    """Response model for AI grammar check."""
+    corrected: str
+    suggestions: list[GrammarSuggestion]
+
+
+@router.post("/documents/{document_id}/ai/rewrite", response_model=RewriteResponse)
+async def rewrite_text(
+    document_id: str,
+    request: RewriteRequest,
+    session: AsyncSession = Depends(get_db),
+):
+    """
+    Rewrite text selection with AI in specified tone.
+
+    Tones: formal, casual, concise, elaborate
+    Returns rewritten text preserving meaning but changing style.
+    """
+    # Verify document exists
+    result = await session.execute(
+        select(Document).where(Document.id == document_id)
+    )
+    document = result.scalar_one_or_none()
+
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Validate tone
+    valid_tones = ["formal", "casual", "concise", "elaborate"]
+    if request.tone not in valid_tones:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid tone: {request.tone}. Must be one of: {', '.join(valid_tones)}"
+        )
+
+    # Generate rewrite using LLM service
+    system_message = """You are a skilled editor specializing in text transformation.
+Your task is to rewrite text while preserving the core meaning and information,
+only changing the style, tone, and level of detail as requested."""
+
+    prompt = f"""Rewrite this text in a {request.tone} tone.
+
+Tone guidelines:
+- formal: Use academic/professional language, complete sentences, avoid contractions
+- casual: Use conversational language, contractions acceptable, simpler vocabulary
+- concise: Remove unnecessary words, be brief and direct, eliminate redundancy
+- elaborate: Add detail and nuance, expand ideas, provide more context
+
+Keep the meaning but change the style.
+
+Text: {request.selection}
+
+Return only the rewritten text, nothing else."""
+
+    try:
+        rewritten = await llm_service.generate(prompt, system_message)
+        logger.info(f"Rewrote text for document {document_id} in {request.tone} tone")
+        return RewriteResponse(rewritten=rewritten.strip())
+    except ValueError as e:
+        # LLM service error (no providers configured)
+        raise HTTPException(
+            status_code=503,
+            detail=f"AI service unavailable: {str(e)}"
+        )
+    except Exception as e:
+        logger.error(f"Error rewriting text: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to rewrite text: {str(e)}"
+        )
+
+
+@router.post("/documents/{document_id}/ai/grammar", response_model=GrammarResponse)
+async def check_grammar(
+    document_id: str,
+    request: GrammarRequest,
+    session: AsyncSession = Depends(get_db),
+):
+    """
+    Check text for grammar, spelling, and style issues with AI.
+
+    Returns corrected text and list of specific suggestions with explanations.
+    """
+    # Verify document exists
+    result = await session.execute(
+        select(Document).where(Document.id == document_id)
+    )
+    document = result.scalar_one_or_none()
+
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Generate grammar check using LLM service
+    system_message = """You are a meticulous editor and proofreader.
+Your task is to identify and correct grammar, spelling, punctuation, and style issues.
+Provide clear explanations for each correction."""
+
+    prompt = f"""Check this text for grammar, spelling, and style issues.
+
+Text: {request.text}
+
+Provide your response in this exact JSON format:
+{{
+    "corrected": "the corrected text with all fixes applied",
+    "suggestions": [
+        {{
+            "original": "the incorrect text",
+            "correction": "the corrected text",
+            "explanation": "brief explanation of the issue and fix"
+        }}
+    ]
+}}
+
+If no issues are found, return the original text as corrected and an empty suggestions array.
+Focus on: grammar rules, spelling, punctuation, clarity, word choice, and style consistency."""
+
+    try:
+        response = await llm_service.generate(prompt, system_message)
+
+        # Parse JSON response
+        import json
+        try:
+            # Find JSON in response
+            start = response.find("{")
+            end = response.rfind("}") + 1
+            if start != -1 and end > start:
+                result_data = json.loads(response[start:end])
+            else:
+                # Fallback if no JSON found
+                logger.warning(f"LLM did not return JSON, returning original text")
+                return GrammarResponse(
+                    corrected=request.text,
+                    suggestions=[]
+                )
+        except json.JSONDecodeError as e:
+            logger.error(f"Failed to parse grammar check JSON: {e}")
+            # Fallback: return original text
+            return GrammarResponse(
+                corrected=request.text,
+                suggestions=[]
+            )
+
+        logger.info(f"Grammar checked text for document {document_id}")
+        return GrammarResponse(
+            corrected=result_data.get("corrected", request.text),
+            suggestions=result_data.get("suggestions", [])
+        )
+    except ValueError as e:
+        # LLM service error (no providers configured)
+        raise HTTPException(
+            status_code=503,
+            detail=f"AI service unavailable: {str(e)}"
+        )
+    except Exception as e:
+        logger.error(f"Error checking grammar: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to check grammar: {str(e)}"
+        )
