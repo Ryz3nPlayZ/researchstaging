@@ -228,7 +228,7 @@ export const Workspace = () => {
           const response = await documentsApi.createDocument(
             selectedProject.id,
             selectedFile.name.replace(/\.(md|docx)$/, ''),
-            'APA'
+            'apa'
           );
           setDocumentData({
             id: response.data.id,

@@ -125,10 +125,10 @@ export const documentsApi = {
   loadDocument: (documentId) => api.get(`/documents/${documentId}`),
 
   // Create new document
-  createDocument: (projectId, title, citationStyle = 'APA') => {
+  createDocument: (projectId, title, citationStyle = 'apa') => {
     return api.post(`/projects/${projectId}/documents`, {
       title,
-      citation_style: citationStyle,
+      citation_style: citationStyle.toLowerCase(),
     });
   },
 
