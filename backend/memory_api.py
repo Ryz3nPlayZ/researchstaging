@@ -15,6 +15,7 @@ from api_models import (
     FindingRequest, FindingResponse,
     PreferenceRequest, PreferenceResponse,
     ClaimRelationshipResponse,
+    DocumentCitationRequest, DocumentCitationResponse,
 )
 
 logger = logging.getLogger(__name__)
@@ -443,3 +444,189 @@ async def get_keyword_suggestions(
     keywords = await relevance_service._extract_project_keywords(project)
 
     return sorted(list(keywords))
+
+
+# ============== Document Citations ==============
+
+@router.get("/documents/{document_id}/citations", response_model=List[DocumentCitationResponse])
+async def get_document_citations(
+    document_id: str,
+    session: AsyncSession = Depends(get_db),
+):
+    """
+    List all citations for a document.
+
+    Returns citations with source_type, source_id, and citation_data.
+    """
+    from database.models import DocumentCitation
+
+    result = await session.execute(
+        select(DocumentCitation).where(DocumentCitation.document_id == document_id)
+    )
+    citations = result.scalars().all()
+
+    return [DocumentCitationResponse.model_validate(c) for c in citations]
+
+
+@router.post("/documents/{document_id}/citations", response_model=DocumentCitationResponse, status_code=201)
+async def create_document_citation(
+    document_id: str,
+    citation_request: DocumentCitationRequest,
+    session: AsyncSession = Depends(get_db),
+):
+    """
+    Create a citation for a document.
+
+    Supports citations from papers, claims, or manual entry.
+    """
+    from database.models import DocumentCitation, Document, CitationSource
+
+    # Verify document exists
+    doc_result = await session.execute(
+        select(Document).where(Document.id == document_id)
+    )
+    document = doc_result.scalar_one_or_none()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Validate source_type
+    try:
+        source_enum = CitationSource(citation_request.source_type)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid source_type: {citation_request.source_type}")
+
+    # For manual citations, citation_data is required
+    if citation_request.source_type == "manual" and not citation_request.citation_data:
+        raise HTTPException(status_code=400, detail="citation_data required for manual citations")
+
+    # For paper/claim citations, source_id is required
+    if citation_request.source_type in ["paper", "claim"] and not citation_request.source_id:
+        raise HTTPException(status_code=400, detail=f"source_id required for {citation_request.source_type} citations")
+
+    # Create citation
+    citation = DocumentCitation(
+        document_id=document_id,
+        citation_position=citation_request.citation_position,
+        source_type=source_enum,
+        source_id=citation_request.source_id,
+        citation_data=citation_request.citation_data or {},
+    )
+
+    session.add(citation)
+    await session.commit()
+    await session.refresh(citation)
+
+    return DocumentCitationResponse.model_validate(citation)
+
+
+@router.put("/documents/{document_id}/citations/{citation_id}", response_model=DocumentCitationResponse)
+async def update_document_citation(
+    document_id: str,
+    citation_id: str,
+    citation_data: Optional[Dict] = None,
+    citation_position: Optional[Dict] = None,
+    session: AsyncSession = Depends(get_db),
+):
+    """
+    Update a document citation.
+
+    Allows updating citation_data and citation_position.
+    """
+    from database.models import DocumentCitation
+
+    # Get citation
+    result = await session.execute(
+        select(DocumentCitation).where(
+            DocumentCitation.id == citation_id,
+            DocumentCitation.document_id == document_id
+        )
+    )
+    citation = result.scalar_one_or_none()
+
+    if not citation:
+        raise HTTPException(status_code=404, detail="Citation not found")
+
+    # Update fields
+    if citation_data is not None:
+        citation.citation_data = citation_data
+    if citation_position is not None:
+        citation.citation_position = citation_position
+
+    await session.commit()
+    await session.refresh(citation)
+
+    return DocumentCitationResponse.model_validate(citation)
+
+
+@router.delete("/documents/citations/{citation_id}", status_code=204)
+async def delete_document_citation(
+    citation_id: str,
+    session: AsyncSession = Depends(get_db),
+):
+    """
+    Delete a document citation.
+    """
+    from database.models import DocumentCitation
+
+    result = await session.execute(
+        select(DocumentCitation).where(DocumentCitation.id == citation_id)
+    )
+    citation = result.scalar_one_or_none()
+
+    if not citation:
+        raise HTTPException(status_code=404, detail="Citation not found")
+
+    await session.delete(citation)
+    await session.commit()
+
+
+@router.get("/documents/{document_id}/bibliography")
+async def get_document_bibliography(
+    document_id: str,
+    style: str = Query("apa", description="Citation style (apa, mla, chicago)"),
+    session: AsyncSession = Depends(get_db),
+):
+    """
+    Generate bibliography from all citations in a document.
+
+    Returns formatted bibliography string with all citations sorted by style requirements.
+    """
+    from database.models import DocumentCitation, Document
+    from citation_service import CitationService
+
+    # Verify document exists
+    doc_result = await session.execute(
+        select(Document).where(Document.id == document_id)
+    )
+    document = doc_result.scalar_one_or_none()
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    # Get all citations for document
+    result = await session.execute(
+        select(DocumentCitation).where(DocumentCitation.document_id == document_id)
+    )
+    citations = result.scalars().all()
+
+    if not citations:
+        return {"bibliography": "", "count": 0}
+
+    # Format bibliography
+    citation_service = CitationService(session)
+
+    citations_data = [
+        {
+            "source_type": c.source_type.value,
+            "source_id": c.source_id,
+            "citation_data": c.citation_data,
+        }
+        for c in citations
+    ]
+
+    bibliography = await citation_service.format_bibliography(citations_data, style=style)
+
+    return {
+        "bibliography": bibliography,
+        "count": len(citations),
+        "style": style,
+    }

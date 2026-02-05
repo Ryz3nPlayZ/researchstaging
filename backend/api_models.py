@@ -95,3 +95,25 @@ class ClaimRelationshipResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class DocumentCitationRequest(BaseModel):
+    """Request model for creating a document citation."""
+    source_type: str = Field(..., description="Type of source (paper, claim, manual)")
+    source_id: Optional[str] = Field(None, description="ID of the source (for paper/claim)")
+    citation_data: Optional[Dict[str, Any]] = Field(None, description="Citation data (for manual type)")
+    citation_position: Optional[Dict[str, int]] = Field(None, description="TipTap position in document")
+
+
+class DocumentCitationResponse(BaseModel):
+    """Response model for a document citation."""
+    id: str
+    document_id: str
+    citation_position: Optional[Dict[str, int]]
+    source_type: str
+    source_id: Optional[str]
+    citation_data: Dict[str, Any]
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
