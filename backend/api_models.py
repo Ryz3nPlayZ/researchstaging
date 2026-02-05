@@ -16,6 +16,14 @@ class ClaimRequest(BaseModel):
     confidence: float = Field(0.0, ge=0.0, le=1.0, description="Extraction confidence")
 
 
+class ExtractClaimsRequest(BaseModel):
+    """Request model for extracting claims from a paper PDF."""
+    paper_id: str = Field(..., description="External paper ID (Semantic Scholar, arXiv)")
+    pdf_url: str = Field(..., description="URL to download PDF")
+    paper_metadata: Dict[str, Any] = Field(..., description="Paper metadata (title, authors, year, etc.)")
+    max_claims: int = Field(default=20, ge=1, le=50, description="Maximum number of claims to extract")
+
+
 class ClaimResponse(BaseModel):
     """Response model for a claim."""
     id: str

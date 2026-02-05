@@ -8,7 +8,7 @@ from typing import List, Optional, Dict
 from sqlalchemy import text, select
 
 from database import get_db
-from database.models import ClaimSourceType
+from database.models import ClaimSourceType, Project
 from memory_service import MemoryService
 from api_models import (
     ClaimRequest, ClaimResponse,
@@ -16,6 +16,7 @@ from api_models import (
     PreferenceRequest, PreferenceResponse,
     ClaimRelationshipResponse,
     DocumentCitationRequest, DocumentCitationResponse,
+    ExtractClaimsRequest,
 )
 
 logger = logging.getLogger(__name__)
@@ -103,6 +104,77 @@ async def create_claim(
     )
 
     return ClaimResponse.model_validate(claim)
+
+
+@router.post("/projects/{project_id}/extract-claims", response_model=List[ClaimResponse])
+async def extract_claims_from_paper(
+    project_id: str,
+    request: ExtractClaimsRequest,
+    session: AsyncSession = Depends(get_db),
+):
+    """
+    Extract claims from a research paper PDF.
+
+    Downloads PDF, extracts text, uses LLM to extract claims,
+    saves claims to memory with provenance tracking.
+
+    Returns: List of extracted Claim objects
+    """
+    from pdf_service import pdf_service
+    from database.models import Project
+
+    # Verify project exists
+    project_result = await session.execute(
+        select(Project).where(Project.id == project_id)
+    )
+    project = project_result.scalar_one_or_none()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Validate PDF URL
+    if not request.pdf_url or not request.pdf_url.startswith(("http://", "https://")):
+        raise HTTPException(status_code=400, detail="Invalid PDF URL")
+
+    try:
+        # Download PDF and extract text
+        pdf_result = await pdf_service.process_paper(
+            paper_id=request.paper_id,
+            pdf_url=request.pdf_url
+        )
+
+        if not pdf_result:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to download PDF from {request.pdf_url}"
+            )
+
+        pdf_text = pdf_result.get("text", "")
+        if not pdf_text or len(pdf_text.strip()) < 100:
+            raise HTTPException(
+                status_code=500,
+                detail="PDF text extraction failed or returned empty text"
+            )
+
+        # Extract claims using memory service
+        service = MemoryService(session)
+        claims = await service.extract_claims_from_pdf(
+            project_id=project_id,
+            paper_id=request.paper_id,
+            pdf_text=pdf_text,
+            paper_metadata=request.paper_metadata,
+            max_claims=request.max_claims,
+        )
+
+        return [ClaimResponse.model_validate(c) for c in claims]
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Claim extraction failed for paper {request.paper_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Claim extraction failed: {str(e)}"
+        )
 
 
 @router.put("/projects/{project_id}/claims/{claim_id}", response_model=ClaimResponse)
