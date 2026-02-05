@@ -38,7 +38,7 @@ export const Bibliography = ({ documentId, style = 'APA', onStyleChange, citatio
     try {
       const apiUrl = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
       const response = await fetch(
-        `${apiUrl}/api/documents/${documentId}/bibliography?style=${currentStyle.toLowerCase()}`,
+        `${apiUrl}/api/memory/documents/${documentId}/bibliography?style=${currentStyle.toLowerCase()}`,
         {
           headers: {
             'Content-Type': 'application/json',
