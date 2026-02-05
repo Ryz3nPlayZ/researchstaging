@@ -41,12 +41,13 @@ import { CitationPicker } from './CitationPicker';
 import { Bibliography } from './Bibliography';
 import { RewriteDialog, GrammarDialog } from './AIAssistant';
 import { VersionHistory } from './VersionHistory';
+import { ExportButton } from './ExportButton';
 import {
   Dialog,
   DialogContent,
 } from '../ui/dialog';
 
-const MenuBar = memo(({ editor, canUndo, canRedo, isSaving, onShowVersionHistory, onInsertCitation, citationStyle, onCitationStyleChange }) => {
+const MenuBar = memo(({ editor, canUndo, canRedo, isSaving, onShowVersionHistory, onInsertCitation, citationStyle, onCitationStyleChange, documentId, projectId, documentTitle }) => {
   if (!editor) return null;
 
   return (
@@ -77,7 +78,7 @@ const MenuBar = memo(({ editor, canUndo, canRedo, isSaving, onShowVersionHistory
           variant="ghost"
           size="sm"
           className="h-8 w-8 p-0"
-          onClick={handleShowVersionHistory}
+          onClick={onShowVersionHistory}
           title="Version History"
         >
           <HistoryIcon className="h-4 w-4" />
@@ -238,6 +239,15 @@ const MenuBar = memo(({ editor, canUndo, canRedo, isSaving, onShowVersionHistory
         <QuoteIcon className="h-4 w-4" />
       </Button>
 
+      {/* Export Button */}
+      {documentId && projectId && (
+        <ExportButton
+          documentId={documentId}
+          projectId={projectId}
+          documentTitle={documentTitle || 'document'}
+        />
+      )}
+
       {/* Citation Style Selector */}
       {onCitationStyleChange && (
         <>
@@ -272,7 +282,7 @@ const MenuBar = memo(({ editor, canUndo, canRedo, isSaving, onShowVersionHistory
 
 MenuBar.displayName = 'MenuBar';
 
-export const DocumentEditor = ({ documentId, projectId, initialContent, onSave, onShowVersionHistory, citationStyle = 'APA', editorRef }) => {
+export const DocumentEditor = ({ documentId, projectId, initialContent, documentTitle, onSave, onShowVersionHistory, citationStyle = 'APA', editorRef }) => {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedHash, setLastSavedHash] = useState('');
@@ -655,6 +665,9 @@ export const DocumentEditor = ({ documentId, projectId, initialContent, onSave, 
         onInsertCitation={handleCitationInsert}
         citationStyle={currentCitationStyle}
         onCitationStyleChange={handleCitationStyleChange}
+        documentId={documentId}
+        projectId={projectId}
+        documentTitle={documentTitle}
       />
 
       {/* Editor Content */}

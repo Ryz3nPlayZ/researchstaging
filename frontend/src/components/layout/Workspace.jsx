@@ -560,6 +560,7 @@ export const Workspace = () => {
                         <DocumentEditor
                           documentId={documentData.id}
                           initialContent={documentData.content}
+                          documentTitle={documentData.title}
                           onSave={handleDocumentSave}
                           editorRef={editorRef}
                         />
