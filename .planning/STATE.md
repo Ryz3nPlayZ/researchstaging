@@ -10,18 +10,18 @@ See: .planning/PROJECT.md (updated 2025-02-01)
 ## Current Position
 
 Phase: 6 of 8 (AI Agent & Sidebar Chat) - 🔄 IN PROGRESS
-Plan: 01 of 3 (Persistent Sidebar Chat)
-Status: Plan 01 complete. Persistent sidebar chat with context-aware AI responses implemented
-Last activity: 2025-02-05 — Completed Phase 6 Plan 01 (Persistent Sidebar Chat)
+Plan: 02 of 3 (Multi-Agent Orchestration)
+Status: Plan 02 complete. Multi-agent routing with context injection implemented
+Last activity: 2026-02-05 — Completed Phase 6 Plan 02 (Multi-Agent Orchestration)
 
-Progress: ████████░░ 67% (12/25 plans complete; 5/8 phases complete, 1 in progress)
+Progress: ████████░░ 68% (18/25 plans complete; 5/8 phases complete, 1 in progress)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 17
+- Total plans completed: 18
 - Average duration: 5 min
-- Total execution time: ~1.6 hours
+- Total execution time: ~1.7 hours
 
 **By Phase:**
 
@@ -30,13 +30,13 @@ Progress: ████████░░ 67% (12/25 plans complete; 5/8 phases c
 | 01-authentication | 2 | 2 | 10 min |
 | 02-file-management | 4 | 4 | 5 min |
 | 03-memory-backend | 4 | 4 | 3 min |
-| 04-rich-text-editor | 3 | ~6 | 6 min |
+| 04-document-editor | 6 | ~6 | 6 min |
 | 05-literature | 3 | ~3 | 5 min |
-| 06-ai-agent | 1 | ~3 | 6 min |
+| 06-ai-agent | 2 | ~3 | 5 min |
 | 07-08 | — | — | — |
 
 **Recent Trend:**
-- Last 5 plans: 6 min, 4 min, 5 min, 5 min, 6 min (04-06, 05-01, 05-02, 05-03, 06-01)
+- Last 5 plans: 6 min, 4 min, 5 min, 5 min, 6 min, 3 min (04-06, 05-01, 05-02, 05-03, 06-01, 06-02)
 - Trend: Steady (consistent execution speed)
 
 *Updated after each plan completion*
@@ -190,6 +190,12 @@ Recent decisions affecting current work:
 95. **Optimistic UI updates** — User message appears immediately, AI response loads asynchronously. Error handling rolls back optimistic update.
 96. **Chat API pattern** — GET history (paginated), POST send (with context), DELETE clear. Simple REST interface for chat operations.
 
+**From 06-02 (Multi-Agent Orchestration):**
+97. **Keyword-based confidence scoring for agent routing** — Each agent implements can_handle() returning 0.0-1.0 confidence based on keyword matching. Simple, effective routing without LLM overhead.
+98. **Context metadata returned to frontend** — Agent responses include context_used dict showing which information sources were accessed (document, literature, memory). Enables visual indicators for transparency.
+99. **Agent base class with abstraction pattern** — Base Agent class defines handle() and can_handle() methods. Specialized agents (DocumentAgent, LiteratureAgent, MemoryAgent, GeneralAgent) inherit and implement. Clean extensibility.
+100. **inject_context() loads all relevant data once** — Single database session loads document, claims (20 recent with min confidence 0.5), findings (10 recent), and user preferences. Context reused across agents for efficiency.
+
 ### Pending Todos
 
 **P0 - Critical:**
@@ -259,6 +265,9 @@ Recent decisions affecting current work:
 
 **From 06-01 (Persistent Sidebar Chat):**
 - No blockers identified. Chat API, AISidebar component, and workspace integration fully functional.
+
+**From 06-02 (Multi-Agent Orchestration):**
+- No blockers identified. Multi-agent routing, context injection, and visual indicators fully functional.
 
 ### Patterns Established
 
@@ -332,7 +341,7 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2025-02-05
-Stopped at: Completed Phase 6 Plan 01 (Persistent Sidebar Chat)
-Resume file: .planning/phases/06-ai-agent/06-01-SUMMARY.md
-Next: Phase 6 Plan 02 (Multi-Agent Orchestration) or other planned features
+Last session: 2026-02-05
+Stopped at: Completed Phase 6 Plan 02 (Multi-Agent Orchestration)
+Resume file: .planning/phases/06-ai-agent/06-02-SUMMARY.md
+Next: Phase 6 Plan 03 (Advanced AI Features) or other planned features
