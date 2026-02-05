@@ -224,6 +224,166 @@ class MemoryAgent(Agent):
             return "I encountered an error while accessing memory. Please try again."
 
 
+class AnalysisAgent(Agent):
+    """Agent for data analysis and code generation."""
+
+    ANALYSIS_KEYWORDS = [
+        "analyze", "statistic", "statistics", "regression", "plot", "chart",
+        "graph", "correlation", "visualization", "data analysis", "dataset",
+        "calculate", "compute", "model", "predict", "forecast", "trend",
+        "distribution", "histogram", "scatter", "bar chart", "line plot",
+        "heatmap", "cluster", "classification", "machine learning"
+    ]
+
+    def can_handle(self, query: str) -> float:
+        """Check if query is about data analysis."""
+        query_lower = query.lower()
+
+        # Check for analysis keywords
+        keyword_count = sum(1 for keyword in self.ANALYSIS_KEYWORDS if keyword in query_lower)
+        if keyword_count >= 1:
+            return min(0.9, 0.7 + (keyword_count * 0.1))
+
+        return 0.1
+
+    async def handle(self, query: str, context: Dict[str, Any]) -> str:
+        """Handle analysis-related query."""
+        # Build system prompt for code generation
+        system_prompt = """You are an expert data analyst and programmer specializing in Python and R for data analysis.
+
+When asked for analysis, you should:
+1. Provide clear, well-commented code
+2. Use best practices for the chosen language
+3. Include error handling where appropriate
+4. Explain the approach before showing code
+5. Suggest appropriate libraries (pandas, numpy, matplotlib, seaborn, ggplot2, dplyr, etc.)
+
+For Python: Use pandas, numpy, matplotlib, seaborn, scikit-learn
+For R: Use tidyverse (ggplot2, dplyr, tidyr), caret, etc."""
+
+        # Add data context if available
+        if context.get("data_context"):
+            system_prompt += f"\n\n# Available Data\n{context['data_context']}"
+
+        try:
+            response = await self.llm.generate(
+                prompt=query,
+                system_message=system_prompt
+            )
+            return response
+        except Exception as e:
+            logger.error(f"AnalysisAgent error: {e}")
+            return "I encountered an error while generating analysis code. Please try again."
+
+    async def generate_code(
+        self,
+        task_description: str,
+        language: str,
+        data_context: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, str]:
+        """
+        Generate analysis code for a specific task.
+
+        Args:
+            task_description: Description of the analysis task
+            language: Programming language ("python" or "r")
+            data_context: Optional information about available data
+
+        Returns:
+            Dict with code, language, and explanation
+        """
+        # Language-specific system prompt
+        if language.lower() == "python":
+            system_prompt = """You are an expert Python data analyst. Generate clean, well-commented Python code for data analysis tasks.
+
+Use these libraries:
+- pandas: Data manipulation
+- numpy: Numerical operations
+- matplotlib: Basic plotting
+- seaborn: Statistical visualization
+- scikit-learn: Machine learning
+
+Return your response in this format:
+EXPLANATION:
+[Your explanation of the approach]
+
+CODE:
+```python
+[your code here]
+```"""
+        elif language.lower() == "r":
+            system_prompt = """You are an expert R data analyst. Generate clean, well-commented R code for data analysis tasks.
+
+Use these libraries:
+- tidyverse: Data manipulation and visualization (ggplot2, dplyr, tidyr)
+- caret: Machine learning
+- plotly: Interactive plots
+
+Return your response in this format:
+EXPLANATION:
+[Your explanation of the approach]
+
+CODE:
+```r
+[your code here]
+```"""
+        else:
+            raise ValueError(f"Unsupported language: {language}. Use 'python' or 'r'.")
+
+        # Build prompt with task and data context
+        prompt = f"Task: {task_description}"
+
+        if data_context:
+            prompt += f"\n\nAvailable Data:\n"
+            if data_context.get("columns"):
+                prompt += f"Columns: {', '.join(data_context['columns'])}\n"
+            if data_context.get("row_count"):
+                prompt += f"Rows: {data_context['row_count']}\n"
+            if data_context.get("description"):
+                prompt += f"Description: {data_context['description']}\n"
+
+        try:
+            response = await self.llm.generate(
+                prompt=prompt,
+                system_message=system_prompt
+            )
+
+            # Parse response to extract explanation and code
+            explanation = ""
+            code = response
+
+            if "EXPLANATION:" in response:
+                parts = response.split("CODE:", 1)
+                if len(parts) == 2:
+                    explanation = parts[0].replace("EXPLANATION:", "").strip()
+                    code_block = parts[1]
+
+                    # Extract code from markdown code block
+                    if "```" in code_block:
+                        lines = code_block.split("\n")
+                        code_lines = []
+                        in_code = False
+                        for line in lines:
+                            if line.startswith("```"):
+                                in_code = not in_code
+                                continue
+                            if in_code:
+                                code_lines.append(line)
+                        code = "\n".join(code_lines)
+                    else:
+                        code = code_block.strip()
+
+            return {
+                "code": code,
+                "language": language.lower(),
+                "explanation": explanation or "Code generated for your analysis task."
+            }
+
+        except Exception as e:
+            logger.error(f"Code generation error: {e}")
+            raise
+
+
 class GeneralAgent(Agent):
     """General-purpose agent for fallback queries."""
 
@@ -271,6 +431,7 @@ class AgentRouter:
             DocumentAgent(llm_service),
             LiteratureAgent(llm_service),
             MemoryAgent(llm_service),
+            AnalysisAgent(llm_service),
             GeneralAgent(llm_service),  # Always last (fallback)
         ]
 
