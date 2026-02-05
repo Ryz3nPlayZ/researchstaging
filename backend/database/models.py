@@ -607,6 +607,13 @@ class ClaimRelationship(Base):
 
 # ============== Document Editor Models ==============
 
+class CitationStyle(str, enum.Enum):
+    """Citation styles for documents."""
+    APA = "apa"
+    MLA = "mla"
+    CHICAGO = "chicago"
+
+
 class CitationSource(str, enum.Enum):
     """Types of sources that can be cited."""
     PAPER = "paper"
@@ -632,7 +639,7 @@ class Document(Base):
     content_hash = Column(String(64), nullable=True)  # SHA-256 hash for change detection
 
     # Citation style
-    citation_style = Column(String(20), nullable=True, default="apa")  # apa, mla, chicago
+    citation_style = Column(SQLEnum(CitationStyle), default=CitationStyle.APA, nullable=False)
 
     # Timestamps
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
