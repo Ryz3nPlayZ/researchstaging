@@ -168,6 +168,56 @@ export const documentsApi = {
 
   restoreVersion: (documentId, versionId) =>
     api.post(`/documents/${documentId}/restore/${versionId}`),
+
+  // Export document to PDF
+  exportDocumentPdf: async (documentId, projectId) => {
+    const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+    const url = `${BACKEND_URL}/api/documents/${documentId}/export/pdf?project_id=${projectId}`;
+
+    return fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    }).then(response => {
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Document not found');
+        } else if (response.status === 403) {
+          throw new Error('You do not have permission to export this document');
+        } else if (response.status === 503) {
+          throw new Error('Export service unavailable. Please contact support.');
+        } else {
+          throw new Error(`Export failed: ${response.statusText}`);
+        }
+      }
+      return response.blob();
+    });
+  },
+
+  // Export document to DOCX
+  exportDocumentDocx: async (documentId, projectId) => {
+    const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+    const url = `${BACKEND_URL}/api/documents/${documentId}/export/docx?project_id=${projectId}`;
+
+    return fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${authToken}`
+      }
+    }).then(response => {
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Document not found');
+        } else if (response.status === 403) {
+          throw new Error('You do not have permission to export this document');
+        } else if (response.status === 503) {
+          throw new Error('Export service unavailable. Please contact support.');
+        } else {
+          throw new Error(`Export failed: ${response.statusText}`);
+        }
+      }
+      return response.blob();
+    });
+  },
 };
 
 // Chat API
