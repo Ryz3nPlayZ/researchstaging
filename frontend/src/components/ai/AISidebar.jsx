@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useProject } from '../../context/ProjectContext';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
+import { Badge } from '../ui/badge';
 import { Loader2, Send, X, Bot, User, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import Markdown from 'react-markdown';
@@ -230,6 +231,25 @@ export const AISidebar = () => {
                       : 'bg-muted'
                   }`}
                 >
+                  {message.role === 'assistant' && message.context?.context_used && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {message.context.context_used.document && (
+                        <Badge variant="secondary" className="text-xs">
+                          📄 Document
+                        </Badge>
+                      )}
+                      {message.context.context_used.literature && (
+                        <Badge variant="secondary" className="text-xs">
+                          📚 Literature
+                        </Badge>
+                      )}
+                      {message.context.context_used.memory && (
+                        <Badge variant="secondary" className="text-xs">
+                          🧠 Memory
+                        </Badge>
+                      )}
+                    </div>
+                  )}
                   {message.role === 'assistant' ? (
                     <div className="prose prose-sm max-w-none">
                       <Markdown>{message.content}</Markdown>
