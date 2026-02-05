@@ -11,8 +11,9 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime, timezone
 import logging
 
-from database import get_db, Project
+from database import get_db, Project, Claim, Finding
 from llm_service import llm_service
+from agent_service import AgentRouter
 
 logger = logging.getLogger(__name__)
 
@@ -81,76 +82,145 @@ def _add_message(project_id: str, role: str, content: str, context: Optional[Dic
 
 # ============== Context Injection ==============
 
-async def _build_context_prompt(
+async def inject_context(
     project_id: str,
-    user_context: Optional[Dict[str, Any]],
+    document_id: Optional[str],
+    query: str,
     db: AsyncSession
-) -> str:
+) -> Dict[str, Any]:
     """
-    Build system prompt with context injection.
+    Gather relevant context for AI response.
 
     Context sources:
-    - Project research goal and metadata
     - Document content if document_id provided
-    - Recent claims/findings from memory
+    - Recent claims from memory
+    - Recent findings from analysis
     - User preferences
+
+    Args:
+        project_id: Project ID
+        document_id: Optional document ID
+        query: User's query (for relevance filtering)
+        db: Database session
+
+    Returns:
+        Dictionary with context data
     """
-    context_parts = []
+    context = {}
 
-    # Get project context
-    result = await db.execute(
-        select(Project).where(Project.id == project_id)
-    )
-    project = result.scalar_one_or_none()
-
-    if project:
-        context_parts.append(f"# Research Context\n")
-        context_parts.append(f"Research Goal: {project.research_goal}\n")
-        context_parts.append(f"Output Type: {project.output_type.value}\n")
-        if project.audience:
-            context_parts.append(f"Target Audience: {project.audience}\n")
-        context_parts.append("\n")
-
-    # Document context
-    if user_context and "document_id" in user_context:
+    # Document content
+    if document_id:
         from database import Document
         doc_result = await db.execute(
-            select(Document).where(Document.id == user_context["document_id"])
+            select(Document).where(Document.id == document_id)
         )
         document = doc_result.scalar_one_or_none()
         if document:
-            context_parts.append(f"# Current Document\n")
-            context_parts.append(f"Title: {document.title}\n")
-            # Add selected text if provided
-            if user_context.get("selection"):
-                context_parts.append(f"Selected Text: {user_context['selection']}\n")
-            context_parts.append("\n")
+            context['document'] = {
+                'title': document.title,
+                'content': document.content,  # TipTap JSON
+                'citation_style': document.citation_style.value if document.citation_style else None
+            }
+            logger.info(f"Loaded document context: {document.title}")
 
-    # Load recent claims from memory
+    # Recent claims (last 20, high confidence)
     try:
-        from database import Claim
         claim_result = await db.execute(
             select(Claim)
             .where(Claim.project_id == project_id)
+            .where(Claim.confidence >= 0.5)
             .order_by(Claim.relevance_score.desc())
-            .limit(10)
+            .limit(20)
         )
         claims = claim_result.scalars().all()
         if claims:
-            context_parts.append(f"# Key Findings from Memory\n")
-            for claim in claims[:5]:  # Top 5 relevant claims
-                context_parts.append(f"- {claim.claim_text}\n")
-            context_parts.append("\n")
+            context['claims'] = [
+                {
+                    'text': c.claim_text,
+                    'type': c.claim_type,
+                    'confidence': c.confidence,
+                    'relevance': c.relevance_score
+                }
+                for c in claims
+            ]
+            logger.info(f"Loaded {len(claims)} claims for context")
     except Exception as e:
         logger.warning(f"Failed to load claims for context: {e}")
 
-    # Combine into system prompt
-    if context_parts:
-        system_prompt = "".join(context_parts)
-        system_prompt += "\nYou are a helpful research assistant. Use the context above to provide relevant, accurate assistance."
-        return system_prompt
+    # Recent findings
+    try:
+        finding_result = await db.execute(
+            select(Finding)
+            .where(Finding.project_id == project_id)
+            .order_by(Finding.significance.desc().nulls_last())
+            .limit(10)
+        )
+        findings = finding_result.scalars().all()
+        if findings:
+            context['findings'] = [
+                {
+                    'type': f.finding_type,
+                    'summary': f.finding_text,
+                    'significance': f.significance
+                }
+                for f in findings
+            ]
+            logger.info(f"Loaded {len(findings)} findings for context")
+    except Exception as e:
+        logger.warning(f"Failed to load findings for context: {e}")
 
-    return "You are a helpful research assistant."
+    # User preferences
+    try:
+        from database import Preference
+        pref_result = await db.execute(
+            select(Preference).where(Preference.project_id == project_id)
+        )
+        preferences = pref_result.scalars().all()
+
+        if preferences:
+            prefs_dict = {}
+            for pref in preferences:
+                if pref.category not in prefs_dict:
+                    prefs_dict[pref.category] = {}
+                prefs_dict[pref.category][pref.key] = pref.value
+
+            context['preferences'] = {
+                'domains': prefs_dict.get('relevance', {}).get('domain_preferences', []),
+                'topics': prefs_dict.get('relevance', {}).get('topic_keywords', [])
+            }
+            logger.info(f"Loaded user preferences for context")
+    except Exception as e:
+        logger.warning(f"Failed to load preferences for context: {e}")
+
+    return context
+
+
+def build_system_prompt(context: dict) -> str:
+    """
+    Build system prompt with context.
+
+    Args:
+        context: Context dictionary from inject_context()
+
+    Returns:
+        System prompt string
+    """
+    base = "You are a helpful research assistant."
+
+    if 'document' in context:
+        base += f"\n\n# Current Document\nTitle: {context['document']['title']}"
+        if context['document'].get('citation_style'):
+            base += f"\nCitation Style: {context['document']['citation_style']}"
+
+    if context.get('claims'):
+        base += f"\n\n# Research Context\nThe project has {len(context['claims'])} extracted claims from literature."
+
+    if context.get('preferences'):
+        topics = context['preferences'].get('topics', [])
+        if topics:
+            base += f"\n\nUser interests: {', '.join(topics[:5])}"
+
+    return base
 
 
 # ============== Endpoints ==============
@@ -235,25 +305,26 @@ async def send_message(
         request.context
     )
 
-    # Build context-aware prompt
-    system_prompt = await _build_context_prompt(project_id, request.context, db)
-
-    # Get chat history for conversation context
-    messages = _get_project_messages(project_id)
-    conversation_history = messages[-10:] if len(messages) > 1 else []  # Last 10 messages for context
+    # Inject context
+    document_id = request.context.get("document_id") if request.context else None
+    context = await inject_context(
+        project_id=project_id,
+        document_id=document_id,
+        query=request.message,
+        db=db
+    )
 
     try:
-        # Call LLM service
-        full_prompt = f"{system_prompt}\n\n"
-        if conversation_history:
-            full_prompt += "Previous conversation:\n"
-            for msg in conversation_history[-5:]:  # Last 5 messages for context
-                full_prompt += f"{msg['role']}: {msg['content']}\n"
-            full_prompt += "\n"
+        # Create agent router
+        agent_router = AgentRouter(llm_service)
 
-        full_prompt += f"user: {request.message}\nassistant:"
+        # Route to appropriate agent
+        agent_response = await agent_router.route(
+            query=request.message,
+            context=context
+        )
 
-        ai_response_text = await llm_service.generate(full_prompt)
+        ai_response_text = agent_response.response
 
         if not ai_response_text:
             raise HTTPException(
@@ -261,12 +332,16 @@ async def send_message(
                 detail="AI service unavailable. Please configure an LLM API key."
             )
 
+        # Add context_used to AI message
+        ai_context = (request.context or {}).copy()
+        ai_context['context_used'] = agent_response.context_used
+
         # Store AI response
         ai_message_dict = _add_message(
             project_id,
             "assistant",
             ai_response_text,
-            request.context
+            ai_context
         )
 
         return SendMessageResponse(
