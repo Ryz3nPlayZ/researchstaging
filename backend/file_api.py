@@ -21,6 +21,8 @@ from file_service import (
     rename_folder,
     delete_folder,
     move_file,
+    markdown_to_tiptap,
+    docx_to_tiptap,
     FileServiceError,
     UnsupportedFileTypeError,
     FileTooLargeError,
@@ -313,6 +315,147 @@ async def download_file(
         raise
     except Exception as e:
         logger.error(f"Failed to download file: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/files/{file_id}/content", responses={404: {"model": ErrorResponse}, 400: {"model": ErrorResponse}})
+async def get_file_content(
+    file_id: str,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get file content as text for document editor.
+
+    Supports .md and .docx files. Returns text content that can be converted to TipTap JSON.
+    For .docx files, returns the raw file as bytes for docx_to_tiptap() processing.
+    """
+    try:
+        file = await get_file(db, file_id)
+
+        # Check file extension
+        ext = file.name.split('.')[-1].lower() if '.' in file.name else ''
+
+        if ext not in ['md', 'docx']:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported file type for content extraction: {ext}. Only .md and .docx are supported."
+            )
+
+        # Read file from storage
+        from storage_service import get_storage
+        storage = get_storage()
+
+        # For local storage, read file directly
+        if hasattr(storage, '__class__') and 'LocalStorage' in storage.__class__.__name__:
+            if not os.path.exists(file.storage_path):
+                logger.error(f"File not found on disk: {file.storage_path}")
+                raise HTTPException(status_code=404, detail="File not found on disk")
+
+            # For DOCX files, read as bytes for docx_to_tiptap processing
+            if ext == 'docx':
+                with open(file.storage_path, 'rb') as f:
+                    content_bytes = f.read()
+
+                # Convert DOCX to TipTap JSON
+                tiptap_json = docx_to_tiptap(content_bytes)
+
+                logger.info(f"Retrieved and parsed DOCX content for file: {file.name}")
+
+                return {
+                    "file_id": file.id,
+                    "name": file.name,
+                    "tiptap": tiptap_json,
+                    "extension": ext,
+                    "format": "tiptap"
+                }
+            else:
+                # For Markdown files, read as text
+                with open(file.storage_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+
+                # Convert Markdown to TipTap JSON
+                tiptap_json = markdown_to_tiptap(content)
+
+                logger.info(f"Retrieved and parsed Markdown content for file: {file.name}")
+
+                return {
+                    "file_id": file.id,
+                    "name": file.name,
+                    "tiptap": tiptap_json,
+                    "extension": ext,
+                    "format": "tiptap"
+                }
+        else:
+            # For S3/R2 storage, would need to download file first
+            # For now, return error for cloud storage
+            raise HTTPException(
+                status_code=501,
+                detail="File content extraction not yet implemented for cloud storage. Please use local storage."
+            )
+
+    except FileServiceError as e:
+        raise _handle_file_service_error(e)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get file content: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class ParseRequest(BaseModel):
+    content: str = Field(..., description="File content as text")
+    extension: str = Field(..., description="File extension (e.g., 'md', 'docx')")
+
+
+@router.post("/files/parse/tiptap", responses={400: {"model": ErrorResponse}, 404: {"model": ErrorResponse}})
+async def parse_file_to_tiptap(
+    data: ParseRequest,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Parse file content and convert to TipTap JSON format.
+
+    Supports .md and .docx files. Returns TipTap JSON structure for document editor initialization.
+
+    For .md files: Converts Markdown to TipTap JSON
+    For .docx files: Converts Word document to TipTap JSON (requires bytes in future enhancement)
+    """
+    try:
+        extension = data.extension.lower()
+        content = data.content
+
+        if extension == 'md':
+            # Convert Markdown to TipTap
+            tiptap_json = markdown_to_tiptap(content)
+
+            return {
+                "tiptap": tiptap_json,
+                "format": "markdown"
+            }
+
+        elif extension == 'docx':
+            # For now, return simple structure for DOCX
+            # Full DOCX parsing requires reading file bytes, which will be added in future
+            logger.warning("DOCX parsing via content endpoint not yet fully implemented")
+            return {
+                "tiptap": {
+                    "type": "doc",
+                    "content": [{"type": "paragraph", "content": [{"type": "text", "text": content}]}]
+                },
+                "format": "docx",
+                "note": "Full DOCX parsing requires file bytes. Use file-based endpoint when available."
+            }
+
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported file type for TipTap parsing: {extension}. Only .md and .docx are supported."
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to parse file to TipTap: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
