@@ -69,6 +69,32 @@ class ExportService:
             self.pandoc_available = False
             raise PandocNotFoundError("Pandoc check timed out")
 
+        # Detect available PDF engines
+        self.pdf_engine = self._detect_pdf_engine()
+        if self.pdf_engine:
+            logger.info(f"PDF engine detected: {self.pdf_engine}")
+        else:
+            logger.warning("No PDF engine found. PDF export will require latex/xelatex installation.")
+
+    def _detect_pdf_engine(self) -> Optional[str]:
+        """Detect available PDF engines for Pandoc."""
+        engines = ["xelatex", "pdflatex", "lualatex"]
+
+        for engine in engines:
+            try:
+                result = subprocess.run(
+                    [engine, "--version"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                if result.returncode == 0:
+                    return engine
+            except (FileNotFoundError, subprocess.TimeoutExpired):
+                continue
+
+        return None
+
     def export_to_pdf(
         self,
         tiptap_json: dict,
@@ -93,6 +119,15 @@ class ExportService:
             ConversionError: If conversion fails
             TimeoutError: If conversion exceeds timeout
         """
+        # Check for PDF engine
+        if not self.pdf_engine:
+            raise ConversionError(
+                "PDF export requires LaTeX. Install xelatex/pdflatex:\n"
+                "  Ubuntu/Debian: sudo apt-get install texlive-xetex\n"
+                "  MacOS: brew install mactex\n"
+                "  Or use DOCX export instead."
+            )
+
         # Convert TipTap to Markdown
         markdown = self.tiptap_to_markdown(tiptap_json)
 
@@ -107,12 +142,12 @@ class ExportService:
             # Write markdown input
             input_path.write_text(markdown_with_meta, encoding="utf-8")
 
-            # Run Pandoc with xelatex
+            # Run Pandoc with detected PDF engine
             cmd = [
                 "pandoc",
                 str(input_path),
                 "-o", str(output_path),
-                "--pdf-engine=xelatex",
+                f"--pdf-engine={self.pdf_engine}",
                 "-V", "geometry:margin=1in",
                 "-V", "fontsize=12pt",
                 "-V", "colorlinks=true",
