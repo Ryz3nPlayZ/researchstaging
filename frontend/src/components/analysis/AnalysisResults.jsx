@@ -57,28 +57,28 @@ export const AnalysisResults = ({ result, onClose }) => {
 
     // Detect chart hints from code/output
     const lowerOutput = trimmed.toLowerCase();
-    if (lowerOutput.includes('plt.plot(') || lowerOutput.includes('plot(') || lowerOutput.includes('ggplot(')) {
+    if (lowerOutput.includes("plt.plot(") || lowerOutput.includes("plot(") || lowerOutput.includes("ggplot(")) {
       return {
         type: 'chart-hint',
         chartType: 'line',
         data: trimmed,
       };
     }
-    if (lowerOutput.includes('plt.bar(') || lowerOutput.includes('barplot(')) {
+    if (lowerOutput.includes("plt.bar(") || lowerOutput.includes("barplot(")) {
       return {
         type: 'chart-hint',
         chartType: 'bar',
         data: trimmed,
       };
     }
-    if (lowerOutput.includes('plt.scatter(') || lowerOutput.includes('plot.*type.*p'))) {
+    if (lowerOutput.includes("plt.scatter(") || lowerOutput.includes("plot.*type.*p"))) {
       return {
         type: 'chart-hint',
         chartType: 'scatter',
         data: trimmed,
       };
     }
-    if (lowerOutput.includes('plt.hist(') || lowerOutput.includes('hist(')) {
+    if (lowerOutput.includes("plt.hist(") || lowerOutput.includes("hist(")) {
       return {
         type: 'chart-hint',
         chartType: 'histogram',
