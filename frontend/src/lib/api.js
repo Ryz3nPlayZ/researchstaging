@@ -107,10 +107,10 @@ export const filesApi = {
   listFiles: (projectId) => api.get(`/files/projects/${projectId}/files`),
   getFileTree: (projectId) => api.get(`/files/projects/${projectId}/files/tree`),
   getFile: (fileId) => api.get(`/files/files/${fileId}`),
-  getFileContent: (fileId, projectId) => api.get(`/files/files/${fileId}/content`, {
+  getFileContent: (fileId, projectId) => api.get(`/files/${fileId}/content`, {
     params: { project_id: projectId }
   }),
-  parseToTipTap: (fileId, projectId) => api.get(`/files/files/${fileId}/content`, {
+  parseToTipTap: (fileId, projectId) => api.get(`/files/${fileId}/content`, {
     params: { project_id: projectId }
   }),
 
