@@ -1,6 +1,6 @@
 # Research Workspace - All-in-One Research Tool
 
-**Last updated:** 2025-01-31 after initialization
+**Last updated:** 2026-02-05 after v1.0 milestone completion
 
 ## What This Is
 
@@ -19,74 +19,137 @@ A web-based research workspace that consolidates literature review, data analysi
 ### Validated
 
 **Infrastructure Reuse (from existing Research Pilot codebase):**
-- ✓ FastAPI backend with PostgreSQL + Redis - existing
-- ✓ Task orchestration engine with state machine - existing
-- ✓ WebSocket real-time updates - existing
-- ✓ LLM service with multi-provider support (OpenAI, Gemini, Mistral, Groq) - existing
-- ✓ Credit system for API usage tracking - existing
-- ✓ Project/workspace data model - existing
-- ✓ React frontend shell with context providers - existing
-
-### Active
+- ✓ FastAPI backend with PostgreSQL + Redis — v1.0
+- ✓ Task orchestration engine with state machine — v1.0
+- ✓ WebSocket real-time updates — v1.0
+- ✓ LLM service with multi-provider support (OpenAI, Gemini, Mistral, Groq) — v1.0
+- ✓ Credit system for API usage tracking — v1.0
+- ✓ Project/workspace data model — v1.0
+- ✓ React frontend shell with context providers — v1.0
 
 **MVP Core Features (Writer + Chat + Analysis):**
-
-- [ ] **Rich Text Document Editor**
-  - TipTap-based editor with formatting comparable to Google Docs/MS Word
+- ✓ **Rich Text Document Editor** — v1.0
+  - TipTap-based editor with formatting (bold, italic, underline, headings, lists, tables, blockquotes)
   - Workspace-centric: documents live in project alongside data/files
-  - Autoformatting features (citations, references, headings)
-  - Feels polished, not janky, low resource usage
+  - Autoformatting: citations (APA, MLA, Chicago), bibliography auto-generation
+  - Auto-save with 4-second debounce + localStorage backup
+  - Version history with side-by-side diff view and restore
   - Works standalone (no AI required for basic writing)
-  - Must validate: Editor feels as good as Google Docs/Word
 
-- [ ] **Sidebar AI Agent Panel**
-  - Persistent sidebar (similar to Cursor AI) for agent interaction
+- ✓ **Sidebar AI Agent Panel** — v1.0
+  - Persistent sidebar (400px expanded, 60px collapsed) for agent interaction
   - Chat-driven interaction: AI proposes actions, user approves
-  - Agent has total recall: artifact-first memory of everything important (literature, analyses, findings, working artifacts)
-  - AI produces formal, structured, research-appropriate writing (objective/empirical statements, good flow)
-  - Multi-agent orchestration: router, planner, evaluator, peer-review emulation, work agents, writing agents (MVP-lite)
-  - Must validate: AI writes usable research content (not generic fluff)
+  - Agent has total recall: artifact-first memory (literature, analyses, findings, documents)
+  - AI produces formal, structured research content via multi-agent orchestration
+  - Multi-agent system: DocumentAgent, LiteratureAgent, MemoryAgent, GeneralAgent
+  - Plan proposal workflow for complex actions with user approval
 
-- [ ] **Project Import & File Management**
-  - Drag-and-drop file upload: PDFs, DOCX, MD, Excel, Python scripts, R scripts, standard research formats
-  - Hybrid organization: conventional folder structure + graph-based linking
-  - Files organized within project workspace
-  - Cloud-based storage for datasets and artifacts
+- ✓ **Project Import & File Management** — v1.0
+  - Drag-and-drop file upload (8 types: PDF, DOCX, MD, CSV, Excel, Python, R, JavaScript)
+  - File type validation, size limits (50MB configurable), duplicate auto-renaming
+  - Folder operations (create, rename, delete with recursive flag)
+  - File metadata extraction (PDF pages, CSV rows, Excel sheets, code lines)
+  - Cloud storage abstraction (local, S3, R2) with presigned URLs
+  - FileExplorer component with tree/list views, Navigator integration
 
-- [ ] **Data Analysis Execution**
-  - User uploads dataset or AI retrieves/acquires dataset
-  - Chat-driven analysis: user talks to AI about what to analyze
-  - AI writes Python/R code as file in cloud server
-  - AI executes code in sandboxed cloud environment
-  - Results displayed as tables or visualizations in frontend
-  - Must validate: End-to-end analysis works (upload → chat → code → results)
+- ✓ **Literature Search & Review** — v1.0
+  - Semantic Scholar API integration for paper discovery
+  - Unpaywall integration for open-access PDF finding with prioritization
+  - PDF parsing and LLM-powered claim extraction (5-20 claims per paper with confidence scores)
+  - Citation formatting (APA, MLA, Chicago) with literature search integration
+  - Claim storage to memory with full provenance (paper ID, authors, year, section, quote)
 
-- [ ] **Information Graph Backend (Foundation)**
-  - Tracks references, claims, data analyses, relationships
-  - Supports visualizing associations, causality, dependencies
-  - Ensures claim consistency and prevents contradictions
-  - Foundation for future UI visualization (not in MVP)
+- ✓ **Data Analysis Execution** — v1.0
+  - AI code generation for Python and R
+  - Monaco Editor integration with syntax highlighting and keyboard shortcuts
+  - Sandboxed code execution via subprocess with 60-second timeout protection
+  - Analysis results display (tables, charts via Plotly.js, text output)
+  - Multi-format download (CSV, PNG, TXT)
+  - Memory integration (findings auto-saved on execution)
 
-**Post-MVP Features:**
-- [ ] Literature review integration (AI-assisted search, summarization, direct integration)
+- ✓ **Information Graph Backend (Foundation)** — v1.0
+  - Claim storage with provenance tracking (source, confidence, extracted_at)
+  - Finding storage from data analyses with metadata
+  - User preferences storage and retrieval
+  - Claim relationship tracking (8 relationship types: association, correlation, causality, prerequisite, contradiction, support, refines, expands_on)
+  - Graph traversal via recursive CTEs
+  - Relevance scoring with TF-IDF keyword matching (4-factor algorithm)
+
+- ✓ **Document Export** — v1.0
+  - Pandoc-based export service with TipTap JSON → Markdown conversion
+  - PDF export with LaTeX engine auto-detection (xelatex, pdflatex, lualatex)
+  - DOCX export (works without LaTeX)
+  - ExportButton component with dropdown menu, blob download handling
+  - Ownership validation and error handling
+
+- ✓ **File Content Loading** — v1.0 (gap closure)
+  - Markdown to TipTap parser (headings, bold, italic, lists, code blocks, links)
+  - DOCX to TipTap parser using python-docx (Word heading detection, formatting preservation)
+  - Workspace integration (file opening workflow complete)
+  - File-document association via tags metadata
+
+**Post-MVP Features (v2 candidates):**
+- [ ] Literature review integration enhancements (AI-assisted search, summarization improvements)
 - [ ] Information graph visualization UI (interactive claim/data relationship browser)
 - [ ] Peer review emulation agent (evaluates paper against literature)
-- [ ] Custom agent builder (user-defined research workflows)
+- [ ] Additional export formats (LaTeX, HTML, Markdown)
+- [ ] Database-backed chat storage (currently in-memory for MVP)
 
-### Out of Scope
+---
 
-- **Literature search pipeline (from Research Pilot)** - not MVP focus, defer to post-MVP
-- **Reference extraction/citation graph (from Research Pilot)** - not MVP focus, defer to post-MVP
-- **"Research goal → plan → execute" flow (from Research Pilot)** - wrong UX pattern, replace with workspace-centric interaction
-- **Navigator/Workspace/Inspector layout (from Research Pilot)** - wrong for writing-focused app, replace with editor + sidebar layout
-- **Terminal UI (TUI)** - not needed for web-based research workspace
-- **Complex custom agents** - MVP-lite orchestration only (router, planner, evaluator, work agents, writing agents)
-- **Production hosting/deployment** - MVP is local/development usage only
-- **Multi-user collaboration** - single-user MVP
-- **Version control for documents** - manual saves only in MVP
-- **Advanced citation management** - basic integration only in MVP
+## Current State
 
-## Context
+**Shipped Version:** v1.0 Complete Research Workspace (2026-02-05)
+
+**Implementation:**
+- 9 phases completed with 31 plans
+- 281 files created/modified
+- 78,892 lines of code (Python backend, React frontend)
+- 13 days development timeline (Jan 23 → Feb 5, 2026)
+
+**Tech Stack:**
+- Backend: FastAPI, PostgreSQL, Redis, SQLAlchemy, TipTap, Pandoc, python-docx, Plotly
+- Frontend: React 19, TipTap Editor, Shadcn UI, Tailwind CSS, Monaco Editor, Plotly.js
+- Infrastructure: Docker (PostgreSQL + Redis), cloud storage abstraction (local/S3/R2)
+
+**Quality Status:**
+- All 64 v1 requirements satisfied
+- All P0 bugs resolved
+- 8/8 cross-phase integrations verified working
+- Code complete, manual browser testing deferred per user request
+
+**Known Technical Debt (Non-Blocking):**
+- P1: Manual browser testing required before production release
+- P2: ESLint warnings in 4 frontend files (missing useCallback dependencies)
+- P2: Minor citation formatting quirks (extra commas in author names)
+- P2: Duplicate markdown_to_tiptap function in file_service.py (shadowed at line 395)
+- P3: In-memory chat storage (100 message limit - migration path documented)
+
+**Documentation:**
+- Roadmap archive: `.planning/milestones/v1.0-ROADMAP.md`
+- Requirements archive: `.planning/milestones/v1.0-REQUIREMENTS.md`
+- Milestone audit: `.planning/milestones/v1.0-FINAL-MILESTONE-AUDIT.md`
+
+---
+
+## Next Milestone Goals
+
+**Status:** Planning phase - awaiting user feedback and usage patterns
+
+**Potential v1.1 Directions:**
+1. **Stability & Polish** - Fix technical debt, complete manual testing, address ESLint warnings
+2. **User Experience Improvements** - Based on real usage feedback
+3. **Performance Optimizations** - Large file handling, query optimization
+4. **Additional Export Formats** - LaTeX, HTML, Markdown export
+5. **Enhanced AI Capabilities** - Better context management, improved writing quality
+
+**Decision:** Next milestone scope to be determined based on:
+- User feedback from v1.0 usage
+- Bug reports and technical issues discovered
+- Performance bottlenecks identified in real-world usage
+- Feature requests from actual research workflows
+
+---
 
 **Existing Codebase (Research Pilot):**
 - Brownfield evolution from existing Research Pilot codebase
