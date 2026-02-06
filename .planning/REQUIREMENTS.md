@@ -193,16 +193,16 @@ Which phases cover which requirements. Updated by create-roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FRONT-01 through FRONT-06 | Phase 1 | Pending |
-| FRONT-07 through FRONT-11 | Phase 2 | Pending |
-| FRONT-12 through FRONT-18 | Phase 3 | Pending |
-| FRONT-19 through FRONT-20 | Phase 4 | Pending |
-| FRONT-21 through FRONT-24 | Phase 5 | Pending |
+| FRONT-01, FRONT-02, FRONT-03, FRONT-04, FRONT-05, FRONT-06 | Phase 10 | Pending |
+| FRONT-07, FRONT-08, FRONT-09, FRONT-10, FRONT-11 | Phase 11 | Pending |
+| FRONT-12, FRONT-13, FRONT-14, FRONT-15, FRONT-16, FRONT-17, FRONT-18 | Phase 12 | Pending |
+| FRONT-19, FRONT-20 | Phase 13 | Pending |
+| FRONT-21, FRONT-22, FRONT-23, FRONT-24 | Phase 14 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 24 total
-- Mapped to phases: 0 (will be set by create-roadmap)
-- Unmapped: 24 ⚠️
+- Mapped to phases: 24
+- Unmapped: 0 ✓
 
 ---
 

@@ -2,275 +2,145 @@
 
 ## Overview
 
-The Research Workspace delivers stateful research intelligence — a single workspace where an AI agent remembers everything important and provides genuinely helpful research assistance. The roadmap progresses from foundational authentication through file management, memory infrastructure, document editing, literature capabilities, AI interaction, data analysis, and finally export functionality.
+v1.1 is a **frontend integration milestone** that replaces the existing React frontend with a new design from `researchai-workspace.zip` (AI Studio export), connecting it to the proven FastAPI backend from v1.0. This maintains all 64 validated v1.0 requirements while dramatically improving UI/UX.
+
+**Scope:** Complete frontend replacement with backend integration, not greenfield development. All backend APIs exist and work from v1.0. The new frontend provides a polished, modern interface with Material Symbols icons and cleaner component architecture.
+
+**Phase numbering:** Continues from v1.0 (which ended at Phase 9). v1.1 uses phases 10-14.
+
+## Milestones
+
+- ✅ **v1.0 Complete Research Workspace** - Phases 1-9 (shipped 2026-02-05)
+- 🚧 **v1.1 Frontend Integration & Polish** - Phases 10-14 (in progress)
+- 📋 **v2.0 [Future]** - Phases 15+ (planned)
 
 ## Phases
 
-**Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+<details>
+<summary>✅ v1.0 Complete Research Workspace (Phases 1-9) - SHIPPED 2026-02-05</summary>
 
-- [x] **Phase 1: Authentication & User Management** - Secure access via mock authentication (Google OAuth code preserved for production)
-- [x] **Phase 2: File & Project Management** - Upload and organize research files
-- [x] **Phase 3: Memory & Information Graph Backend** - Store research information and relationships
-- [x] **Phase 4: Rich Text Document Editor** - Write papers with citations and version history
-- [x] **Phase 6: AI Agent & Sidebar Chat** - Interactive AI research assistant
-- [x] **Phase 7: Data Analysis** - Execute R/Python analyses in cloud sandbox
-- [x] **Phase 8: Document Export** - Export papers to PDF and DOCX
-- [x] **Phase 9: File Content Loading** - Gap closure: Fix file opening from File Explorer
+v1.0 delivered a complete research workspace with rich text editor, AI chat, file management, literature search, data analysis, and document export. All 64 requirements satisfied, 9 phases completed with 31 plans, 78,892 lines of code.
 
-## Phase Details
+See [`.planning/milestones/v1.0-FINAL-MILESTONE-AUDIT.md`](.planning/milestones/v1.0-FINAL-MILESTONE-AUDIT.md) for full details.
 
-### Phase 1: Authentication & User Management
+</details>
 
-**Goal**: Users can securely access the workspace via Google OAuth
+### 🚧 v1.1 Frontend Integration & Polish (In Progress)
 
-**Depends on**: Nothing (first phase)
+**Milestone Goal:** Integrate the new AI Studio frontend design (from `researchai-workspace.zip`) with the existing FastAPI backend, maintaining all v1.0 features while improving UI/UX.
 
-**Requirements**: AUTH-01, AUTH-02, AUTH-03, AUTH-04
-
+#### Phase 10: Frontend Foundation & Setup
+**Goal**: Establish the new frontend project structure and development environment
+**Depends on**: Phase 9 (v1.0 complete)
+**Requirements**: FRONT-01, FRONT-02, FRONT-03, FRONT-04, FRONT-05, FRONT-06
 **Success Criteria** (what must be TRUE):
-  1. User can sign in with Google OAuth
-  2. User account is automatically created on first login
-  3. User session persists across browser refresh
-  4. User can sign out from any page
+  1. Development server runs on port 3000 without errors
+  2. Frontend displays the new UI (Dashboard, Files, Library, Editor views render)
+  3. Material Symbols icons load and display correctly
+  4. Tailwind CSS custom theme matches frontend3 design (primary color #4a8fe3)
+  5. Vite build completes successfully with TypeScript compilation
+**Research**: Unlikely (standard Vite + React setup, patterns exist)
+**Plans**: TBD
 
-**Research**: Likely (Google OAuth integration)
-**Research topics**: Google OAuth 2.0 flow, session token strategy, FastAPI OAuth patterns
+Plans:
+- [ ] 10-01: Initialize frontend project and configure build system
+- [ ] 10-02: Configure Tailwind CSS and Material Symbols integration
+- [ ] 10-03: Set up development environment proxy to FastAPI backend
 
-**Completed**: 2025-02-01
-
-**Plans**:
-- [x] 01-01: Mock authentication system with FastAPI routes and React context
-- [x] 01-02: Fix AppContent AuthContext integration (gap closure)
-
-### Phase 2: File & Project Management
-
-**Goal**: Users can upload and organize research files in cloud workspace
-
-**Depends on**: Phase 1 (requires authenticated user context)
-
-**Requirements**: FILE-01, FILE-02, FILE-03, FILE-04, FILE-05, FILE-06, FILE-07, FILE-08, FILE-09, FILE-10, FILE-11
-
+#### Phase 11: View Integration
+**Goal**: Connect all main views to backend APIs
+**Depends on**: Phase 10
+**Requirements**: FRONT-07, FRONT-08, FRONT-09, FRONT-10, FRONT-11
 **Success Criteria** (what must be TRUE):
-  1. User can upload files via drag-and-drop
-  2. User can create nested folder structure
-  3. Files are stored in cloud-based project workspace
-  4. All file types supported (PDF, DOCX, MD, .py, .r, .js, CSV, Excel)
+  1. Dashboard loads real project data from `/api/projects` (not mock data)
+  2. Files view displays actual files from `/api/files` endpoint
+  3. Library view shows papers from backend literature database
+  4. Editor view uses TipTap editor (not contentEditable div)
+  5. AI chat sends messages to backend `/api/chat` (not direct Gemini API)
+**Research**: Unlikely (TipTap integration, API connections - established patterns)
+**Plans**: TBD
 
-**Research**: Unlikely (leverage existing Research Pilot file upload/storage patterns)
+Plans:
+- [ ] 11-01: Connect Dashboard and Files views to backend APIs
+- [ ] 11-02: Connect Library view to literature search backend
+- [ ] 11-03: Integrate TipTap editor in Editor view
+- [ ] 11-04: Connect AI sidebar chat to multi-agent backend
 
-**Completed**: 2025-02-03
-
-**Plans**:
-- [x] 02-01: File Management API Enhancement — Validate file types, handle duplicates, extract metadata, improve error handling
-- [x] 02-02: File Explorer Frontend Component — Tree view, drag-drop upload, folder operations, file operations, API client
-- [x] 02-03: Navigator Integration and Routing — Integrate FileExplorer, add view switching, file selection updates Inspector, breadcrumb navigation
-- [x] 02-04: Cloud Storage Integration — S3/R2 storage with local fallback, presigned URLs, migration utility
-
-### Phase 3: Memory & Information Graph Backend
-
-**Goal**: System stores and tracks research information with relationship graph
-
-**Depends on**: Phase 2 (requires file/project context)
-
-**Requirements**: MEM-01, MEM-02, MEM-03, MEM-04, MEM-05, MEM-06
-
+#### Phase 12: Backend Feature Integration
+**Goal**: Integrate backend features for full v1.0 feature parity
+**Depends on**: Phase 11
+**Requirements**: FRONT-12, FRONT-13, FRONT-14, FRONT-15, FRONT-16, FRONT-17, FRONT-18
 **Success Criteria** (what must be TRUE):
-  1. Claims extracted from literature are stored
-  2. Findings from data analyses are stored
-  3. User preferences are stored
-  4. Claim relationships are tracked (association, correlation, causality, prerequisite)
-  5. Backend provides graph data model for papers, data sources, and information
+  1. User can log in and session persists across refresh
+  2. File upload works via drag-drop and stores files in backend
+  3. Document CRUD operations create/read/update/delete documents
+  4. Citations insert via @-mention and bibliography generates
+  5. Data analysis executes Python/R code and displays results
+  6. Document export downloads PDF and DOCX files
+  7. Information graph queries return claims/findings
+**Research**: Unlikely (backend APIs already exist from v1.0)
+**Plans**: TBD
 
-**Research**: Likely (graph data model design, PostgreSQL graph patterns)
-**Research topics**: PostgreSQL graph extensions, claim relationship schema design, relevance prioritization algorithms
+Plans:
+- [ ] 12-01: Implement authentication flow and file upload functionality
+- [ ] 12-02: Integrate document CRUD operations and citation formatting
+- [ ] 12-03: Integrate data analysis execution and document export
+- [ ] 12-04: Integrate information graph queries
 
-**Completed**: 2026-02-04
-
-**Plans**:
-- [x] 03-01: Memory Backend Data Model — Claim, Finding, Preference, ClaimRelationship tables with adjacency list graph pattern
-- [x] 03-02: Claim Extraction and Storage Service — LLM-powered extraction with provenance tracking
-- [x] 03-03: Memory Query and Retrieval API — REST API with search, filtering, graph traversal
-- [x] 03-04: User Preferences and Relevance Scoring — TF-IDF keyword matching with 4-factor algorithm
-
-### Phase 4: Rich Text Document Editor
-
-**Goal**: Users can write research papers with citations, formatting, and version history
-
-**Depends on**: Phase 3 (requires memory backend for citations)
-
-**Requirements**: EDIT-01, EDIT-02, EDIT-03, EDIT-04, EDIT-05, EDIT-06, EDIT-07, EDIT-08, EDIT-09, EDIT-10, EDIT-11, EDIT-12, EDIT-13, EDIT-14, EDIT-15
-
+#### Phase 13: Real-Time Features
+**Goal**: Implement WebSocket connection and auto-save functionality
+**Depends on**: Phase 12
+**Requirements**: FRONT-19, FRONT-20
 **Success Criteria** (what must be TRUE):
-  1. User can write and format text with bold, italic, underline
-  2. User can create headings, lists, block quotes, tables
-  3. User can insert and edit citations in-text
-  4. System auto-formats citations in APA, MLA, or Chicago style
-  5. System auto-generates bibliography from document citations
-  6. User can view and restore previous document versions
-  7. System auto-saves document content every 2-5 seconds during typing
-  8. Editor typing response time is <100ms for keystrokes
+  1. WebSocket connects to `ws://localhost:8000/ws/{project_id}` on mount
+  2. Document changes auto-save to backend after 4 seconds of inactivity
+  3. "Saving..." and "Saved" status indicators display in editor
+**Research**: Unlikely (WebSocket infrastructure exists from v1.0)
+**Plans**: TBD
 
-**Research**: Likely (TipTap editor setup, citation management patterns)
-**Research topics**: TipTap editor with React, citation management architecture, document versioning strategy
+Plans:
+- [ ] 13-01: Implement WebSocket connection for real-time updates
+- [ ] 13-02: Implement auto-save with debouncing and status indicators
 
-**Completed**: 2026-02-05 (All 6 plans code complete, pending manual testing and P0 bug fix)
-
-**Plans**:
-- [x] 04-01: Document Backend Foundation (Database models, CRUD API, migration)
-- [x] 04-02: TipTap Editor Frontend (Editor component, toolbar, auto-save)
-- [x] 04-03: Citation Management Backend (Model, formatting service, API)
-- [x] 04-04: Document Version History (Version UI, diff view, restore)
-- [x] 04-05: Citation UI and Bibliography (Insertion UI, bibliography generation)
-- [x] 04-06: AI Text Assistance (Rewrite, grammar check)
-
-**Progress**: ✅ COMPLETE (6/6 plans = 100% code complete, API verified)
-**Known Issues**: P0 bug (file content loading from File Explorer broken) - see agentteam.md
-
-### Phase 5: Literature Search & Review
-
-**Goal**: AI can discover, acquire, and analyze research papers
-
-**Depends on**: Phase 3 (requires memory backend to store claims)
-
-**Requirements**: LIT-01, LIT-02, LIT-03, LIT-04, LIT-05, LIT-06, LIT-07
-
+#### Phase 14: Production Polish
+**Goal**: Resolve code quality issues and complete manual testing
+**Depends on**: Phase 13
+**Requirements**: FRONT-21, FRONT-22, FRONT-23, FRONT-24
 **Success Criteria** (what must be TRUE):
-  1. AI agent can search for papers via Semantic Scholar API
-  2. AI agent uses Unpaywall to find open-access PDFs
-  3. System prioritizes papers with full PDF access in search results
-  4. AI agent extracts key claims and statements from papers
-  5. AI agent saves extracted claims to memory
-  6. System auto-formats citations during literature review
+  1. All ESLint warnings resolved (0 warnings in console)
+  2. Component loading states display during API calls
+  3. All user flows work end-to-end (create project → upload files → write document → export)
+  4. Responsive layout works on desktop (1280px+), tablet (768-1279px), mobile (<768px)
+**Research**: Unlikely (code quality and testing - standard practices)
+**Plans**: TBD
 
-**Research**: Complete - Semantic Scholar, Unpaywall, and PDF parsing already implemented
-**Research topics**: Semantic Scholar API endpoints, Unpaywall integration, PDF text extraction patterns, claim extraction algorithms
+Plans:
+- [ ] 14-01: Resolve ESLint warnings and improve component architecture
+- [ ] 14-02: Add loading states and error boundaries
+- [ ] 14-03: Complete manual browser testing for all user flows
+- [ ] 14-04: Verify responsive design across screen sizes
 
-**Completed**: 2026-02-05
+### 📋 v2.0 [Future] (Planned)
 
-**Plans**:
-- [x] 05-01: Literature Search & Unpaywall Integration — API endpoints, UI component, PDF prioritization
-- [x] 05-02: AI Claim Extraction from Papers — PDF-to-claims pipeline, LLM extraction, API endpoint
-- [x] 05-03: Citation Integration — Literature search to citation picker, auto-formatting
+**Milestone Goal:** To be determined based on v1.1 usage feedback and user requests
 
-### Phase 6: AI Agent & Sidebar Chat
-
-**Goal**: Users interact with AI for research assistance via persistent sidebar
-
-**Depends on**: Phase 4 (editor context) and Phase 5 (literature context)
-
-**Requirements**: AI-01, AI-02, AI-03, AI-04, AI-05, AI-06, AI-07, AI-08, AI-09, AI-10
-
-**Success Criteria** (what must be TRUE):
-  1. User sees persistent sidebar panel for AI interaction
-  2. User can send chat messages to AI agent
-  3. AI agent has read access to current document content
-  4. AI agent has read access to analysis results
-  5. AI agent has read access to stored claims and findings
-  6. AI agent has read access to user preferences
-  7. AI agent can refine text directly (simple changes)
-  8. AI agent presents plan for complex actions before execution
-  9. User can approve or reject AI-proposed plans
-  10. AI agent executes plan only after user approval
-
-**Research**: Complete - Multi-agent patterns and proposal-based UX follow established LLM service patterns
-**Research topics**: Multi-agent orchestration patterns, proposal-based UX, router/planner/evaluator agent architecture
-
-**Completed**: 2026-02-05
-
-**Plans**:
-- [x] 06-01: Persistent Sidebar Chat — Chat panel, API endpoints, message history, workspace integration
-- [x] 06-02: Context Injection & Multi-Agent Orchestration — Agent router, specialized agents, context loading
-- [x] 06-03: Plan Proposal & Text Refinement — Plan generation, approval UI, text refinement integration
-
-### Phase 7: Data Analysis
-
-**Goal**: Users can analyze datasets through AI-generated code execution
-
-**Depends on**: Phase 3 (memory backend to store results) and Phase 6 (AI agent)
-
-**Requirements**: ANA-01, ANA-02, ANA-03, ANA-04, ANA-05, ANA-06, ANA-07, ANA-08, ANA-09
-
-**Success Criteria** (what must be TRUE):
-  1. AI agent can generate R code for data analysis
-  2. AI agent can generate Python code for data analysis
-  3. System executes code in sandboxed cloud environment
-  4. System displays analysis results as tables
-  5. System displays analysis results as charts
-  6. System displays analysis results as visualizations
-  7. User can download analysis results
-  8. User can view and edit AI-generated code before execution
-  9. System saves analysis results to memory for future access
-
-**Research**: Complete - Subprocess-based execution with timeout protection, Plotly for visualization
-**Research topics**: Subprocess execution, timeout handling, CSV/JSON parsing, Plotly chart rendering
-
-**Completed**: 2026-02-05
-
-**Plans**:
-- [x] 07-01: Code Generation and Editing UI — AnalysisAgent, code generation API, CodeEditor component
-- [x] 07-02: Code Execution Service — ExecutionService, execution API, memory integration
-- [x] 07-03: Visualization and Export — AnalysisResults component, download endpoints, workflow integration
-
-### Phase 8: Document Export
-
-**Goal**: Users can export finished papers in standard formats
-
-**Depends on**: Phase 4 (document editor)
-
-**Requirements**: EXP-01, EXP-02
-
-**Success Criteria** (what must be TRUE):
-  1. User can export document as PDF
-  2. User can export document as DOCX
-
-**Research**: Likely (Pandoc integration or TipTap export)
-**Research topics**: TipTap export to PDF/DOCX, Pandoc integration, format fidelity
-
-**Completed**: 2026-02-05
-
-**Plans**:
-- [x] 08-01: Backend Export Service and API — Pandoc-based export service with TipTap to Markdown conversion, PDF engine auto-detection, and export API endpoints
-- [x] 08-02: Frontend Export UI — ExportButton component with dropdown menu, blob download handling, loading states, and error handling
-
-### Phase 9: File Content Loading (Gap Closure)
-
-**Goal**: Users can open existing files from File Explorer in Document Editor
-
-**Depends on**: Phase 2 (File Management) and Phase 4 (Document Editor)
-
-**Gap Closure**: Closes P0 bug from v1.0 milestone audit
-
-**Success Criteria** (what must be TRUE):
-  1. User can click `.md` file in File Explorer and see content in Document Editor
-  2. User can click `.docx` file in File Explorer and see content in Document Editor
-  3. File content is converted to TipTap JSON format for editor initialization
-  4. Workspace loads file content before creating document
-
-**Research**: Unlikely (follow established file service and document editor patterns)
-
-**Completed**: 2026-02-05
-
-**Plans**:
-- [x] 09-01: File Content API — GET /files/{id}/content endpoint with raw file return
-- [x] 09-02: Markdown to TipTap Parser — Convert Markdown to TipTap JSON structure
-- [x] 09-03: DOCX to TipTap Parser — Extract DOCX content and convert to TipTap JSON
-- [x] 09-04: Workspace Content Loading — Fetch and load file content when opening from File Explorer
+See [PROJECT.md](.planning/PROJECT.md) for potential v2.0 directions (information graph UI, additional export formats, enhanced literature features, database chat storage).
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8
+Phases execute in numeric order: 10 → 11 → 12 → 13 → 14
 
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Authentication & User Management | 2/2 | ✓ Complete | 2025-02-01 |
-| 2. File & Project Management | 4/4 | ✓ Complete | 2025-02-03 |
-| 3. Memory & Information Graph Backend | 4/4 | ✓ Complete | 2026-02-04 |
-| 4. Rich Text Document Editor | 6/6 | ✓ Complete | 2026-02-05 |
-| 5. Literature Search & Review | 3/3 | ✓ Complete | 2026-02-05 |
-| 6. AI Agent & Sidebar Chat | 3/3 | ✓ Complete | 2026-02-05 |
-| 7. Data Analysis | 3/3 | ✓ Complete | 2026-02-05 |
-| 8. Document Export | 2/2 | ✓ Complete | 2026-02-05 |
-| 9. File Content Loading | 4/4 | ✓ Complete | 2026-02-05 |
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1-9 | v1.0 | 31/31 | Complete | 2026-02-05 |
+| 10. Frontend Foundation | v1.1 | 0/3 | Not started | - |
+| 11. View Integration | v1.1 | 0/4 | Not started | - |
+| 12. Backend Feature Integration | v1.1 | 0/4 | Not started | - |
+| 13. Real-Time Features | v1.1 | 0/2 | Not started | - |
+| 14. Production Polish | v1.1 | 0/4 | Not started | - |
+
+---
+
+*Roadmap created: 2026-02-06*
+*Last updated: 2026-02-06 after v1.1 milestone initialization*

@@ -1,128 +1,69 @@
----
-phase: 04-rich-text-editor
-plan: 03
-subsystem: backend
-tags: [citations, academic-writing, apa, mla, chicago, documents]
+# Plan 04-03: Citation Management Backend
 
-# Dependency graph
-requires:
-  - phase: 03-memory-backend
-    provides: Paper and Claim models for citation sources
-provides:
-  - DocumentCitation model with polymorphic source associations (paper/claim/manual)
-  - CitationService with APA, MLA, and Chicago formatting
-  - Citation CRUD and bibliography generation API endpoints
-affects: [04-04, 04-05] # Future document editor plans
+**Status:** ✓ Complete
+**Duration:** 4 minutes
+**Date:** 2026-02-04
 
-# Tech tracking
-tech-stack:
-  added: []
-  patterns:
-    - Polymorphic source associations (source_type enum + source_id)
-    - Citation service layer with multiple format support
-    - Bibliography generation with style-specific sorting
+## Tasks Completed
 
-key-files:
-  created:
-    - backend/citation_service.py
-    - backend/database/models.py (DocumentCitation, Document, DocumentVersion)
-  modified:
-    - backend/memory_api.py (citation endpoints)
-    - backend/api_models.py (DocumentCitationRequest/Response)
+### Task 1: Create DocumentCitation Model
+**Commits:**
+- b606402 - `feat(04-03): add DocumentCitation, Document, and DocumentVersion models`
 
-key-decisions:
-  - "Polymorphic source pattern - using source_type enum + source_id allows citations to reference papers, claims, or manual entries without separate foreign keys"
-  - "Three citation styles implemented (APA, MLA, Chicago) - covers 90%+ of academic use cases"
-  - "Bibliography endpoint returns formatted string - simpler than returning structured data for rendering"
+Added to `backend/database/models.py`:
+- DocumentCitation model with:
+  - id, document_id (FK CASCADE), citation_position (JSONB)
+  - source_type enum (PAPER, CLAIM, MANUAL)
+  - source_id (polymorphic reference to papers.id or claims.id)
+  - citation_data (JSONB with formatted citation)
+  - created_at timestamp
+- Indexes on document_id and (source_type, source_id)
 
-patterns-established:
-  - "Citation source polymorphism - source_type enum (PAPER/CLAIM/MANUAL) + source_id pattern for flexible references"
-  - "Service layer formatting - CitationService encapsulates complex citation formatting logic separate from API"
-  - "Bibliography generation - collect all document citations, format in bulk, sort by style requirements"
+### Task 2: Create Citation Formatting Service
+**Commit:** 944bebf - `feat(04-03): add CitationService for academic citation formatting`
 
-# Metrics
-duration: 4min
-completed: 2026-02-04
----
+Created `backend/citation_service.py` (100+ lines):
+- format_citation(source_type, source_data, style) - Formats individual citations
+- Three style methods:
+  - format_apa() - "{Author}. ({Year}). {Title}. {Venue}."
+  - format_mla() - "{Author}. \"{Title}.\" {Venue}, {Year}."
+  - format_chicago() - "{Author}. {Year}. \"{Title}.\" {Venue}."
+- format_bibliography(citations, style) - Formats and sorts bibliography
+- Author formatting: handles single, multiple, et al.
+- Venue extraction with fallback chain
 
-# Phase 04 Plan 03: Citation Management Backend Summary
+### Task 3: Create Citation API Endpoints
+**Commit:** 906d68d - `feat(04-03): add citation API endpoints`
 
-**Citation storage with polymorphic source links, APA/MLA/Chicago formatting service, and bibliography generation API**
+Added to `backend/memory_api.py`:
+- GET /api/documents/{id}/citations - List all citations for document
+- POST /api/documents/{id}/citations - Create citation
+- PUT /api/documents/{id}/citations/{citation_id} - Update citation
+- DELETE /api/documents/citations/{citation_id} - Delete citation
+- GET /api/documents/{id}/bibliography?style={style} - Generate bibliography
 
-## Performance
+All endpoints follow async patterns with Pydantic validation.
 
-- **Duration:** 4 minutes
-- **Started:** 2026-02-05T00:56:10Z
-- **Completed:** 2026-02-05T01:00:37Z
-- **Tasks:** 3
-- **Files modified:** 4
+## Deviations
 
-## Accomplishments
+None. All tasks completed as specified.
 
-- Created DocumentCitation model supporting references to papers, claims, or manual entries
-- Implemented CitationService with APA 7th, MLA 9th, and Chicago 17th edition formatting
-- Added citation CRUD endpoints and bibliography generation to memory_api
-- Created Document and DocumentVersion models for rich text editor foundation
+## Verification
 
-## Task Commits
+✓ DocumentCitation model created with correct fields and enum  
+✓ CitationService formats citations in APA, MLA, Chicago styles  
+✓ API endpoints created and functional  
+✓ Bibliography generation works  
+✓ Polymorphic source associations work (paper/claim/manual)  
+✓ All 3 citation styles supported (APA 7th, MLA 9th, Chicago 17th)
 
-Each task was committed atomically:
+## Next Steps
 
-1. **Task 1: Create DocumentCitation model** - `b606402` (feat)
-2. **Task 2: Create citation formatting service** - `944bebf` (feat)
-3. **Task 3: Create citation API endpoints** - `906d68d` (feat)
+Citation backend is complete with model, formatting service, and API endpoints. Supports dual-mode citations (memory backend + manual entry) and all three academic styles (APA, MLA, Chicago). Ready for Citation UI integration (Phase 04-05) and document editor integration.
 
-**Plan metadata:** (not applicable - will be added after state update)
+## Design Decisions
 
-## Files Created/Modified
-
-### Created
-- `backend/citation_service.py` - Citation formatting service with APA/MLA/Chicago support
-
-### Modified
-- `backend/database/models.py` - Added DocumentCitation, Document, DocumentVersion models, CitationSource enum
-- `backend/api_models.py` - Added DocumentCitationRequest and DocumentCitationResponse models
-- `backend/memory_api.py` - Added citation CRUD endpoints and bibliography generation
-
-## Decisions Made
-
-1. **Polymorphic source associations** - Used `source_type` enum (PAPER/CLAIM/MANUAL) + `source_id` pattern instead of separate foreign keys. This allows citations to reference any source type without schema changes and follows the established Claim model pattern.
-
-2. **Citation service layer** - Created separate CitationService class instead of formatting in endpoints. This keeps formatting logic testable, reusable, and follows established service layer patterns (MemoryService, RelevanceService).
-
-3. **Bibliography returns formatted string** - API returns pre-formatted bibliography text rather than structured data. Simplifies frontend integration and avoids duplicating formatting logic.
-
-4. **Document and DocumentVersion models** - Added these models as foundational structure for document editor, even though not explicitly required in this plan. They're needed for citations to reference documents.
-
-## Deviations from Plan
-
-None - plan executed exactly as written. All three tasks completed as specified:
-- Task 1: DocumentCitation model with correct fields, indexes, and CitationSource enum
-- Task 2: CitationService with all three styles (APA, MLA, Chicago)
-- Task 3: All five API endpoints functional (GET list, POST create, PUT update, DELETE remove, GET bibliography)
-
-## Issues Encountered
-
-None. All verification checks passed on first attempt.
-
-## User Setup Required
-
-None - no external service configuration required. All citation formatting is done server-side using data already in the database.
-
-## Next Phase Readiness
-
-**What's ready:**
-- Citation storage and retrieval backend complete
-- Bibliography generation functional for all three styles
-- Document model foundation ready for TipTap content storage
-
-**For next phase (04-04):**
-- Document endpoints (CRUD) need to be created
-- TipTap JSON content handling needs to be implemented
-- Document version history endpoints need to be created
-
-**No blockers.** The citation management backend is complete and ready for document editor frontend integration.
-
----
-*Phase: 04-rich-text-editor, Plan: 03*
-*Completed: 2026-02-04*
+1. **CitationService encapsulation** - Separate service for all citation formatting logic
+2. **Style-specific formatting** - Separate methods for APA, MLA, Chicago with proper rules
+3. **Bibliography as formatted string** - API returns pre-formatted text (not structured data) to avoid duplicating formatting logic
+4. **Polymorphic source pattern** - source_type + source_id for flexible references without separate FKs
