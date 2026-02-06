@@ -1,150 +1,191 @@
-# Requirements: Research Workspace
+# Requirements: Research Workspace v1.1
 
-**Defined:** 2025-02-01
+**Defined:** 2026-02-06
+**Milestone:** v1.1 Frontend Integration & Polish
 **Core Value:** Stateful research intelligence — Single workspace where AI agent remembers everything important (all chats, analyses, documents, file contents) and uses that context to provide genuinely helpful research assistance.
 
-## v1 Requirements
+## v1.1 Requirements
 
-Requirements for initial release. Each maps to roadmap phases.
+Requirements for v1.1 frontend integration milestone. Goal: Integrate new React 19 + TypeScript + Vite frontend (from researchai-workspace.zip) with existing FastAPI backend, maintaining all v1.0 validated features while improving UI/UX.
+
+### Frontend Architecture & Setup
+
+- [ ] **FRONT-01**: Frontend project initialized with new design from researchai-workspace.zip
+- [ ] **FRONT-02**: Build system configured with Vite + React 19 + TypeScript
+- [ ] **FRONT-03**: Development environment proxy configured to existing FastAPI backend (http://localhost:8000)
+- [ ] **FRONT-04**: Material Symbols icons integrated with proper loading
+- [ ] **FRONT-05**: Tailwind CSS configured with custom theme matching researchai-workspace.zip design
+- [ ] **FRONT-06**: Development server runs without errors (`npm run dev` serves frontend)
+
+### View Integration
+
+- [ ] **FRONT-07**: Dashboard view connects to `/api/projects` backend endpoint
+  - Replace mock project data with real API calls
+  - Display projects from backend database
+  - "Create Project" button triggers backend project creation
+- [ ] **FRONT-08**: Files view connects to `/api/files` backend endpoints
+  - Replace mock file data with real API calls
+  - File list loads from backend (documents, PDFs, datasets, code)
+  - File metadata displays correctly (name, type, size, uploaded date, status)
+- [ ] **FRONT-09**: Library view connects to `/api/literature` backend endpoints
+  - Replace mock paper data with real API calls
+  - Literature search form submits to Semantic Scholar API via backend
+  - Paper display includes title, authors, journal, year, abstract, PDF access
+- [ ] **FRONT-10**: Editor view integrates TipTap editor component
+  - Replace `contentEditable` div with actual TipTap editor
+  - Toolbar buttons (bold, italic, link, quote, list) trigger TipTap commands
+  - Document content loads from backend via `/api/documents/{id}`
+  - Editor state persists to backend on changes
+- [ ] **FRONT-11**: AI sidebar chat connects to multi-agent backend system
+  - Replace `geminiService.ts` with backend API calls to `/api/chat`
+  - Chat messages route through backend orchestration service
+  - Multi-agent selection (Document, Literature, Memory, General) works
+  - Proposal workflow displays: AI suggests actions, user approves, then executes
+
+### Backend API Integration
+
+- [ ] **FRONT-12**: Authentication flow integrated
+  - Mock authentication for local development (auto-login as test user)
+  - Google OAuth preserved for production backend integration
+  - User session persists in localStorage
+  - Protected routes redirect to login if not authenticated
+- [ ] **FRONT-13**: File upload functionality implemented
+  - Drag-drop upload zone calls `/api/files/upload` multipart endpoint
+  - Upload progress bar displays (if supported by backend)
+  - File type validation matches backend (PDF, DOCX, MD, CSV, Excel, Python, R, JS)
+  - File size limits enforced (50MB default)
+  - Duplicate file auto-renaming works (filename (N).ext pattern)
+- [ ] **FRONT-14**: Document CRUD operations functional
+  - Create document: "New Document" button calls `/api/documents` POST endpoint
+  - Read document: Load document content from `/api/documents/{id}` GET endpoint
+  - Update document: TipTap changes debounce to `/api/documents/{id}` PUT endpoint (4-second debounce)
+  - Delete document: Delete option calls `/api/documents/{id}` DELETE endpoint
+- [ ] **FRONT-15**: Citation formatting integrated
+  - @-mention citations search literature database via backend
+  - Citation autocomplete dropdown displays matching papers
+  - Selected citation inserts in proper format (APA, MLA, Chicago)
+  - Bibliography auto-generates from document citations via backend `/api/citations`
+- [ ] **FRONT-16**: Data analysis execution integrated
+  - Monaco editor component loads for Python/R code editing
+  - Code submission sends to `/api/analysis/execute` backend endpoint
+  - Analysis results display (tables via backend HTML, charts via Plotly.js, text output)
+  - Result download buttons work (CSV, PNG, TXT formats)
+- [ ] **FRONT-17**: Document export functionality integrated
+  - Export dropdown in toolbar offers PDF and DOCX formats
+  - PDF export calls `/api/export/pdf` with document content
+  - DOCX export calls `/api/export/docx` with document content
+  - Exported file downloads to browser via blob handling
+- [ ] **FRONT-18**: Information graph queries integrated
+  - Claims, findings, relationships display from backend `/api/memory` queries
+  - Search queries submit to backend relevance scoring endpoint
+  - Graph visualization optional (defer to v1.2 if not in scope)
+
+### Real-Time Features & State Management
+
+- [ ] **FRONT-19**: WebSocket connection established for real-time updates
+  - WebSocket connects to `ws://localhost:8000/ws/{project_id}` on mount
+  - Real-time events: document changes, analysis progress, chat responses
+  - Connection error handling with reconnection logic
+  - WebSocket closes cleanly on component unmount
+- [ ] **FRONT-20**: Auto-save with debouncing implemented
+  - TipTap editor changes debounce for 4 seconds
+  - Auto-save sends to backend `/api/documents/{id}` endpoint
+  - localStorage backup saves immediately as fallback
+  - "Saving..." and "Saved" status indicators display
+
+### Production Polish
+
+- [ ] **FRONT-21**: All ESLint warnings resolved
+  - Fix missing useCallback dependencies in current frontend
+  - Fix duplicate markdown_to_tiptap function shadowing warning
+  - No console errors or warnings in browser dev tools
+- [ ] **FRONT-22**: Component architecture follows React best practices
+  - All hooks declared before conditional returns
+  - No prop drilling (use React Context where appropriate)
+  - Proper error boundaries for route-level error handling
+  - Component loading states (skeletons, spinners) during API calls
+- [ ] **FRONT-23**: Manual browser testing complete for all user flows
+  - Create new project and add documents
+  - Upload files (PDF, DOCX, CSV) and verify display
+  - Write and format text in TipTap editor
+  - Insert citations and generate bibliography
+  - Search literature and import papers
+  - Execute data analysis and view results
+  - Export documents to PDF and DOCX
+  - Chat with AI assistant across all agent types
+- [ ] **FRONT-24**: Responsive design works across screen sizes
+  - Desktop layout (1280px+): Full sidebar + main content + AI chat panel
+  - Tablet layout (768px-1279px): Collapsible sidebar, main content + AI chat
+  - Mobile layout (<768px): Stacked layout, hamburger menu for sidebar
+  - No horizontal scrolling at any viewport width
+
+## v1.0 Validated Requirements (Reference)
+
+These features shipped in v1.0 and must remain functional in v1.1:
 
 ### Authentication & User Management
-
-- [ ] **AUTH-01**: User can sign in with Google OAuth
-- [ ] **AUTH-02**: User account is automatically created on first OAuth login
-- [ ] **AUTH-03**: User can sign out
-- [ ] **AUTH-04**: User session persists across browser refresh
+- ✓ **AUTH-01**: User can sign in with Google OAuth
+- ✓ **AUTH-02**: User account automatically created on first OAuth login
+- ✓ **AUTH-03**: User can sign out
+- ✓ **AUTH-04**: User session persists across browser refresh
 
 ### Document Editor
-
-- [ ] **EDIT-01**: User can write and format text with bold, italic, underline
-- [ ] **EDIT-02**: User can create headings (multiple levels)
-- [ ] **EDIT-03**: User can create lists (bulleted and numbered)
-- [ ] **EDIT-04**: User can create block quotes
-- [ ] **EDIT-05**: User can create and edit tables
-- [ ] **EDIT-06**: User can insert citations in-text
-- [ ] **EDIT-07**: User can edit citation details
-- [ ] **EDIT-08**: System auto-formats citations in APA style
-- [ ] **EDIT-09**: System auto-formats citations in MLA style
-- [ ] **EDIT-10**: System auto-formats citations in Chicago style
-- [ ] **EDIT-11**: System auto-generates bibliography from document citations
-- [ ] **EDIT-12**: User can view previous versions of document
-- [ ] **EDIT-13**: User can restore document to previous version
-- [ ] **EDIT-14**: System auto-saves document content every 2-5 seconds during typing with debouncing to reduce server load
-- [ ] **EDIT-15**: Editor typing response time is <100ms for keystrokes (performance optimized to target <16ms for optimal user experience)
+- ✓ **EDIT-01** through **EDIT-15**: Rich text editing, auto-save, version history, citations, export
 
 ### AI Agent & Sidebar Chat
+- ✓ **AI-01** through **AI-10**: Multi-agent orchestration, proposal workflow, total recall memory
 
-- [x] **AI-01**: User sees persistent sidebar panel for AI interaction
-- [x] **AI-02**: User can send chat messages to AI agent
-- [x] **AI-03**: AI agent has read access to current document content
-- [x] **AI-04**: AI agent has read access to analysis results
-- [x] **AI-05**: AI agent has read access to stored claims and findings
-- [x] **AI-06**: AI agent has read access to user preferences
-- [x] **AI-07**: AI agent can refine text directly (simple changes like "make this sentence more formal")
-- [x] **AI-08**: AI agent presents plan for complex actions before execution
-- [x] **AI-09**: User can approve or reject AI-proposed plans
-- [x] **AI-10**: AI agent executes plan only after user approval
+### File Management
+- ✓ File upload, cloud storage, folder operations, metadata extraction
 
-### Memory & Information Graph
+### Literature Search & Review
+- ✓ Semantic Scholar integration, Unpaywall PDF finding, claim extraction
 
-- [x] **MEM-01**: System stores claims extracted from literature
-- [x] **MEM-02**: System stores findings from data analyses
-- [x] **MEM-03**: System stores user preferences
-- [x] **MEM-04**: System prioritizes storage of claims relevant to user's research project
-- [x] **MEM-05**: System tracks relationships between claims (association, correlation, causality, prerequisite)
-- [x] **MEM-06**: Backend provides graph data model for papers, data sources, and information
+### Data Analysis Execution
+- ✓ Python/R code generation, Monaco editor, sandboxed execution, results display
 
-### Literature Review & Search
-
-- [x] **LIT-01**: AI agent can search for papers via Semantic Scholar API
-- [x] **LIT-02**: AI agent uses Unpaywall to find open-access PDFs
-- [x] **LIT-03**: System prioritizes papers with full PDF access in search results
-- [x] **LIT-04**: AI agent extracts key claims and statements from papers
-- [x] **LIT-05**: AI agent saves extracted claims to memory
-- [x] **LIT-06**: System auto-formats citations during literature review
-- [x] **LIT-07**: User can upload PDF files to project
-
-### Data Analysis
-
-- [x] **ANA-01**: AI agent can generate R code for data analysis
-- [x] **ANA-02**: AI agent can generate Python code for data analysis
-- [x] **ANA-03**: System executes code in sandboxed cloud environment
-- [x] **ANA-04**: System displays analysis results as tables
-- [x] **ANA-05**: System displays analysis results as charts
-- [x] **ANA-06**: System displays analysis results as visualizations
-- [x] **ANA-07**: User can download analysis results
-- [x] **ANA-08**: User can view and edit AI-generated code before execution
-- [x] **ANA-09**: System saves analysis results to memory for future access
-
-### File & Project Management
-
-- [ ] **FILE-01**: User can upload files via drag-and-drop
-- [ ] **FILE-02**: User can create nested folder structure
-- [ ] **FILE-03**: System supports PDF file uploads
-- [ ] **FILE-04**: System supports DOCX file uploads
-- [ ] **FILE-05**: System supports Markdown file uploads
-- [ ] **FILE-06**: System supports Python file uploads
-- [ ] **FILE-07**: System supports R file uploads
-- [ ] **FILE-08**: System supports JavaScript file uploads
-- [ ] **FILE-09**: System supports CSV file uploads
-- [ ] **FILE-10**: System supports Excel file uploads
-- [ ] **FILE-11**: Files are stored in cloud-based project workspace
+### Information Graph Backend
+- ✓ Claim storage, relationship tracking, relevance scoring
 
 ### Document Export
+- ✓ PDF/DOCX export via Pandoc
 
-- [x] **EXP-01**: User can export document as PDF
-- [x] **EXP-02**: User can export document as DOCX
+### File Content Loading
+- ✓ Markdown/DOCX to TipTap parsing
 
-## v2 Requirements
+## v2 Requirements (Deferred)
 
-Deferred to future release. Tracked but not in current roadmap.
+Features explicitly deferred to post-v1.1:
 
-### Information Graph UI
-
-- **GRAPH-01**: User can visualize information graph with nodes and edges
-- **GRAPH-02**: User can see claim relationships visually (association, correlation, causality, prerequisite)
-- **GRAPH-03**: User can click nodes to view related claims and sources
-
-### Advanced Literature Analysis
-
-- **LIT-V2-01**: AI agent detects contradictions across papers
-- **LIT-V2-02**: AI agent identifies patterns across literature (e.g., temporal trends, geographic variations)
-- **LIT-V2-03**: AI agent performs advanced literature pattern analysis
-
-### Enhanced AI Transparency
-
-- **AI-V2-01**: User can see which agent is handling each task
-- **AI-V2-02**: User can view agent orchestration workflow
-
-### Enhanced File Organization
-
-- **FILE-V2-01**: User can link files via graph relationships
-- **FILE-V2-02**: User can navigate file connections visually
+### Information Graph Visualization UI
+- **GRAPH-01**: Interactive D3.js or Cytoscape.js graph visualization
+- **GRAPH-02**: Filter by citation count, theme, or date
+- **GRAPH-03**: Click nodes to navigate to related artifacts
 
 ### Additional Export Formats
+- **EXPORT-01**: LaTeX export with BibTeX
+- **EXPORT-02**: HTML export with styling
+- **EXPORT-03**: Markdown export
 
-- **EXP-V2-01**: User can export document as LaTeX
-- **EXP-V2-02**: User can export document as HTML
-- **EXP-V2-03**: User can export document as Markdown
+### Enhanced Literature Features
+- **LIT-01**: AI-assisted literature search and summarization
+- **LIT-02**: Semantic search with vector embeddings
 
-### Peer Review Emulation
-
-- **PEER-01**: AI agent evaluates paper against literature
-- **PEER-02**: AI agent identifies potential weaknesses in arguments
-- **PEER-03**: AI agent suggests missing citations or references
+### Chat Storage
+- **CHAT-01**: Database-backed chat storage (currently in-memory for MVP)
 
 ## Out of Scope
 
-Explicitly excluded. Documented to prevent scope creep.
+Explicitly excluded from v1.1:
 
 | Feature | Reason |
 |---------|--------|
-| Multi-user collaboration | Single-user MVP, defer to v2+ |
-| Real-time co-editing | Single-user MVP, defer to v2+ |
-| Advanced permissions | Single-user MVP, defer to v2+ |
-| Custom agent builders | MVP-lite orchestration only |
-| Full DAG/agent graph visualization UI | Backend only in v1, UI deferred to v2 |
-| Heavy infrastructure cost items | Defer until validated user willingness to pay |
+| Real-time multi-user editing | Extreme complexity (OT/CRDT), conflicts with research workflow model. Async sharing sufficient for v1.1. |
+| Mobile app | Research work requires desktop; responsive web UI meets mobile needs. |
+| Social features (sharing, comments) | Network effects require scale; single-user productivity is the focus. |
+| Native desktop app | Web-based deployment prioritized for cross-platform access. |
+| Video/audio analysis | Expensive transcription APIs; focus on text/PDF analysis. |
+| Real-time web browsing | Flaky and costly; static literature APIs more reliable. |
 
 ## Traceability
 
@@ -152,76 +193,18 @@ Which phases cover which requirements. Updated by create-roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| AUTH-01 | Phase 1 | Complete |
-| AUTH-02 | Phase 1 | Complete |
-| AUTH-03 | Phase 1 | Complete |
-| AUTH-04 | Phase 1 | Complete |
-| FILE-01 | Phase 2 | Complete |
-| FILE-02 | Phase 2 | Complete |
-| FILE-03 | Phase 2 | Complete |
-| FILE-04 | Phase 2 | Complete |
-| FILE-05 | Phase 2 | Complete |
-| FILE-06 | Phase 2 | Complete |
-| FILE-07 | Phase 2 | Complete |
-| FILE-08 | Phase 2 | Complete |
-| FILE-09 | Phase 2 | Complete |
-| FILE-10 | Phase 2 | Complete |
-| FILE-11 | Phase 2 | Complete |
-| MEM-01 | Phase 3 | Pending |
-| MEM-02 | Phase 3 | Pending |
-| MEM-03 | Phase 3 | Pending |
-| MEM-04 | Phase 3 | Pending |
-| MEM-05 | Phase 3 | Pending |
-| MEM-06 | Phase 3 | Pending |
-| EDIT-01 | Phase 4 | Pending |
-| EDIT-02 | Phase 4 | Pending |
-| EDIT-03 | Phase 4 | Pending |
-| EDIT-04 | Phase 4 | Pending |
-| EDIT-05 | Phase 4 | Pending |
-| EDIT-06 | Phase 4 | Pending |
-| EDIT-07 | Phase 4 | Pending |
-| EDIT-08 | Phase 4 | Pending |
-| EDIT-09 | Phase 4 | Pending |
-| EDIT-10 | Phase 4 | Pending |
-| EDIT-11 | Phase 4 | Pending |
-| EDIT-12 | Phase 4 | Pending |
-| EDIT-13 | Phase 4 | Pending |
-| EDIT-14 | Phase 4 | Pending |
-| EDIT-15 | Phase 4 | Pending |
-| LIT-01 | Phase 5 | Complete |
-| LIT-02 | Phase 5 | Complete |
-| LIT-03 | Phase 5 | Complete |
-| LIT-04 | Phase 5 | Complete |
-| LIT-05 | Phase 5 | Complete |
-| LIT-06 | Phase 5 | Complete |
-| LIT-07 | Phase 5 | Complete |
-| AI-01 | Phase 6 | Complete |
-| AI-02 | Phase 6 | Complete |
-| AI-03 | Phase 6 | Complete |
-| AI-04 | Phase 6 | Complete |
-| AI-05 | Phase 6 | Complete |
-| AI-06 | Phase 6 | Complete |
-| AI-07 | Phase 6 | Complete |
-| AI-08 | Phase 6 | Complete |
-| AI-09 | Phase 6 | Complete |
-| AI-10 | Phase 6 | Complete |
-| ANA-01 | Phase 7 | Complete |
-| ANA-02 | Phase 7 | Complete |
-| ANA-03 | Phase 7 | Complete |
-| ANA-04 | Phase 7 | Complete |
-| ANA-05 | Phase 7 | Complete |
-| ANA-06 | Phase 7 | Complete |
-| ANA-07 | Phase 7 | Complete |
-| ANA-08 | Phase 7 | Complete |
-| ANA-09 | Phase 7 | Complete |
-| EXP-01 | Phase 8 | Complete |
-| EXP-02 | Phase 8 | Complete |
+| FRONT-01 through FRONT-06 | Phase 1 | Pending |
+| FRONT-07 through FRONT-11 | Phase 2 | Pending |
+| FRONT-12 through FRONT-18 | Phase 3 | Pending |
+| FRONT-19 through FRONT-20 | Phase 4 | Pending |
+| FRONT-21 through FRONT-24 | Phase 5 | Pending |
 
 **Coverage:**
-- v1 requirements: 64 total
-- Mapped to phases: 64
-- Unmapped: 0 ✓
+- v1.1 requirements: 24 total
+- Mapped to phases: 0 (will be set by create-roadmap)
+- Unmapped: 24 ⚠️
 
 ---
-*Requirements defined: 2025-02-01*
-*Last updated: 2025-02-01 after roadmap creation*
+
+*Requirements defined: 2026-02-06*
+*Last updated: 2026-02-06 after v1.1 milestone initialization*
