@@ -95,6 +95,38 @@ A web-based research workspace that consolidates literature review, data analysi
 - [ ] Additional export formats (LaTeX, HTML, Markdown)
 - [ ] Database-backed chat storage (currently in-memory for MVP)
 
+### Active
+
+**v1.1 Frontend Integration & Polish:**
+
+<!-- Frontend Architecture & Setup -->
+- [ ] **FRONT-01**: Frontend project initialized with new design from researchai-workspace.zip
+- [ ] **FRONT-02**: Build system configured (Vite + React 19 + TypeScript)
+- [ ] **FRONT-03**: Development environment connected to existing FastAPI backend
+- [ ] **FRONT-04**: UI component library integrated (Material Symbols, Tailwind CSS)
+
+<!-- View Integration -->
+- [ ] **FRONT-05**: Dashboard view connected to backend projects API
+- [ ] **FRONT-06**: Files view connected to file management API (upload, delete, organize)
+- [ ] **FRONT-07**: Library view connected to literature search API (Semantic Scholar, Unpaywall)
+- [ ] **FRONT-08**: Editor view with TipTap integration (rich text editing, auto-save, version history)
+- [ ] **FRONT-09**: AI sidebar chat connected to multi-agent backend (Document, Literature, Memory, General)
+
+<!-- Backend API Integration -->
+- [ ] **FRONT-10**: Authentication flow (mock for local dev, Google OAuth for production)
+- [ ] **FRONT-11**: File upload with drag-drop, progress tracking, validation
+- [ ] **FRONT-12**: Document CRUD operations (create, read, update, delete)
+- [ ] **FRONT-13**: Citation formatting (APA, MLA, Chicago) with bibliography generation
+- [ ] **FRONT-14**: Data analysis execution (Monaco editor, Python/R sandbox, results display)
+- [ ] **FRONT-15**: Document export (PDF/DOCX via Pandoc backend)
+- [ ] **FRONT-16**: Information graph queries (claims, findings, relationships)
+
+<!-- Production Polish -->
+- [ ] **FRONT-17**: All ESLint warnings resolved
+- [ ] **FRONT-18**: Component architecture follows React best practices
+- [ ] **FRONT-19**: Manual browser testing complete for all user flows
+- [ ] **FRONT-20**: Responsive design works across screen sizes
+
 ---
 
 ## Current State
@@ -132,22 +164,41 @@ A web-based research workspace that consolidates literature review, data analysi
 
 ---
 
-## Next Milestone Goals
+## Current Milestone: v1.1 Frontend Integration & Polish
 
-**Status:** Planning phase - awaiting user feedback and usage patterns
+**Goal:** Integrate the new AI Studio frontend design (from researchai-workspace.zip) with the existing FastAPI backend, maintaining all v1.0 features while improving UI/UX.
 
-**Potential v1.1 Directions:**
-1. **Stability & Polish** - Fix technical debt, complete manual testing, address ESLint warnings
-2. **User Experience Improvements** - Based on real usage feedback
-3. **Performance Optimizations** - Large file handling, query optimization
-4. **Additional Export Formats** - LaTeX, HTML, Markdown export
-5. **Enhanced AI Capabilities** - Better context management, improved writing quality
+**Started:** 2026-02-06
 
-**Decision:** Next milestone scope to be determined based on:
-- User feedback from v1.0 usage
-- Bug reports and technical issues discovered
-- Performance bottlenecks identified in real-world usage
-- Feature requests from actual research workflows
+**Target features:**
+- **Frontend Replacement:** Integrate new React 19 + TypeScript + Vite frontend design
+- **UI/UX Improvements:** Modern, polished interface with Material Symbols icons
+- **Backend Integration:** Connect all views (Dashboard, Files, Library, Editor) to existing FastAPI APIs
+- **Feature Parity:** Ensure all v1.0 capabilities work with new UI:
+  - Authentication (mock for local, Google OAuth for production)
+  - Document editor (TipTap-based rich text editing)
+  - File management (drag-drop upload, cloud storage)
+  - Literature search (Semantic Scholar + Unpaywall)
+  - AI sidebar chat (multi-agent orchestration)
+  - Data analysis execution (Python/R sandbox)
+  - Document export (PDF/DOCX)
+  - Information graph backend integration
+- **Production Polish:** Fix ESLint warnings, improve code quality, manual testing
+
+**Integration approach:**
+- Use new frontend as foundation (better design, cleaner architecture)
+- Replace current React Vite frontend completely
+- Migrate all backend API integrations to new frontend
+- Implement missing features (TipTap editor, file upload handlers)
+- Maintain all v1.0 validated requirements
+
+---
+
+## v1.0 Milestone (Completed)
+
+**Shipped:** 2026-02-05
+
+All v1.0 features delivered. See [milestones archive](.planning/milestones/v1.0-FINAL-MILESTONE-AUDIT.md) for details.
 
 ---
 
@@ -235,4 +286,4 @@ A web-based research workspace that consolidates literature review, data analysi
 
 ---
 
-*Last updated: 2025-01-31 after initialization*
+*Last updated: 2026-02-06 after v1.1 milestone initialization*
