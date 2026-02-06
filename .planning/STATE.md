@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 **Milestone:** v1.1 Frontend Integration & Polish - STARTED 2026-02-06
 
 Phase: 10 of 14 (Frontend Foundation & Setup)
-Plan: Not started
-Status: Ready to plan Phase 10
+Plan: 02 of 05 (Tailwind & Material Symbols Verification)
+Status: In progress
 
-Last activity: 2026-02-06 — Roadmap created with 5 phases (10-14) for v1.1 frontend integration. Requirements defined and mapped to phases. frontend3/ extracted from researchai-workspace.zip analyzed.
+Last activity: 2026-02-06 — Verified Tailwind CSS configuration with custom theme (#4a8fe3 primary) and Material Symbols integration (46 icons across 6 components). Created TEST_STYLES.html for visual verification.
 
-Progress: ████████░░ 80% (v1.0 complete: 9 phases, 31 plans. v1.1: 0/17 plans started)
+Progress: █████░░░░░░░░░░░░░ 20.8% (v1.0 complete: 9 phases, 31 plans. v1.1: 1/17 plans complete)
 
 ## Accumulated Context
 
@@ -78,6 +78,14 @@ Progress: ████████░░ 80% (v1.0 complete: 9 phases, 31 plans.
 
 **Full decision log:** See PROJECT.md Key Decisions table
 
+### v1.1 Decisions
+
+**From Phase 10 (Frontend Foundation):**
+35. Tailwind CSS CDN configuration for rapid prototyping (no build step)
+36. Material Symbols with font-variation-settings for icon variants (outlined/filled)
+37. Custom primary color theme (#4a8fe3) across frontend3
+38. Dark mode via 'class' strategy (Tailwind)
+
 ### Technical Debt (From v1.0)
 
 **P1 - High Priority:**
@@ -100,4 +108,4 @@ Progress: ████████░░ 80% (v1.0 complete: 9 phases, 31 plans.
 
 ---
 
-*Last updated: 2026-02-06 after v1.1 milestone initialization*
+*Last updated: 2026-02-06 after completing 10-02 (Tailwind & Material Symbols Verification)*
