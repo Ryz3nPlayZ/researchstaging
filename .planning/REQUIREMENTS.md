@@ -193,7 +193,7 @@ Which phases cover which requirements. Updated by create-roadmap.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FRONT-01, FRONT-02, FRONT-03, FRONT-04, FRONT-05, FRONT-06 | Phase 10 | Pending |
+| FRONT-01, FRONT-02, FRONT-03, FRONT-04, FRONT-05, FRONT-06 | Phase 10 | Complete |
 | FRONT-07, FRONT-08, FRONT-09, FRONT-10, FRONT-11 | Phase 11 | Pending |
 | FRONT-12, FRONT-13, FRONT-14, FRONT-15, FRONT-16, FRONT-17, FRONT-18 | Phase 12 | Pending |
 | FRONT-19, FRONT-20 | Phase 13 | Pending |
