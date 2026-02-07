@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 **Milestone:** v1.1 Frontend Integration & Polish - STARTED 2026-02-06
 
 Phase: 11 of 14 (View Integration)
-Plan: 3 of 3 (View Integration)
-Status: In progress
+Plan: 4 of 4 (View Integration)
+Status: Phase complete
 
-Last activity: 2026-02-07 — Plan 11-03 complete: TipTap rich text editor integrated with toolbar controls (bold, italic, underline, link, quote, list). Active state highlighting and keyboard shortcuts functional. 3/3 tasks executed successfully.
+Last activity: 2026-02-07 — Plan 11-04 complete: AI chat connected to backend multi-agent orchestration. Agent selection UI (4 types) implemented. Direct Gemini API calls replaced with backend /api/chat endpoint. Document context passed from TipTap editor.
 
-Progress: ████████░░ 83% (v1.0 complete: 9 phases, 31 plans. v1.1: 6/17 plans started)
+Progress: ████████░░ 88% (v1.0 complete: 9 phases, 31 plans. v1.1: 7/17 plans started)
 
 ## Accumulated Context
 
@@ -113,6 +113,12 @@ Progress: ████████░░ 83% (v1.0 complete: 9 phases, 31 plans.
 62. Tailwind prose classes for editor typography (prose-sm, prose-base, prose-lg, prose-xl)
 63. Placeholder extension for empty editor state messaging
 64. Toolbar buttons wired to TipTap: bold, italic, underline, link, quote, bullet list
+65. Chat API client with TypeScript types (ChatMessage, ChatRequest, ChatResponse)
+66. Agent selection button group UI with 4 agent types (Document, Literature, Memory, General)
+67. Backend /api/chat endpoint (no project_id required for MVP)
+68. Multi-agent routing via backend with agent_type parameter
+69. Document context passing from TipTap editor to backend (HTML content)
+70. geminiService.ts deprecated in favor of backend chat API
 
 ### Technical Debt (From v1.0)
 
@@ -136,10 +142,10 @@ Progress: ████████░░ 83% (v1.0 complete: 9 phases, 31 plans.
 
 ## Session Continuity
 
-Last session: 2025-02-06T21:17:03Z
-Stopped at: Completed Phase 11, Plan 03 - TipTap rich text editor integration
-Resume file: None (plan complete, no checkpoint)
+Last session: 2026-02-07T02:34:00Z
+Stopped at: Completed Phase 11, Plan 04 - AI chat backend integration
+Resume file: None (phase complete, ready for Phase 12)
 
 ---
 
-*Last updated: 2025-02-06 after Plan 11-03 completion (View Integration)*
+*Last updated: 2026-02-07 after Plan 11-04 completion (View Integration)*
