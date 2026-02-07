@@ -13,12 +13,12 @@ export const AnalysisResults = ({ result, onClose }) => {
   const [activeTab, setActiveTab] = useState('table');
   const [chartType, setChartType] = useState('auto');
 
-  if (!result) {
-    return null;
-  }
-
   // Parse output intelligently
   const parsedData = useMemo(() => {
+    if (!result) {
+      return { type: 'text', data: '' };
+    }
+
     const output = result.output || '';
     const trimmed = output.trim();
 
@@ -71,7 +71,7 @@ export const AnalysisResults = ({ result, onClose }) => {
         data: trimmed,
       };
     }
-    if (lowerOutput.includes("plt.scatter(") || lowerOutput.includes("plot.*type.*p"))) {
+    if (lowerOutput.includes("plt.scatter(") || lowerOutput.includes("plot.*type.*p")) {
       return {
         type: 'chart-hint',
         chartType: 'scatter',
@@ -91,7 +91,7 @@ export const AnalysisResults = ({ result, onClose }) => {
       type: 'text',
       data: trimmed,
     };
-  }, [result.output]);
+  }, [result]);
 
   // Determine available views
   const availableViews = useMemo(() => {
@@ -232,6 +232,11 @@ export const AnalysisResults = ({ result, onClose }) => {
       setActiveTab('table');
     }
   }, [availableViews, activeTab]);
+
+  // Early return after all hooks
+  if (!result) {
+    return null;
+  }
 
   return (
     <Card className="fixed inset-4 z-50 flex flex-col bg-background">

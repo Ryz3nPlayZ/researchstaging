@@ -3,7 +3,7 @@ Tests for agent orchestration service.
 """
 import pytest
 import asyncio
-from backend.agent_service import AgentRouter, DocumentAgent, LiteratureAgent, MemoryAgent, GeneralAgent
+from agent_service import AgentRouter, DocumentAgent, LiteratureAgent, MemoryAgent, GeneralAgent
 
 
 # Mock LLM service
@@ -198,10 +198,10 @@ class TestGeneralAgent:
         """Test that general agent can handle any query."""
         agent = GeneralAgent(mock_llm_service)
 
-        # Should have low confidence for everything
-        assert agent.can_handle("Hello") == 0.1
-        assert agent.can_handle("Help me") == 0.1
-        assert agent.can_handle("What's the weather?") == 0.1
+        # Should have low confidence for everything (but slightly higher than other agents' defaults)
+        assert agent.can_handle("Hello") == 0.2
+        assert agent.can_handle("Help me") == 0.2
+        assert agent.can_handle("What's the weather?") == 0.2
 
     @pytest.mark.asyncio
     async def test_handle_general_query(self, mock_llm_service):

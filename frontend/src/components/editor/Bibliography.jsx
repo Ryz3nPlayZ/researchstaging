@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
 import { Separator } from '../ui/separator';
@@ -28,7 +28,7 @@ export const Bibliography = ({ documentId, style = 'APA', onStyleChange, citatio
   /**
    * Fetch bibliography from backend
    */
-  const fetchBibliography = async (showRefreshing = false) => {
+  const fetchBibliography = useCallback(async (showRefreshing = false) => {
     if (showRefreshing) {
       setIsRefreshing(true);
     } else {
@@ -68,14 +68,14 @@ export const Bibliography = ({ documentId, style = 'APA', onStyleChange, citatio
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  };
+  }, [documentId, currentStyle, toast]);
 
   /**
    * Fetch on mount and when style changes
    */
   useEffect(() => {
     fetchBibliography();
-  }, [documentId, currentStyle]);
+  }, [documentId, currentStyle, fetchBibliography]);
 
   /**
    * Update when prop citations change

@@ -6,7 +6,7 @@ import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import Underline from '@tiptap/extension-underline';
 import { ChatMessage } from '../types';
-import { chatApi } from '../lib/api';
+import { chatApi, exportApi } from '../lib/api';
 
 // Agent type constants
 const AGENT_TYPES = [
@@ -51,7 +51,31 @@ const EditorView: React.FC = () => {
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<string>('general');
+  const [exporting, setExporting] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+
+  // TODO: Get documentId and projectId from route/context
+  const documentId = 'default-document';
+  const projectId = 'default-project';
+
+  const handleExport = async (format: 'pdf' | 'docx') => {
+    if (exporting) return;
+
+    setExporting(true);
+
+    try {
+      if (format === 'pdf') {
+        await exportApi.pdf(documentId, projectId);
+      } else {
+        await exportApi.docx(documentId, projectId);
+      }
+    } catch (err) {
+      console.error('Export error:', err);
+      alert(err instanceof Error ? err.message : 'Export failed');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -167,6 +191,30 @@ const EditorView: React.FC = () => {
             <span className="material-symbols-outlined text-[20px]">format_list_bulleted</span>
           </button>
           <div className="w-[1px] h-6 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+          <div className="relative group">
+            <button className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200">
+              <span>Export</span>
+              <span className="material-symbols-outlined text-sm">arrow_drop_down</span>
+            </button>
+
+            {/* Dropdown menu */}
+            <div className="absolute top-full left-0 mt-1 hidden group-hover:block bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg overflow-hidden min-w-[150px] z-50">
+              <button
+                onClick={() => handleExport('pdf')}
+                disabled={exporting}
+                className="block w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Export as PDF
+              </button>
+              <button
+                onClick={() => handleExport('docx')}
+                disabled={exporting}
+                className="block w-full px-4 py-2 text-left text-sm text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Export as DOCX
+              </button>
+            </div>
+          </div>
           <button className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs font-bold hover:bg-primary/20">
             <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
             AI ASSIST

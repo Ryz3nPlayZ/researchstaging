@@ -64,19 +64,19 @@ export const RewriteDialog = ({ isOpen, onClose, documentId, selection, onReplac
     }
   }, [documentId, selection, selectedTone, toast]);
 
-  const handleReplace = useCallback(() => {
-    if (rewrittenText) {
-      onReplace(rewrittenText);
-      handleClose();
-    }
-  }, [rewrittenText, onReplace]);
-
   const handleClose = useCallback(() => {
     setRewrittenText('');
     setHasResult(false);
     setSelectedTone('formal');
     onClose();
   }, [onClose]);
+
+  const handleReplace = useCallback(() => {
+    if (rewrittenText) {
+      onReplace(rewrittenText);
+      handleClose();
+    }
+  }, [rewrittenText, onReplace, handleClose]);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -211,19 +211,19 @@ export const GrammarDialog = ({ isOpen, onClose, documentId, text, onReplace }) 
     }
   }, [documentId, text, toast]);
 
-  const handleApplyAll = useCallback(() => {
-    if (correctedText) {
-      onReplace(correctedText);
-      handleClose();
-    }
-  }, [correctedText, onReplace]);
-
   const handleClose = useCallback(() => {
     setCorrectedText('');
     setSuggestions([]);
     setHasResult(false);
     onClose();
   }, [onClose]);
+
+  const handleApplyAll = useCallback(() => {
+    if (correctedText) {
+      onReplace(correctedText);
+      handleClose();
+    }
+  }, [correctedText, onReplace, handleClose]);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>

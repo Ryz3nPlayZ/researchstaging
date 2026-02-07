@@ -389,7 +389,7 @@ class GeneralAgent(Agent):
 
     def can_handle(self, query: str) -> float:
         """General agent can handle anything with low confidence."""
-        return 0.1  # Always available but low priority
+        return 0.2  # Slightly higher than other agents' defaults, so it wins for general queries
 
     async def handle(self, query: str, context: Dict[str, Any]) -> str:
         """Handle general queries."""

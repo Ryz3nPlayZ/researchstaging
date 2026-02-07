@@ -106,14 +106,6 @@ export const AISidebar = () => {
     }
   }, [selectedProject]);
 
-  // Handle Enter key (send) vs Shift+Enter (newline)
-  const handleKeyDown = useCallback((e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  }, [handleSend]);
-
   // Auto-resize textarea
   const handleInput = useCallback((e) => {
     setInputText(e.target.value);
@@ -252,7 +244,7 @@ export const AISidebar = () => {
     const success = applyAISuggestion(suggestion.revised, suggestion.range);
     if (success) {
       // Remove suggestion after applying
-      handleDismissSuggestion(suggestion.id);
+      setTextSuggestions(prev => prev.filter(s => s.id !== suggestion.id));
     }
   }, [applyAISuggestion]);
 
@@ -385,6 +377,14 @@ export const AISidebar = () => {
 
   // Assign handleSend to use plan check
   const handleSend = handleSendWithPlanCheck;
+
+  // Handle Enter key (send) vs Shift+Enter (newline)
+  const handleKeyDown = useCallback((e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
+  }, [handleSend]);
 
   if (!selectedProject) {
     return null;
