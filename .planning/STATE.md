@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 **Milestone:** v1.1 Frontend Integration & Polish - IN PROGRESS
 
 Phase: 13 of 14 (Real-Time Features)
-Plan: 0 of 2 (Real-Time Features)
-Status: Not started
+Plan: 2 of 2 (Real-Time Features)
+Status: In progress
 
-Last activity: 2026-02-07 — Phase 12 complete: Backend features integrated for full v1.0 feature parity. Authentication, file upload, document CRUD, citations, data analysis, export, and information graph queries all connected to backend APIs. Verification passed with 96.6% must-haves (28/29).
+Last activity: 2026-02-07 — Completed Phase 13-02: Auto-Save Enhancements with type-safe DocumentUpdateRequest, improved error handling, and WebSocket connection status indicator.
 
-Progress: ████████░░ 82% (v1.0 complete: 9 phases, 31 plans. v1.1: 15/17 plans complete)
+Progress: ████████░░ 83% (v1.0 complete: 9 phases, 31 plans. v1.1: 16/17 plans complete)
 
 ## Accumulated Context
 
@@ -151,6 +151,21 @@ Progress: ████████░░ 82% (v1.0 complete: 9 phases, 31 plans.
 96. Tab-based results navigation pattern for organized multi-type results
 97. Graph visualization deferred to v2.0 (D3.js/Cytoscape.js out of MVP scope)
 
+**From Phase 13-01 (WebSocket Infrastructure):**
+98. WebSocket manager singleton with auto-reconnect (3-second delay)
+99. Connection status tracking: connecting, connected, disconnected, error
+100. Ping/pong heartbeat every 30 seconds to keep connection alive
+101. Event-based pub/sub pattern for real-time updates
+102. useWebSocket React hook for status tracking and event subscriptions
+
+**From Phase 13-02 (Auto-Save Enhancements):**
+103. Type-safe DocumentUpdateRequest interface with optional fields for partial updates
+104. Enhanced auto-save with user-facing error alerts via browser alert()
+105. WebSocket connection status indicator in editor toolbar (Live/Connecting/Offline)
+106. Color-coded status: green (connected), amber (connecting), red (offline)
+107. Fixed context.ts → context.tsx for JSX support (build bug)
+108. Fixed exportApi calls to use currentProjectId instead of undefined projectId
+
 ### Technical Debt (From v1.0)
 
 **P1 - High Priority:**
@@ -173,10 +188,10 @@ Progress: ████████░░ 82% (v1.0 complete: 9 phases, 31 plans.
 
 ## Session Continuity
 
-Last session: 2026-02-07T03:20:00Z
-Stopped at: Completed Phase 12 - Backend Feature Integration
-Resume file: None (phase complete, ready for Phase 13)
+Last session: 2026-02-07T12:58:36Z
+Stopped at: Completed Phase 13-02 - Auto-Save Enhancements
+Resume file: None (plan complete, ready for Phase 14)
 
 ---
 
-*Last updated: 2026-02-07 after Phase 12 completion (Backend Feature Integration)*
+*Last updated: 2026-02-07 after Phase 13-02 completion (Auto-Save Enhancements)*
