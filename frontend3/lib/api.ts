@@ -171,11 +171,16 @@ export interface AnalysisResult {
 // Memory/Graph types
 export interface Claim {
   id: string;
-  source_id: string;
+  project_id: string;
   claim_text: string;
+  claim_type?: string;
+  claim_data?: Record<string, unknown>;
+  source_type: string;
+  source_id: string;
   confidence: number;
+  relevance_score?: number;
   extracted_at: string;
-  paper_id?: string;
+  extracted_by?: string;
 }
 
 export interface Finding {
