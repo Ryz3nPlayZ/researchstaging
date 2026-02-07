@@ -128,11 +128,19 @@ const EditorView: React.FC = () => {
 
       try {
         const content = editor.getJSON();
-        await documentApi.update(documentId, content, documentTitle);
+        await documentApi.update(documentId, {
+          content,
+          title: documentTitle,
+        });
         setSavingStatus('saved');
       } catch (err) {
         console.error('Save error:', err);
         setSavingStatus('unsaved');
+
+        // Show error alert to user
+        if (err instanceof Error) {
+          alert(`Failed to save document: ${err.message}`);
+        }
       }
     }, 4000); // 4-second debounce
 
