@@ -58,30 +58,52 @@ const EditorView: React.FC = () => {
   }, [messages]);
 
   const handleSendMessage = async () => {
-    if (!inputText.trim()) return;
+    if (!inputText.trim() || isTyping) return;
 
     const userMsg: ChatMessage = {
       id: Date.now().toString(),
       role: 'user',
       content: inputText,
-      timestamp: new Date()
+      timestamp: new Date(),
+      agent_type: selectedAgent,
     };
 
     setMessages(prev => [...prev, userMsg]);
     setInputText('');
     setIsTyping(true);
 
-    const response = await askResearchAssistant(inputText, "Current document: Neural Networks in Modern Research");
-    
-    const assistantMsg: ChatMessage = {
-      id: (Date.now() + 1).toString(),
-      role: 'assistant',
-      content: response,
-      timestamp: new Date()
-    };
+    try {
+      // Get current document context from TipTap editor if available
+      const documentContext = editor?.getHTML() || undefined;
 
-    setMessages(prev => [...prev, assistantMsg]);
-    setIsTyping(false);
+      // Call backend chat API instead of direct Gemini
+      const response = await chatApi.send(inputText, selectedAgent, documentContext);
+
+      if (response.error || !response.data) {
+        throw new Error(response.error || 'No response from server');
+      }
+
+      const assistantMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: response.data.response || 'No response from agent',
+        timestamp: new Date(),
+        agent_type: response.data.agent_type || selectedAgent,
+      };
+
+      setMessages(prev => [...prev, assistantMsg]);
+    } catch (error) {
+      console.error('Chat error:', error);
+      const errorMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: 'Sorry, I encountered an error. Please try again.',
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorMsg]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   return (
@@ -197,9 +219,15 @@ const EditorView: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
           {messages.map((msg) => (
             <div key={msg.id} className={`flex flex-col gap-1 ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
+              {msg.role === 'assistant' && msg.agent_type && (
+                <div className="flex items-center gap-2 text-xs text-slate-500 mb-1">
+                  <span className="material-symbols-outlined text-sm">smart_toy</span>
+                  {AGENT_TYPES.find(a => a.value === msg.agent_type)?.label || 'AI'} Agent
+                </div>
+              )}
               <div className={`p-3 rounded-xl text-xs max-w-[90%] leading-relaxed ${
-                msg.role === 'user' 
-                  ? 'bg-primary text-white rounded-tr-none' 
+                msg.role === 'user'
+                  ? 'bg-primary text-white rounded-tr-none'
                   : 'bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-tl-none'
               }`}>
                 {msg.content}
