@@ -152,6 +152,39 @@ export interface AnalysisResult {
   finding_id?: string;
 }
 
+// Memory/Graph types
+export interface Claim {
+  id: string;
+  source_id: string;
+  claim_text: string;
+  confidence: number;
+  extracted_at: string;
+  paper_id?: string;
+}
+
+export interface Finding {
+  id: string;
+  claim_ids: string[];
+  synthesis: string;
+  confidence: number;
+  created_at: string;
+}
+
+export interface Relationship {
+  id: string;
+  from_claim_id: string;
+  to_claim_id: string;
+  relationship_type: 'supports' | 'contradicts' | 'extends';
+  confidence: number;
+}
+
+export interface MemorySearchResult {
+  claims: Claim[];
+  findings: Finding[];
+  relationships: Relationship[];
+  total: number;
+}
+
 // Export types
 export interface ExportRequest {
   document_id: string;
@@ -309,5 +342,34 @@ export const exportApi = {
     a.click();
     window.URL.revokeObjectURL(url);
     document.body.removeChild(a);
+  },
+};
+
+// Memory/Information Graph APIs
+export const memoryApi = {
+  search: async (query: string, limit: number = 20) =>
+    apiRequest<MemorySearchResult>(`/memory/search?q=${encodeURIComponent(query)}&limit=${limit}`),
+
+  claims: async (paperId?: string, limit: number = 50) => {
+    const params = new URLSearchParams();
+    if (paperId) params.append('paper_id', paperId);
+    params.append('limit', limit.toString());
+    return apiRequest<Claim[]>(`/memory/claims?${params}`);
+  },
+
+  findings: async (claimIds?: string[], limit: number = 20) => {
+    const params = new URLSearchParams();
+    if (claimIds && claimIds.length > 0) {
+      claimIds.forEach(id => params.append('claim_ids', id));
+    }
+    params.append('limit', limit.toString());
+    return apiRequest<Finding[]>(`/memory/findings?${params}`);
+  },
+
+  relationships: async (claimId?: string, limit: number = 50) => {
+    const params = new URLSearchParams();
+    if (claimId) params.append('claim_id', claimId);
+    params.append('limit', limit.toString());
+    return apiRequest<Relationship[]>(`/memory/relationships?${params}`);
   },
 };
