@@ -103,6 +103,12 @@ export interface ChatResponse {
   error?: string;
 }
 
+export interface UploadProgress {
+  loaded: number;
+  total: number;
+  percentage: number;
+}
+
 // Project APIs
 export const projectApi = {
   list: () => apiRequest<Project[]>('/projects'),
@@ -119,6 +125,26 @@ export const fileApi = {
   list: (projectId?: string) =>
     apiRequest<File[]>(projectId ? `/files/projects/${projectId}/files` : '/files'),
   get: (id: string) => apiRequest<File>(`/files/${id}`),
+  upload: async (file: File, projectId: string) => {
+    const formData = new FormData();
+    // FormData.append() expects 'string | Blob', File is compatible at runtime
+    // Using 'any' to work around TypeScript lib type definition limitation
+    formData.append('file', file as any);
+    formData.append('project_id', projectId);
+
+    const response = await fetch(`${API_BASE}/files/projects/${projectId}/files/upload`, {
+      method: 'POST',
+      body: formData,
+      // Don't set Content-Type for FormData (browser sets it with boundary)
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || 'Upload failed');
+    }
+
+    return response.json();
+  },
 };
 
 // Document APIs
