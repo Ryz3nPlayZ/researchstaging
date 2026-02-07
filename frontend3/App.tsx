@@ -1,0 +1,95 @@
+
+import React, { useState, useEffect } from 'react';
+import Sidebar from './components/Sidebar';
+import DashboardView from './pages/DashboardView';
+import FilesView from './pages/FilesView';
+import EditorView from './pages/EditorView';
+import LibraryView from './pages/LibraryView';
+import { View } from './types';
+import { useSession } from './lib/auth';
+
+const App: React.FC = () => {
+  const [activeView, setActiveView] = useState<View>(View.DASHBOARD);
+  const { session, loading, login } = useSession();
+
+  // Auto-login for local development if no session
+  useEffect(() => {
+    if (!loading && !session) {
+      login();
+    }
+  }, [loading, session, login]);
+
+  // Show loading state while checking session
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-50 dark:bg-slate-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  const renderView = () => {
+    switch (activeView) {
+      case View.DASHBOARD: return <DashboardView />;
+      case View.FILES: return <FilesView />;
+      case View.LIBRARY: return <LibraryView />;
+      case View.EDITOR: return <EditorView />;
+      case View.CITATIONS: return <LibraryView />; // Using Library as a fallback for citations view
+      default: return <DashboardView />;
+    }
+  };
+
+  return (
+    <div className="flex h-screen overflow-hidden text-slate-900 dark:text-slate-100 font-sans">
+      <Sidebar activeView={activeView} onViewChange={setActiveView} />
+      
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top Header Bar */}
+        <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between px-8 z-30 shrink-0">
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActiveView(View.DASHBOARD)}>
+              <span className="material-symbols-outlined text-primary text-2xl">auto_stories</span>
+              <span className="font-bold text-lg hidden sm:block">Research Hub</span>
+            </div>
+            
+            <div className="hidden md:flex items-center w-80 relative">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">search</span>
+              <input 
+                className="w-full pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary/50 transition-all placeholder-slate-400" 
+                placeholder="Search papers, projects, notes..." 
+                type="text"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setActiveView(View.EDITOR)}
+              className="hidden sm:flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm"
+            >
+              <span className="material-symbols-outlined text-xl">add</span>
+              <span>New Document</span>
+            </button>
+            <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 mx-2 hidden sm:block"></div>
+            <button className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg relative">
+              <span className="material-symbols-outlined">notifications</span>
+              <span className="absolute top-2 right-2 size-2 bg-red-500 border-2 border-white dark:border-slate-900 rounded-full"></span>
+            </button>
+            <div className="size-9 rounded-full bg-slate-200 dark:bg-slate-700 border-2 border-white dark:border-slate-900 overflow-hidden cursor-pointer">
+              <img 
+                className="w-full h-full object-cover" 
+                alt="User Profile" 
+                src="https://picsum.photos/seed/user/100" 
+              />
+            </div>
+          </div>
+        </header>
+
+        {/* View Content */}
+        {renderView()}
+      </div>
+    </div>
+  );
+};
+
+export default App;
