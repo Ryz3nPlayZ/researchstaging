@@ -13,10 +13,10 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 **Milestone:** v1.1 Frontend Integration & Polish - IN PROGRESS
 
 Phase: 15 of 15 (Startup and Navigation Fixes)
-Plan: 2 of 2 (WebSocket Fix & Navigation)
+Plan: 1 of 2 (Startup Scripts Update)
 Status: Complete
 
-Last activity: 2026-02-07T00:05 — Completed Plan 15-02: WebSocket Fix & Navigation with WebSocket URL fix and Analysis/Memory navigation integration.
+Last activity: 2026-02-07T15:30 — Completed Plan 15-01: Startup Scripts Update with frontend3 directory configuration and comprehensive logging.
 
 Progress: ███████░░ 90% (v1.0 complete: 9 phases, 31 plans. v1.1: 19/21 plans complete)
 
@@ -194,12 +194,20 @@ Progress: ███████░░ 90% (v1.0 complete: 9 phases, 31 plans. v1
 129. package.json build script for production (Vite build)
 130. package.json preview script for production preview (Vite preview server)
 
+**From Phase 15-01 (Startup Scripts Update):**
+128. Startup scripts updated to use frontend3/ directory with npm run dev
+129. Timestamp function for consistent logging format (YYYY-MM-DD HH:MM:SS)
+130. Component labels [SYSTEM], [BACKEND], [FRONTEND] for log filtering
+131. PID display for process management and debugging
+132. Environment variable changed from REACT_APP_API_URL to VITE_API_URL for Vite compatibility
+133. Port 3000 confirmation after frontend startup to verify Vite server listening
+
 **From Phase 15-02 (WebSocket Fix & Navigation):**
-131. View enum extended with ANALYSIS and MEMORY values
-132. Sidebar navigation items for Analysis (code icon) and Memory (psychology icon)
-133. WebSocket URL fix: removed incorrect /api prefix (connect to ws://localhost:8000/ws/{id})
-134. App.tsx routing for AnalysisView and MemoryView components
-135. Material Symbol icons with filled variant for active navigation state
+134. View enum extended with ANALYSIS and MEMORY values
+135. Sidebar navigation items for Analysis (code icon) and Memory (psychology icon)
+136. WebSocket URL fix: removed incorrect /api prefix (connect to ws://localhost:8000/ws/{id})
+137. App.tsx routing for AnalysisView and MemoryView components
+138. Material Symbol icons with filled variant for active navigation state
 
 ### Technical Debt (From v1.0)
 
@@ -223,10 +231,10 @@ Progress: ███████░░ 90% (v1.0 complete: 9 phases, 31 plans. v1
 
 ## Session Continuity
 
-Last session: 2026-02-07T00:05:00Z
-Stopped at: Completed Plan 15-02 - WebSocket Fix & Navigation
+Last session: 2026-02-07T15:29:00Z
+Stopped at: Completed Plan 15-01 - Startup Scripts Update
 Resume file: None (plan complete, ready for next plan)
 
 ---
 
-*Last updated: 2026-02-07 after Plan 15-02 completion (WebSocket Fix & Navigation)*
+*Last updated: 2026-02-07 after Plan 15-01 completion (Startup Scripts Update)*
