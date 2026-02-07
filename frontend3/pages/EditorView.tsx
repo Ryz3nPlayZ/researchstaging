@@ -6,7 +6,8 @@ import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import Underline from '@tiptap/extension-underline';
 import { ChatMessage } from '../types';
-import { chatApi, exportApi } from '../lib/api';
+import { chatApi, exportApi, documentApi, projectApi } from '../lib/api';
+import type { Project } from '../lib/api';
 
 // Agent type constants
 const AGENT_TYPES = [
@@ -54,9 +55,12 @@ const EditorView: React.FC = () => {
   const [exporting, setExporting] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // TODO: Get documentId and projectId from route/context
-  const documentId = 'default-document';
-  const projectId = 'default-project';
+  // Document state
+  const [documentId, setDocumentId] = useState<string | null>(null);
+  const [documentTitle, setDocumentTitle] = useState('');
+  const [savingStatus, setSavingStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
+  const [currentProject, setCurrentProject] = useState<Project | null>(null);
+  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
 
   const handleExport = async (format: 'pdf' | 'docx') => {
     if (exporting) return;
@@ -80,6 +84,103 @@ const EditorView: React.FC = () => {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Load first project on mount
+  useEffect(() => {
+    const loadProject = async () => {
+      try {
+        const response = await projectApi.list();
+        if (response.data && response.data.length > 0) {
+          setCurrentProject(response.data[0]);
+          setCurrentProjectId(response.data[0].id);
+        }
+      } catch (err) {
+        console.error('Load project error:', err);
+      }
+    };
+
+    loadProject();
+  }, []);
+
+  // Load existing document on mount
+  useEffect(() => {
+    const pathParts = window.location.pathname.split('/');
+    const docId = pathParts[pathParts.length - 1];
+
+    if (docId && docId !== 'editor') {
+      loadDocument(docId);
+    }
+  }, []);
+
+  // Auto-save with 4-second debounce
+  useEffect(() => {
+    if (!editor || !documentId) return;
+
+    const saveTimeout = setTimeout(async () => {
+      setSavingStatus('saving');
+
+      try {
+        const content = editor.getJSON();
+        await documentApi.update(documentId, content, documentTitle);
+        setSavingStatus('saved');
+      } catch (err) {
+        console.error('Save error:', err);
+        setSavingStatus('unsaved');
+      }
+    }, 4000); // 4-second debounce
+
+    return () => clearTimeout(saveTimeout);
+  }, [editor?.getJSON(), documentId, documentTitle]);
+
+  // Load document function
+  const loadDocument = async (id: string) => {
+    try {
+      const response = await documentApi.get(id);
+      if (response.error) throw new Error(response.error);
+
+      setDocumentId(response.data.id);
+      setDocumentTitle(response.data.title);
+      setSavingStatus('saved');
+
+      if (editor && response.data.content) {
+        editor.commands.setContent(response.data.content);
+      }
+    } catch (err) {
+      console.error('Load document error:', err);
+      alert('Failed to load document');
+    }
+  };
+
+  // Create new document function
+  const handleNewDocument = async () => {
+    if (!currentProjectId) {
+      alert('Please create a project first');
+      return;
+    }
+
+    try {
+      const response = await documentApi.create(currentProjectId);
+      if (response.error) throw new Error(response.error);
+
+      setDocumentId(response.data.id);
+      setDocumentTitle(response.data.title);
+      setSavingStatus('saved');
+
+      // Load TipTap content if exists
+      if (response.data.content && editor) {
+        editor.commands.setContent(response.data.content);
+      } else if (editor) {
+        // Clear editor for new document
+        editor.commands.setContent('<p></p>');
+      }
+
+      // Update URL
+      window.history.pushState({}, '', `/editor/${response.data.id}`);
+    } catch (err) {
+      console.error('Create document error:', err);
+      alert('Failed to create document');
+    }
+  };
 
   const handleSendMessage = async () => {
     if (!inputText.trim() || isTyping) return;
@@ -214,6 +315,19 @@ const EditorView: React.FC = () => {
                 Export as DOCX
               </button>
             </div>
+          </div>
+          <div className="w-[1px] h-6 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+          <button
+            onClick={handleNewDocument}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200"
+          >
+            <span className="material-symbols-outlined text-[18px]">add</span>
+            New Document
+          </button>
+          <div className="text-sm text-slate-600 dark:text-slate-400 ml-2">
+            {savingStatus === 'saved' && '✓ Saved'}
+            {savingStatus === 'saving' && 'Saving...'}
+            {savingStatus === 'unsaved' && '● Unsaved changes'}
           </div>
           <button className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs font-bold hover:bg-primary/20">
             <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
