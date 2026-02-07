@@ -7,6 +7,34 @@ import EditorView from './pages/EditorView';
 import LibraryView from './pages/LibraryView';
 import { View } from './types';
 import { useSession } from './lib/auth';
+import { ProjectProvider } from './lib/context';
+import { useWebSocket } from './lib/websocket';
+import { useProjectContext } from './lib/context';
+
+// WebSocket wrapper component
+function WebSocketWrapper({ children }: { children: React.ReactNode }) {
+  const { currentProjectId } = useProjectContext();
+  const { connect, disconnect, status } = useWebSocket();
+
+  useEffect(() => {
+    if (currentProjectId) {
+      // Connect to WebSocket when project is loaded
+      connect(currentProjectId, window.location.origin + '/api');
+    }
+
+    return () => {
+      // Disconnect on unmount
+      disconnect();
+    };
+  }, [currentProjectId, connect, disconnect]);
+
+  // Log connection status for debugging
+  useEffect(() => {
+    console.log('WebSocket status:', status);
+  }, [status]);
+
+  return <>{children}</>;
+}
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<View>(View.DASHBOARD);
@@ -40,55 +68,59 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden text-slate-900 dark:text-slate-100 font-sans">
-      <Sidebar activeView={activeView} onViewChange={setActiveView} />
-      
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Header Bar */}
-        <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between px-8 z-30 shrink-0">
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActiveView(View.DASHBOARD)}>
-              <span className="material-symbols-outlined text-primary text-2xl">auto_stories</span>
-              <span className="font-bold text-lg hidden sm:block">Research Hub</span>
-            </div>
-            
-            <div className="hidden md:flex items-center w-80 relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">search</span>
-              <input 
-                className="w-full pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary/50 transition-all placeholder-slate-400" 
-                placeholder="Search papers, projects, notes..." 
-                type="text"
-              />
-            </div>
-          </div>
+    <ProjectProvider>
+      <WebSocketWrapper>
+        <div className="flex h-screen overflow-hidden text-slate-900 dark:text-slate-100 font-sans">
+          <Sidebar activeView={activeView} onViewChange={setActiveView} />
 
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => setActiveView(View.EDITOR)}
-              className="hidden sm:flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm"
-            >
-              <span className="material-symbols-outlined text-xl">add</span>
-              <span>New Document</span>
-            </button>
-            <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 mx-2 hidden sm:block"></div>
-            <button className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg relative">
-              <span className="material-symbols-outlined">notifications</span>
-              <span className="absolute top-2 right-2 size-2 bg-red-500 border-2 border-white dark:border-slate-900 rounded-full"></span>
-            </button>
-            <div className="size-9 rounded-full bg-slate-200 dark:bg-slate-700 border-2 border-white dark:border-slate-900 overflow-hidden cursor-pointer">
-              <img 
-                className="w-full h-full object-cover" 
-                alt="User Profile" 
-                src="https://picsum.photos/seed/user/100" 
-              />
-            </div>
-          </div>
-        </header>
+          <div className="flex-1 flex flex-col min-w-0">
+            {/* Top Header Bar */}
+            <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between px-8 z-30 shrink-0">
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActiveView(View.DASHBOARD)}>
+                  <span className="material-symbols-outlined text-primary text-2xl">auto_stories</span>
+                  <span className="font-bold text-lg hidden sm:block">Research Hub</span>
+                </div>
 
-        {/* View Content */}
-        {renderView()}
-      </div>
-    </div>
+                <div className="hidden md:flex items-center w-80 relative">
+                  <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">search</span>
+                  <input
+                    className="w-full pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary/50 transition-all placeholder-slate-400"
+                    placeholder="Search papers, projects, notes..."
+                    type="text"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setActiveView(View.EDITOR)}
+                  className="hidden sm:flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-all shadow-sm"
+                >
+                  <span className="material-symbols-outlined text-xl">add</span>
+                  <span>New Document</span>
+                </button>
+                <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 mx-2 hidden sm:block"></div>
+                <button className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg relative">
+                  <span className="material-symbols-outlined">notifications</span>
+                  <span className="absolute top-2 right-2 size-2 bg-red-500 border-2 border-white dark:border-slate-900 rounded-full"></span>
+                </button>
+                <div className="size-9 rounded-full bg-slate-200 dark:bg-slate-700 border-2 border-white dark:border-slate-900 overflow-hidden cursor-pointer">
+                  <img
+                    className="w-full h-full object-cover"
+                    alt="User Profile"
+                    src="https://picsum.photos/seed/user/100"
+                  />
+                </div>
+              </div>
+            </header>
+
+            {/* View Content */}
+            {renderView()}
+          </div>
+        </div>
+      </WebSocketWrapper>
+    </ProjectProvider>
   );
 };
 
