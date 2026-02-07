@@ -14,6 +14,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange, isOpen = tr
     { id: View.DASHBOARD, label: 'Dashboard', icon: 'dashboard' },
     { id: View.LIBRARY, label: 'Library', icon: 'menu_book' },
     { id: View.FILES, label: 'Files', icon: 'folder' },
+    { id: View.ANALYSIS, label: 'Analysis', icon: 'code' },
+    { id: View.MEMORY, label: 'Memory', icon: 'psychology' },
     { id: View.CITATIONS, label: 'Citations', icon: 'link' },
   ];
 
