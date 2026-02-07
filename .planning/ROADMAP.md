@@ -11,8 +11,8 @@ v1.1 is a **frontend integration milestone** that replaces the existing React fr
 ## Milestones
 
 - ✅ **v1.0 Complete Research Workspace** - Phases 1-9 (shipped 2026-02-05)
-- 🚧 **v1.1 Frontend Integration & Polish** - Phases 10-14 (in progress)
-- 📋 **v2.0 [Future]** - Phases 15+ (planned)
+- 🚧 **v1.1 Frontend Integration & Polish** - Phases 10-15 (in progress)
+- 📋 **v2.0 [Future]** - Phases 16+ (planned)
 
 ## Phases
 
@@ -115,10 +115,27 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 14-01: Resolve ESLint warnings and improve component architecture
-- [ ] 14-02: Add loading states and error boundaries
+- [x] 14-01: Resolve ESLint warnings and improve component architecture
+- [x] 14-02: Add loading states and error boundaries
 - [ ] 14-03: Complete manual browser testing for all user flows
 - [ ] 14-04: Verify responsive design across screen sizes
+
+#### Phase 15: Startup Script & Navigation Fixes
+**Goal**: Fix critical configuration issues and complete navigation for all views
+**Depends on**: Phase 14
+**Requirements**: Addresses integration gaps from v1.1 audit
+**Success Criteria** (what must be TRUE):
+  1. `run-all.sh` starts frontend3/ (new design) not frontend/ (legacy)
+  2. Startup logs include timestamps and clear component labels
+  3. WebSocket connects to `ws://localhost:8000/ws/{id}` (no `/api` prefix)
+  4. Analysis and Memory views accessible from Sidebar navigation
+**Gap Closure**: Closes HIGH priority integration gap (startup script) and MEDIUM gaps (navigation, WebSocket URL)
+**Research**: Unlikely (script updates and navigation additions - straightforward)
+**Plans**:
+
+Plans:
+- [ ] 15-01: Update run-all.sh to use frontend3/ with detailed logging
+- [ ] 15-02: Fix WebSocket URL construction and add Analysis/Memory navigation
 
 ### 📋 v2.0 [Future] (Planned)
 
@@ -129,7 +146,7 @@ See [PROJECT.md](.planning/PROJECT.md) for potential v2.0 directions (informatio
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 10 → 11 → 12 → 13 → 14
+Phases execute in numeric order: 10 → 11 → 12 → 13 → 14 → 15
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -138,9 +155,10 @@ Phases execute in numeric order: 10 → 11 → 12 → 13 → 14
 | 11. View Integration | v1.1 | 4/4 | Complete | 2026-02-06 |
 | 12. Backend Feature Integration | v1.1 | 4/4 | Complete | 2026-02-07 |
 | 13. Real-Time Features | v1.1 | 2/2 | Complete | 2026-02-07 |
-| 14. Production Polish | v1.1 | 0/4 | Not started | - |
+| 14. Production Polish | v1.1 | 2/4 | In Progress | - |
+| 15. Startup & Navigation Fixes | v1.1 | 0/2 | Not Started | - |
 
 ---
 
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-07 after Phase 13 completion*
+*Last updated: 2026-02-07 after Phase 13 completion, added Phase 15 for audit gaps*
