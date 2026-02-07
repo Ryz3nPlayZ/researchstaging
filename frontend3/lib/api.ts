@@ -91,6 +91,13 @@ export interface Document {
   updated_at: string;
 }
 
+// Document update request type for type-safe updates
+export interface DocumentUpdateRequest {
+  content?: any;
+  title?: string;
+  citation_style?: string;
+}
+
 export interface Citation {
   id: string;
   paper_id: string;
@@ -243,10 +250,10 @@ export const documentApi = {
   get: (documentId: string) =>
     apiRequest<Document>(`/documents/${documentId}`),
 
-  update: async (documentId: string, content: any, title?: string) =>
+  update: async (documentId: string, request: DocumentUpdateRequest) =>
     apiRequest<Document>(`/documents/${documentId}`, {
       method: 'PUT',
-      body: JSON.stringify({ content, ...(title && { title }) }),
+      body: JSON.stringify(request),
     }),
 
   delete: async (documentId: string) =>
