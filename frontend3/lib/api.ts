@@ -65,6 +65,22 @@ export interface File {
   metadata?: Record<string, unknown>;
 }
 
+export interface Paper {
+  id?: string;
+  external_id?: string;
+  source: string; // 'semantic_scholar' | 'arxiv'
+  title: string;
+  authors: string[];
+  abstract?: string;
+  year?: number;
+  citation_count?: number;
+  url?: string;
+  pdf_url?: string;
+  open_access_pdf_url?: string;
+  doi?: string;
+  journal?: string;
+}
+
 // Project APIs
 export const projectApi = {
   list: () => apiRequest<Project[]>('/projects'),
@@ -90,5 +106,6 @@ export const documentApi = {
 
 // Literature APIs
 export const literatureApi = {
-  search: (query: string) => apiRequest(`/literature/search?q=${query}`),
+  search: (query: string, limit: number = 20) =>
+    apiRequest<Paper[]>(`/literature/search?q=${encodeURIComponent(query)}&limit=${limit}`),
 };
