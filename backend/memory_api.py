@@ -63,6 +63,28 @@ async def get_claims(
     return [ClaimResponse.model_validate(c) for c in claims]
 
 
+@router.get("/projects/{project_id}/claims/search", response_model=List[ClaimResponse])
+async def search_claims(
+    project_id: str,
+    q: str = Query(..., min_length=2, description="Search query"),
+    limit: int = Query(20, ge=1, le=100),
+    session: AsyncSession = Depends(get_db),
+):
+    """
+    Full-text search on claim_text field.
+
+    Uses PostgreSQL GIN index for efficient search.
+    """
+    service = MemoryService(session)
+    claims = await service.search_claims(
+        project_id=project_id,
+        query=q,
+        limit=limit,
+    )
+
+    return [ClaimResponse.model_validate(c) for c in claims]
+
+
 @router.get("/projects/{project_id}/claims/{claim_id}", response_model=ClaimResponse)
 async def get_claim(
     project_id: str,
@@ -219,28 +241,6 @@ async def delete_claim(
         raise HTTPException(status_code=404, detail="Claim not found")
 
     await service.delete_claim(claim_id)
-
-
-@router.get("/projects/{project_id}/claims/search", response_model=List[ClaimResponse])
-async def search_claims(
-    project_id: str,
-    q: str = Query(..., min_length=2, description="Search query"),
-    limit: int = Query(20, ge=1, le=100),
-    session: AsyncSession = Depends(get_db),
-):
-    """
-    Full-text search on claim_text field.
-
-    Uses PostgreSQL GIN index for efficient search.
-    """
-    service = MemoryService(session)
-    claims = await service.search_claims(
-        project_id=project_id,
-        query=q,
-        limit=limit,
-    )
-
-    return [ClaimResponse.model_validate(c) for c in claims]
 
 
 # ============== Graph Traversal and Relationships ==============
