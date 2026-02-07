@@ -6,7 +6,7 @@ import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import Underline from '@tiptap/extension-underline';
 import { ChatMessage } from '../types';
-import { chatApi, exportApi, documentApi, projectApi } from '../lib/api';
+import { chatApi, exportApi, documentApi, projectApi, citationApi } from '../lib/api';
 import type { Project } from '../lib/api';
 
 // Agent type constants
@@ -61,6 +61,12 @@ const EditorView: React.FC = () => {
   const [savingStatus, setSavingStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
+
+  // Citation search state
+  const [showCitationModal, setShowCitationModal] = useState(false);
+  const [citationQuery, setCitationQuery] = useState('');
+  const [citationResults, setCitationResults] = useState<any[]>([]);
+  const [searchingCitations, setSearchingCitations] = useState(false);
 
   const handleExport = async (format: 'pdf' | 'docx') => {
     if (exporting) return;
@@ -180,6 +186,38 @@ const EditorView: React.FC = () => {
       console.error('Create document error:', err);
       alert('Failed to create document');
     }
+  };
+
+  // Citation search handler
+  const handleCitationSearch = async () => {
+    if (citationQuery.length < 2) return;
+
+    setSearchingCitations(true);
+
+    try {
+      const response = await citationApi.search(citationQuery, 10);
+      if (response.error) throw new Error(response.error);
+
+      setCitationResults(response.data || []);
+    } catch (err) {
+      console.error('Citation search error:', err);
+      alert('Failed to search citations');
+    } finally {
+      setSearchingCitations(false);
+    }
+  };
+
+  // Insert citation handler
+  const insertCitation = (paper: any) => {
+    if (!editor) return;
+
+    // Insert citation placeholder at cursor
+    const citationText = `[@${paper.id || paper.external_id}]`;
+    editor.commands.insertContent(citationText);
+
+    setShowCitationModal(false);
+    setCitationQuery('');
+    setCitationResults([]);
   };
 
   const handleSendMessage = async () => {
@@ -324,6 +362,13 @@ const EditorView: React.FC = () => {
             <span className="material-symbols-outlined text-[18px]">add</span>
             New Document
           </button>
+          <button
+            onClick={() => setShowCitationModal(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg text-xs font-semibold text-slate-700 dark:text-slate-200"
+          >
+            <span className="material-symbols-outlined text-[18px]">format_quote</span>
+            Insert Citation
+          </button>
           <div className="text-sm text-slate-600 dark:text-slate-400 ml-2">
             {savingStatus === 'saved' && '✓ Saved'}
             {savingStatus === 'saving' && 'Saving...'}
@@ -435,6 +480,83 @@ const EditorView: React.FC = () => {
           </div>
         </div>
       </aside>
+
+      {/* Citation Search Modal */}
+      {showCitationModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] flex flex-col m-4">
+            <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Insert Citation</h2>
+              <button
+                onClick={() => {
+                  setShowCitationModal(false);
+                  setCitationQuery('');
+                  setCitationResults([]);
+                }}
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-500"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={citationQuery}
+                  onChange={(e) => setCitationQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleCitationSearch()}
+                  placeholder="Search for papers by title, author, or keywords..."
+                  className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-primary focus:border-primary"
+                />
+                <button
+                  onClick={handleCitationSearch}
+                  disabled={searchingCitations || citationQuery.length < 2}
+                  className="px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {searchingCitations ? 'Searching...' : 'Search'}
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-4">
+              {citationResults.length === 0 ? (
+                <div className="text-center py-8 text-slate-500 dark:text-slate-400 text-sm">
+                  {citationQuery.length < 2
+                    ? 'Enter at least 2 characters to search'
+                    : 'No results found. Try a different search query.'}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {citationResults.map((paper, index) => (
+                    <div
+                      key={index}
+                      onClick={() => insertCitation(paper)}
+                      className="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg hover:border-primary cursor-pointer transition-colors"
+                    >
+                      <div className="font-semibold text-sm text-slate-900 dark:text-slate-100 mb-1">
+                        {paper.title}
+                      </div>
+                      <div className="text-xs text-slate-600 dark:text-slate-400 mb-1">
+                        {Array.isArray(paper.authors) ? paper.authors.join(', ') : paper.authors}
+                      </div>
+                      <div className="text-xs text-slate-500 dark:text-slate-500 flex items-center gap-2">
+                        <span>{paper.year}</span>
+                        {paper.journal && <span>• {paper.journal}</span>}
+                        {paper.source && (
+                          <span className="px-2 py-0.5 bg-slate-200 dark:bg-slate-700 rounded text-[10px] uppercase">
+                            {paper.source}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
