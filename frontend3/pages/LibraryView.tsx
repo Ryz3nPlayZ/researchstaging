@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { Paper } from '../types';
+import { literatureApi } from '../lib/api';
 
 const LibraryView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -9,44 +10,27 @@ const LibraryView: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const handleSearch = async () => {
-    // Will be implemented in Task 3
-    console.log('Search for:', searchQuery);
-  };
+    if (!searchQuery.trim()) return;
 
-  const mockPapers: Paper[] = [
-    {
-      id: '1',
-      title: 'Attention Is All You Need',
-      authors: 'Vaswani, A., Shazeer, N., Parmar, N., et al.',
-      journal: 'Journal of Machine Learning',
-      year: 2017,
-      citations: '120,432 Citations',
-      claims: [
-        'Proposes a new simple network architecture, the Transformer, based solely on attention mechanisms.',
-        'Dispenses entirely with recurrence and convolutions, allowing for significantly more parallelization.',
-        'Achieves state-of-the-art results on translation tasks while requiring substantially less time to train.'
-      ]
-    },
-    {
-      id: '2',
-      title: 'Large Language Models are Zero-Shot Reasoners',
-      authors: 'Kojima, T., Gu, S. S., Reid, M., et al.',
-      journal: 'NeurIPS',
-      year: 2022,
-      citations: '2,150 Citations',
-      claims: [],
-      recommended: true
-    },
-    {
-      id: '3',
-      title: 'Learning to Prompt for Vision-Language Models',
-      authors: 'Zhou, K., Yang, J., Loy, C. C., et al.',
-      journal: 'IJCV',
-      year: 2022,
-      citations: '1,890 Citations',
-      claims: []
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await literatureApi.search(searchQuery, 20);
+
+      if (response.error) {
+        throw new Error(response.error);
+      }
+
+      setPapers(response.data || []);
+    } catch (err) {
+      console.error('Search error:', err);
+      setError(err instanceof Error ? err.message : 'Search failed');
+      setPapers([]);
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  };
 
   return (
     <div className="flex-1 flex overflow-hidden">
@@ -90,73 +74,86 @@ const LibraryView: React.FC = () => {
           </div>
 
           <div className="space-y-4">
-            {papers.map((paper, idx) => (
-              <div 
-                key={paper.id} 
-                className={`group flex flex-col rounded-xl border ${idx === 0 ? 'border-l-4 border-l-primary' : 'border-slate-200 dark:border-slate-800'} bg-white dark:bg-slate-900 shadow-sm transition-all hover:shadow-md cursor-pointer overflow-hidden`}
-              >
-                <div className="p-6">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <h3 className={`text-xl font-bold mb-2 transition-colors ${idx === 0 ? 'text-slate-900 dark:text-white' : 'text-slate-700 dark:text-slate-300 group-hover:text-primary'}`}>
-                        {paper.title}
-                      </h3>
-                      <p className={`text-sm font-medium mb-1 ${idx === 0 ? 'text-primary' : 'text-slate-500'}`}>{paper.authors}</p>
-                      <div className="flex items-center gap-3 text-xs text-slate-500">
-                        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-xs">menu_book</span> {paper.journal}</span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1"><span className="material-symbols-outlined text-xs">calendar_today</span> {paper.year}</span>
-                        {paper.citations && (
-                          <>
-                            <span>•</span>
-                            <span className="flex items-center gap-1"><span className="material-symbols-outlined text-xs">format_quote</span> {paper.citations}</span>
-                          </>
-                        )}
-                        {paper.recommended && <span className="text-primary font-bold uppercase tracking-tight">AI Recommended</span>}
-                      </div>
-                    </div>
-                    <span className="material-symbols-outlined text-slate-300">
-                      {idx === 0 ? 'expand_less' : 'expand_more'}
-                    </span>
-                  </div>
-
-                  {idx === 0 && paper.claims.length > 0 && (
-                    <div className="mt-6 border-t border-slate-100 dark:border-slate-800 pt-6">
-                      <div className="flex items-center gap-2 mb-4">
-                        <span className="material-symbols-outlined text-primary text-sm">auto_awesome</span>
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400">Key Claims (AI Extracted)</h4>
-                      </div>
-                      <ul className="space-y-3">
-                        {paper.claims.map((claim, cIdx) => (
-                          <li key={cIdx} className="flex items-start gap-3">
-                            <div className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary/40"></div>
-                            <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed" dangerouslySetInnerHTML={{ __html: claim.replace(/Transformer/g, '<strong class="text-slate-900 dark:text-white">Transformer</strong>') }} />
-                          </li>
-                        ))}
-                      </ul>
-                      <div className="mt-8 flex flex-wrap items-center gap-3">
-                        <button className="flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all">
-                          <span className="material-symbols-outlined text-sm">format_quote</span>
-                          Cite in Document
-                        </button>
-                        <button className="flex items-center gap-2 rounded-lg bg-slate-100 dark:bg-slate-700 px-5 py-2.5 text-sm font-bold text-slate-700 dark:text-white hover:bg-slate-200 dark:hover:bg-slate-600 transition-all">
-                          <span className="material-symbols-outlined text-sm">description</span>
-                          View Full Paper
-                        </button>
-                        <div className="ml-auto flex items-center gap-2">
-                          <button className="p-2 text-slate-400 hover:text-primary transition-colors">
-                            <span className="material-symbols-outlined">bookmark</span>
-                          </button>
-                          <button className="p-2 text-slate-400 hover:text-red-500 transition-colors">
-                            <span className="material-symbols-outlined">delete</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
+            {/* Error state */}
+            {error && (
+              <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 mb-6">
+                <p className="text-red-600 dark:text-red-400 text-sm font-medium">{error}</p>
               </div>
-            ))}
+            )}
+
+            {/* Loading state */}
+            {isLoading && (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="animate-pulse bg-slate-200 dark:bg-slate-800 rounded-xl h-32"></div>
+                ))}
+              </div>
+            )}
+
+            {/* Empty state */}
+            {papers.length === 0 && !isLoading && !error && (
+              <div className="text-center py-12 text-slate-500">
+                <p className="text-lg font-medium mb-2">No papers found</p>
+                <p className="text-sm">Try searching for a different topic</p>
+              </div>
+            )}
+
+            {/* Paper results */}
+            {papers.map((paper, idx) => {
+              const pdfUrl = paper.pdf_url || paper.open_access_pdf_url;
+              return (
+                <div
+                  key={paper.id || paper.external_id || idx}
+                  className="group flex flex-col rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm transition-all hover:shadow-md cursor-pointer overflow-hidden"
+                >
+                  <div className="p-6">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold mb-2 transition-colors text-slate-700 dark:text-slate-300 group-hover:text-primary">
+                          {paper.title}
+                        </h3>
+                        <p className="text-sm font-medium mb-1 text-slate-500">{Array.isArray(paper.authors) ? paper.authors.join(', ') : paper.authors}</p>
+                        <div className="flex items-center gap-3 text-xs text-slate-500">
+                          <span className={`text-xs px-2 py-0.5 rounded ${
+                            paper.source === 'arxiv'
+                              ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
+                              : 'bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
+                          }`}>
+                            {paper.source === 'arxiv' ? 'arXiv' : 'Semantic Scholar'}
+                          </span>
+                          <span className="flex items-center gap-1"><span className="material-symbols-outlined text-xs">menu_book</span> {paper.journal || paper.source}</span>
+                          <span>•</span>
+                          <span className="flex items-center gap-1"><span className="material-symbols-outlined text-xs">calendar_today</span> {paper.year}</span>
+                          {paper.citation_count !== undefined && (
+                            <>
+                              <span>•</span>
+                              <span className="flex items-center gap-1"><span className="material-symbols-outlined text-xs">format_quote</span> {paper.citation_count.toLocaleString()} Citations</span>
+                            </>
+                          )}
+                        </div>
+                        {paper.abstract && (
+                          <p className="text-sm text-slate-600 dark:text-slate-400 mt-2 line-clamp-3">
+                            {paper.abstract}
+                          </p>
+                        )}
+                        {pdfUrl && (
+                          <button
+                            onClick={() => window.open(pdfUrl, '_blank')}
+                            className="flex items-center gap-1 text-primary text-sm font-semibold mt-3"
+                          >
+                            <span className="material-symbols-outlined text-sm">picture_as_pdf</span>
+                            View PDF
+                          </button>
+                        )}
+                      </div>
+                      <span className="material-symbols-outlined text-slate-300">
+                        expand_more
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
