@@ -7,6 +7,11 @@ const FilesView: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentProjectId, setCurrentProjectId] = useState<string | undefined>(undefined);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
+  // Use a default project ID for now (will be context-based in production)
+  const projectId = currentProjectId || 'default-project';
 
   // Fetch files on component mount
   useEffect(() => {
@@ -65,6 +70,48 @@ const FilesView: React.FC = () => {
     }
   };
 
+  // File upload handlers
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    await uploadFile(file);
+  };
+
+  const uploadFile = async (file: File) => {
+    setUploading(true);
+    setUploadProgress(0);
+
+    try {
+      await fileApi.upload(file, projectId);
+      // Refresh file list after upload
+      window.location.reload(); // Simple approach for now
+    } catch (err) {
+      console.error('Upload error:', err);
+      alert(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const files = e.dataTransfer.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    await uploadFile(file);
+  };
+
   return (
     <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950">
       <div className="max-w-5xl mx-auto px-8 py-10">
@@ -73,10 +120,20 @@ const FilesView: React.FC = () => {
             <h2 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Files Management</h2>
             <p className="text-slate-500 mt-1">Organize and process your research documents.</p>
           </div>
-          <button className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-white rounded-lg font-semibold text-sm transition-all shadow-md shadow-primary/20">
+          <input
+            type="file"
+            id="file-upload"
+            className="hidden"
+            onChange={handleFileSelect}
+            disabled={uploading}
+          />
+          <label
+            htmlFor="file-upload"
+            className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 disabled:bg-slate-300 dark:disabled:bg-slate-700 text-white rounded-lg font-semibold text-sm transition-all shadow-md shadow-primary/20 cursor-pointer"
+          >
             <span className="material-symbols-outlined text-[20px]">upload</span>
-            Upload Files
-          </button>
+            {uploading ? `Uploading... ${uploadProgress}%` : 'Upload Files'}
+          </label>
         </div>
 
         {/* Loading State */}
@@ -105,17 +162,26 @@ const FilesView: React.FC = () => {
         {/* Upload Zone (show when not loading) */}
         {!loading && (
           <div className="mb-12">
-            <div className="group relative border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-primary dark:hover:border-primary bg-white dark:bg-slate-900 rounded-xl p-12 transition-all flex flex-col items-center justify-center text-center">
+            <div
+              className={`group relative border-2 border-dashed rounded-xl p-12 transition-all flex flex-col items-center justify-center text-center ${
+                uploading ? 'border-primary bg-primary/5' : 'border-slate-300 dark:border-slate-700 hover:border-primary dark:hover:border-primary bg-white dark:bg-slate-900'
+              }`}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+            >
               <div className="size-16 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4 group-hover:scale-110 transition-transform">
                 <span className="material-symbols-outlined text-[32px]">cloud_upload</span>
               </div>
-              <h3 className="text-lg font-semibold mb-1">Drag and drop files here</h3>
+              <h3 className="text-lg font-semibold mb-1">{uploading ? 'Uploading file...' : 'Drag and drop files here'}</h3>
               <p className="text-slate-500 text-sm max-w-sm mb-6">
                 Enhance your research by uploading PDFs, documents, or data sets. We support PDF, DOCX, TXT and CSV up to 50MB.
               </p>
-              <button className="px-6 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-bold transition-colors">
-                Browse files
-              </button>
+              <label
+                htmlFor="file-upload"
+                className="px-6 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg text-sm font-bold transition-colors cursor-pointer"
+              >
+                {uploading ? 'Upload in progress...' : 'Browse files'}
+              </label>
             </div>
           </div>
         )}
