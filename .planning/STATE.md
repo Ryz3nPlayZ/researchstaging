@@ -13,10 +13,10 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 **Milestone:** v1.1 Frontend Integration & Polish - STARTED 2026-02-06
 
 Phase: 12 of 14 (Backend Feature Integration)
-Plan: 3 of X (Backend Feature Integration)
+Plan: 2 of X (Backend Feature Integration)
 Status: In progress
 
-Last activity: 2026-02-07 — Plan 12-03 complete: Analysis execution API client, Monaco editor component (textarea fallback), AnalysisView with code execution UI, PDF/DOCX export functionality.
+Last activity: 2026-02-07 — Plan 12-02 complete: Document CRUD API client, TipTap editor backend integration with 4-second auto-save, citation search modal, bibliography component with format selection.
 
 Progress: ████████░░ 89% (v1.0 complete: 9 phases, 31 plans. v1.1: 9/17 plans started)
 
@@ -134,6 +134,14 @@ Progress: ████████░░ 89% (v1.0 complete: 9 phases, 31 plans.
 81. Export API client with blob download handling for PDF and DOCX
 82. Code execution pattern: API call → loading state → results display with error handling
 83. Blob download pattern: fetch → blob → URL.createObjectURL → anchor click → revokeObjectURL
+84. Document CRUD API client with TypeScript types (Document, Citation, BibliographyEntry)
+85. TipTap editor backend integration with 4-second auto-save debounce
+86. Document state management (documentId, title, savingStatus: saved/saving/unsaved)
+87. Project auto-loading (first project) for seamless document creation
+88. Citation search modal with literature database integration (simplified button-based approach)
+89. Bibliography component with format selection (APA, MLA, Chicago)
+90. Bibliography positioned below editor content for visibility during writing
+91. Modal pattern for search with Enter key support and loading states
 
 ### Technical Debt (From v1.0)
 
@@ -157,10 +165,10 @@ Progress: ████████░░ 89% (v1.0 complete: 9 phases, 31 plans.
 
 ## Session Continuity
 
-Last session: 2026-02-07T03:03:43Z
-Stopped at: Completed Phase 12, Plan 03 - Analysis & Export integration
+Last session: 2026-02-07T03:07:49Z
+Stopped at: Completed Phase 12, Plan 02 - Document CRUD & Citation Integration
 Resume file: None (plan complete, ready for next plan)
 
 ---
 
-*Last updated: 2026-02-07 after Plan 12-03 completion (Backend Feature Integration)*
+*Last updated: 2026-02-07 after Plan 12-02 completion (Backend Feature Integration)*
