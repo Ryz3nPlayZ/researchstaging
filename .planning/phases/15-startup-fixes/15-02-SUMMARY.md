@@ -69,7 +69,7 @@ Each task was committed atomically:
 2. **Task 2: Add Analysis and Memory navigation items to Sidebar** - `9d80797` (feat)
 3. **Task 3: Fix WebSocket URL and wire Analysis/Memory views** - `09139d8` (feat)
 
-**Plan metadata:** `pending` (docs: complete plan)
+**Plan metadata:** `51fd587` (docs: complete plan)
 
 ## Files Created/Modified
 
