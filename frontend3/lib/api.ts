@@ -81,6 +81,34 @@ export interface Paper {
   journal?: string;
 }
 
+export interface Document {
+  id: string;
+  project_id: string;
+  title: string;
+  content: any; // TipTap JSON
+  citation_style: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Citation {
+  id: string;
+  paper_id: string;
+  document_id: string;
+  position: number;
+  citation_text: string;
+  formatted_citation: string;
+}
+
+export interface BibliographyEntry {
+  id: string;
+  authors: string;
+  year: number;
+  title: string;
+  journal?: string;
+  doi?: string;
+}
+
 // Chat types
 export interface ChatMessage {
   id: string;
@@ -107,6 +135,30 @@ export interface UploadProgress {
   loaded: number;
   total: number;
   percentage: number;
+}
+
+// Analysis types
+export interface AnalysisRequest {
+  code: string;
+  language: 'python' | 'r';
+  save_to_memory?: boolean;
+}
+
+export interface AnalysisResult {
+  success: boolean;
+  output: string;
+  error: string;
+  execution_time: number;
+  finding_id?: string;
+}
+
+// Export types
+export interface ExportRequest {
+  document_id: string;
+  project_id: string;
+  author?: string;
+  abstract?: string;
+  keywords?: string[];
 }
 
 // Project APIs
@@ -149,7 +201,36 @@ export const fileApi = {
 
 // Document APIs
 export const documentApi = {
-  list: () => apiRequest('/documents'),
+  create: async (projectId: string, title: string = 'Untitled Document') =>
+    apiRequest<Document>(`/projects/${projectId}/documents`, {
+      method: 'POST',
+      body: JSON.stringify({ title, citation_style: 'apa', content: {} }),
+    }),
+
+  get: (documentId: string) =>
+    apiRequest<Document>(`/documents/${documentId}`),
+
+  update: async (documentId: string, content: any, title?: string) =>
+    apiRequest<Document>(`/documents/${documentId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ content, ...(title && { title }) }),
+    }),
+
+  delete: async (documentId: string) =>
+    apiRequest(`/documents/${documentId}`, {
+      method: 'DELETE',
+    }),
+};
+
+// Citation APIs
+export const citationApi = {
+  search: async (query: string, limit: number = 10) =>
+    apiRequest<Paper[]>(`/literature/search?q=${encodeURIComponent(query)}&limit=${limit}`),
+
+  generate: async (documentId: string, format: 'apa' | 'mla' | 'chicago' = 'apa') =>
+    apiRequest<{ bibliography: string; count: number; style: string }>(
+      `/documents/${documentId}/bibliography?style=${format}`
+    ),
 };
 
 // Literature APIs
@@ -169,4 +250,64 @@ export const chatApi = {
         context,
       }),
     }),
+};
+
+// Analysis APIs
+export const analysisApi = {
+  execute: async (code: string, language: 'python' | 'r', projectId: string, saveToMemory = true) =>
+    apiRequest<AnalysisResult>(`/analysis/projects/${projectId}/execute`, {
+      method: 'POST',
+      body: JSON.stringify({
+        code,
+        language,
+        save_to_memory: saveToMemory,
+      }),
+    }),
+};
+
+// Export APIs
+export const exportApi = {
+  pdf: async (documentId: string, projectId: string, author?: string) => {
+    const params = new URLSearchParams({ project_id: projectId });
+    if (author) params.append('author', author);
+
+    const response = await fetch(`${API_BASE}/documents/${documentId}/export/pdf?${params.toString()}`);
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Export failed' }));
+      throw new Error(error.detail || 'Export failed');
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `document-${documentId}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  },
+
+  docx: async (documentId: string, projectId: string, author?: string) => {
+    const params = new URLSearchParams({ project_id: projectId });
+    if (author) params.append('author', author);
+
+    const response = await fetch(`${API_BASE}/documents/${documentId}/export/docx?${params.toString()}`);
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Export failed' }));
+      throw new Error(error.detail || 'Export failed');
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `document-${documentId}.docx`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  },
 };
