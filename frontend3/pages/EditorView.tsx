@@ -10,6 +10,7 @@ import { chatApi, exportApi, documentApi, projectApi, citationApi } from '../lib
 import type { Project } from '../lib/api';
 import { Bibliography } from '../components/Bibliography';
 import { useProjectContext } from '../lib/context';
+import { useWebSocket } from '../lib/websocket';
 
 // Agent type constants
 const AGENT_TYPES = [
@@ -21,6 +22,7 @@ const AGENT_TYPES = [
 
 const EditorView: React.FC = () => {
   const { currentProject, currentProjectId } = useProjectContext();
+  const { status: wsStatus } = useWebSocket();
 
   const editor = useEditor({
     extensions: [
