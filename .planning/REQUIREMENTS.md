@@ -82,12 +82,12 @@ Requirements for v1.1 frontend integration milestone. Goal: Integrate new React 
 
 ### Real-Time Features & State Management
 
-- [ ] **FRONT-19**: WebSocket connection established for real-time updates
+- [x] **FRONT-19**: WebSocket connection established for real-time updates
   - WebSocket connects to `ws://localhost:8000/ws/{project_id}` on mount
   - Real-time events: document changes, analysis progress, chat responses
   - Connection error handling with reconnection logic
   - WebSocket closes cleanly on component unmount
-- [ ] **FRONT-20**: Auto-save with debouncing implemented
+- [x] **FRONT-20**: Auto-save with debouncing implemented
   - TipTap editor changes debounce for 4 seconds
   - Auto-save sends to backend `/api/documents/{id}` endpoint
   - localStorage backup saves immediately as fallback
@@ -196,7 +196,7 @@ Which phases cover which requirements. Updated by create-roadmap.
 | FRONT-01, FRONT-02, FRONT-03, FRONT-04, FRONT-05, FRONT-06 | Phase 10 | Complete |
 | FRONT-07, FRONT-08, FRONT-09, FRONT-10, FRONT-11 | Phase 11 | Complete |
 | FRONT-12, FRONT-13, FRONT-14, FRONT-15, FRONT-16, FRONT-17, FRONT-18 | Phase 12 | Complete |
-| FRONT-19, FRONT-20 | Phase 13 | Pending |
+| FRONT-19, FRONT-20 | Phase 13 | Complete |
 | FRONT-21, FRONT-22, FRONT-23, FRONT-24 | Phase 14 | Pending |
 
 **Coverage:**
@@ -207,4 +207,4 @@ Which phases cover which requirements. Updated by create-roadmap.
 ---
 
 *Requirements defined: 2026-02-06*
-*Last updated: 2026-02-07 after Phase 12 completion*
+*Last updated: 2026-02-07 after Phase 13 completion*
