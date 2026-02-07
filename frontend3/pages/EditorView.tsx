@@ -153,7 +153,7 @@ const EditorView: React.FC = () => {
   // Create new document function
   const handleNewDocument = async () => {
     if (!currentProjectId) {
-      alert('Please create a project first');
+      alert('Loading project... Please wait');
       return;
     }
 
