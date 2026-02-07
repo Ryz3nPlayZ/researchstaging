@@ -1,50 +1,41 @@
 
 import React, { useState } from 'react';
 import { memoryApi } from '../lib/api';
-import type { Claim, Finding, Relationship } from '../lib/api';
+import type { Claim } from '../lib/api';
+import { useProjectContext } from '../lib/context';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const MemoryView: React.FC = () => {
+  const { currentProjectId } = useProjectContext();
   const [searchQuery, setSearchQuery] = useState('');
-  const [results, setResults] = useState<{ claims: Claim[]; findings: Finding[]; relationships: Relationship[] } | null>(null);
+  const [results, setResults] = useState<{ claims: Claim[] } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'claims' | 'findings' | 'relationships'>('claims');
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
+
+    if (!currentProjectId) {
+      setError('No project selected');
+      return;
+    }
 
     setLoading(true);
     setError(null);
     setResults(null);
 
     try {
-      const response = await memoryApi.search(searchQuery, 20);
+      const response = await memoryApi.search(currentProjectId, searchQuery, 20);
       if (response.error) throw new Error(response.error);
 
       setResults({
-        claims: response.data?.claims || [],
-        findings: response.data?.findings || [],
-        relationships: response.data?.relationships || [],
+        claims: response.data || [],
       });
     } catch (err) {
       console.error('Search error:', err);
       setError(err instanceof Error ? err.message : 'Search failed');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const getRelationshipTypeColor = (type: string) => {
-    switch (type) {
-      case 'supports':
-        return 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800';
-      case 'contradicts':
-        return 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800';
-      case 'extends':
-        return 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800';
-      default:
-        return 'bg-slate-50 dark:bg-slate-900/20 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800';
     }
   };
 
@@ -100,126 +91,27 @@ const MemoryView: React.FC = () => {
 
         {/* Results display */}
         {results && !loading && (
-          <div>
-            {/* Tabs */}
-            <div className="flex gap-6 mb-6 border-b border-slate-200 dark:border-slate-700">
-              <button
-                onClick={() => setActiveTab('claims')}
-                className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
-                  activeTab === 'claims'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-                }`}
-              >
-                Claims ({results.claims.length})
-              </button>
-              <button
-                onClick={() => setActiveTab('findings')}
-                className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
-                  activeTab === 'findings'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-                }`}
-              >
-                Findings ({results.findings.length})
-              </button>
-              <button
-                onClick={() => setActiveTab('relationships')}
-                className={`px-4 py-3 font-medium text-sm border-b-2 transition-colors ${
-                  activeTab === 'relationships'
-                    ? 'border-primary text-primary'
-                    : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-                }`}
-              >
-                Relationships ({results.relationships.length})
-              </button>
-            </div>
-
-            {/* Claims tab */}
-            {activeTab === 'claims' && (
-              <div className="space-y-4">
-                {results.claims.length === 0 ? (
-                  <div className="text-center py-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
-                    <p className="text-lg font-medium text-slate-500 mb-2">No claims found</p>
-                    <p className="text-sm text-slate-400">Try a different search query</p>
-                  </div>
-                ) : (
-                  results.claims.map((claim) => (
-                    <div key={claim.id} className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
-                      <p className="text-slate-800 dark:text-slate-200 text-base mb-3">{claim.claim_text}</p>
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                        <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded font-medium">
-                          Confidence: {(claim.confidence * 100).toFixed(0)}%
-                        </span>
-                        <span>•</span>
-                        <span>Source: {claim.source_id}</span>
-                        <span>•</span>
-                        <span>Extracted: {new Date(claim.extracted_at).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                  ))
-                )}
+          <div className="space-y-4">
+            {results.claims.length === 0 ? (
+              <div className="text-center py-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+                <p className="text-lg font-medium text-slate-500 mb-2">No claims found</p>
+                <p className="text-sm text-slate-400">Try a different search query</p>
               </div>
-            )}
-
-            {/* Findings tab */}
-            {activeTab === 'findings' && (
-              <div className="space-y-4">
-                {results.findings.length === 0 ? (
-                  <div className="text-center py-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
-                    <p className="text-lg font-medium text-slate-500 mb-2">No findings found</p>
-                    <p className="text-sm text-slate-400">Try a different search query</p>
+            ) : (
+              results.claims.map((claim) => (
+                <div key={claim.id} className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+                  <p className="text-slate-800 dark:text-slate-200 text-base mb-3">{claim.claim_text}</p>
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
+                    <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded font-medium">
+                      Confidence: {(claim.confidence * 100).toFixed(0)}%
+                    </span>
+                    <span>•</span>
+                    <span>Source: {claim.source_id}</span>
+                    <span>•</span>
+                    <span>Extracted: {new Date(claim.extracted_at).toLocaleDateString()}</span>
                   </div>
-                ) : (
-                  results.findings.map((finding) => (
-                    <div key={finding.id} className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
-                      <p className="text-slate-800 dark:text-slate-200 text-base mb-3">{finding.synthesis}</p>
-                      <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
-                        <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded font-medium">
-                          Confidence: {(finding.confidence * 100).toFixed(0)}%
-                        </span>
-                        <span>•</span>
-                        <span>Based on {finding.claim_ids.length} claims</span>
-                        <span>•</span>
-                        <span>Created: {new Date(finding.created_at).toLocaleDateString()}</span>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-
-            {/* Relationships tab */}
-            {activeTab === 'relationships' && (
-              <div className="space-y-4">
-                {results.relationships.length === 0 ? (
-                  <div className="text-center py-12 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
-                    <p className="text-lg font-medium text-slate-500 mb-2">No relationships found</p>
-                    <p className="text-sm text-slate-400">Try a different search query</p>
-                  </div>
-                ) : (
-                  results.relationships.map((rel) => (
-                    <div key={rel.id} className="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
-                      <div className="flex items-center gap-4 mb-3">
-                        <div className="flex-1 text-right">
-                          <code className="text-xs text-slate-600 dark:text-slate-400">{rel.from_claim_id}</code>
-                        </div>
-                        <span className={`px-3 py-1 text-xs font-semibold rounded-full border ${getRelationshipTypeColor(rel.relationship_type)}`}>
-                          {rel.relationship_type}
-                        </span>
-                        <div className="flex-1">
-                          <code className="text-xs text-slate-600 dark:text-slate-400">{rel.to_claim_id}</code>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3 text-xs text-slate-500">
-                        <span className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded font-medium">
-                          Confidence: {(rel.confidence * 100).toFixed(0)}%
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
+                </div>
+              ))
             )}
           </div>
         )}
