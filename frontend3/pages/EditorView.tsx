@@ -8,6 +8,7 @@ import Underline from '@tiptap/extension-underline';
 import { ChatMessage } from '../types';
 import { chatApi, exportApi, documentApi, projectApi, citationApi } from '../lib/api';
 import type { Project } from '../lib/api';
+import { Bibliography } from '../components/Bibliography';
 
 // Agent type constants
 const AGENT_TYPES = [
@@ -384,6 +385,11 @@ const EditorView: React.FC = () => {
         <article className="w-full max-w-[850px] min-h-[1100px] bg-white dark:bg-slate-950 my-8 shadow-xl rounded-lg border border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200">
           <EditorContent editor={editor} />
         </article>
+
+        {/* Bibliography */}
+        <div className="w-full max-w-[850px]">
+          <Bibliography documentId={documentId} format="apa" />
+        </div>
       </main>
 
       {/* AI Assistant Sidebar */}
