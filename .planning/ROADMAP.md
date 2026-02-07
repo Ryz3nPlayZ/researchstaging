@@ -96,11 +96,11 @@ Plans:
   2. Document changes auto-save to backend after 4 seconds of inactivity
   3. "Saving..." and "Saved" status indicators display in editor
 **Research**: Unlikely (WebSocket infrastructure exists from v1.0)
-**Plans**: TBD
+**Plans**:
 
 Plans:
-- [ ] 13-01: Implement WebSocket connection for real-time updates
-- [ ] 13-02: Implement auto-save with debouncing and status indicators
+- [x] 13-01: Implement WebSocket connection for real-time updates
+- [x] 13-02: Implement auto-save with debouncing and status indicators
 
 #### Phase 14: Production Polish
 **Goal**: Resolve code quality issues and complete manual testing
