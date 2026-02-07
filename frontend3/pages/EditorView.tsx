@@ -81,23 +81,58 @@ const EditorView: React.FC = () => {
       <main className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-900/50 flex flex-col items-center">
         {/* Floating Toolbar */}
         <div className="sticky top-4 mt-6 z-20 flex items-center gap-1 p-1.5 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-slate-200 dark:border-slate-700">
-          <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-200">
+          <button
+            onClick={() => editor?.chain().focus().toggleBold().run()}
+            className={`p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-200 ${
+              editor?.isActive('bold') ? 'bg-slate-200 dark:bg-slate-600' : ''
+            }`}
+          >
             <span className="material-symbols-outlined text-[20px]">format_bold</span>
           </button>
-          <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-200">
+          <button
+            onClick={() => editor?.chain().focus().toggleItalic().run()}
+            className={`p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-200 ${
+              editor?.isActive('italic') ? 'bg-slate-200 dark:bg-slate-600' : ''
+            }`}
+          >
             <span className="material-symbols-outlined text-[20px]">format_italic</span>
           </button>
-          <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-200">
+          <button
+            onClick={() => editor?.chain().focus().toggleUnderline().run()}
+            className={`p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-200 ${
+              editor?.isActive('underline') ? 'bg-slate-200 dark:bg-slate-600' : ''
+            }`}
+          >
+            <span className="material-symbols-outlined text-[20px]">format_underlined</span>
+          </button>
+          <button
+            onClick={() => {
+              const url = prompt('Enter URL:');
+              if (url) {
+                editor?.chain().focus().setLink({ href: url }).run();
+              }
+            }}
+            className={`p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-200 ${
+              editor?.isActive('link') ? 'bg-slate-200 dark:bg-slate-600' : ''
+            }`}
+          >
             <span className="material-symbols-outlined text-[20px]">link</span>
           </button>
           <div className="w-[1px] h-6 bg-slate-200 dark:bg-slate-700 mx-1"></div>
-          <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-200">
+          <button
+            onClick={() => editor?.chain().focus().toggleBlockquote().run()}
+            className={`p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-200 ${
+              editor?.isActive('blockquote') ? 'bg-slate-200 dark:bg-slate-600' : ''
+            }`}
+          >
             <span className="material-symbols-outlined text-[20px]">format_quote</span>
           </button>
-          <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-200">
-            <span className="material-symbols-outlined text-[20px]">menu_book</span>
-          </button>
-          <button className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-200">
+          <button
+            onClick={() => editor?.chain().focus().toggleBulletList().run()}
+            className={`p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-700 dark:text-slate-200 ${
+              editor?.isActive('bulletList') ? 'bg-slate-200 dark:bg-slate-600' : ''
+            }`}
+          >
             <span className="material-symbols-outlined text-[20px]">format_list_bulleted</span>
           </button>
           <div className="w-[1px] h-6 bg-slate-200 dark:bg-slate-700 mx-1"></div>
