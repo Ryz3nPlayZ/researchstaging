@@ -6,19 +6,19 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** Stateful research intelligence — Single workspace where AI agent remembers everything important (all chats, analyses, documents, file contents) and uses that context to provide genuinely helpful research assistance.
 
-**Current focus:** Phase 14 — Production Polish
+**Current focus:** Phase 14 — Production Polish (remaining work)
 
 ## Current Position
 
 **Milestone:** v1.1 Frontend Integration & Polish - IN PROGRESS
 
-Phase: 15 of 15 (Startup and Navigation Fixes)
-Plan: 1 of 2 (Startup Scripts Update)
-Status: Complete
+Phase: 15 of 15 (Startup and Navigation Fixes) - COMPLETE
+Plan: 2 of 2 - COMPLETE
+Status: Phase 15 Complete
 
-Last activity: 2026-02-07T15:30 — Completed Plan 15-01: Startup Scripts Update with frontend3 directory configuration and comprehensive logging.
+Last activity: 2026-02-07T15:30 — Completed Phase 15: Startup Script & Navigation Fixes. Fixed run-all.sh to use frontend3/ with comprehensive logging, fixed WebSocket URL construction, added Analysis/Memory navigation to Sidebar.
 
-Progress: ███████░░ 90% (v1.0 complete: 9 phases, 31 plans. v1.1: 19/21 plans complete)
+Progress: ███████░░ 90% (v1.0 complete: 9 phases, 31 plans. v1.1: 21/23 plans complete)
 
 ## Accumulated Context
 

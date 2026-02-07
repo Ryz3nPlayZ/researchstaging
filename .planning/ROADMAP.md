@@ -136,8 +136,8 @@ Plans:
 **Plans:** 2 plans
 
 Plans:
-- [ ] 15-01-PLAN.md — Update startup scripts to use frontend3/ with npm run dev and comprehensive logging
-- [ ] 15-02-PLAN.md — Fix WebSocket URL and add Analysis/Memory navigation items
+- [x] 15-01-PLAN.md — Update startup scripts to use frontend3/ with npm run dev and comprehensive logging
+- [x] 15-02-PLAN.md — Fix WebSocket URL and add Analysis/Memory navigation items
 
 ### 📋 v2.0 [Future] (Planned)
 
@@ -158,7 +158,7 @@ Phases execute in numeric order: 10 → 11 → 12 → 13 → 14 → 15
 | 12. Backend Feature Integration | v1.1 | 4/4 | Complete | 2026-02-07 |
 | 13. Real-Time Features | v1.1 | 2/2 | Complete | 2026-02-07 |
 | 14. Production Polish | v1.1 | 2/4 | In Progress | - |
-| 15. Startup & Navigation Fixes | v1.1 | 2/2 planned | Ready | - |
+| 15. Startup & Navigation Fixes | v1.1 | 2/2 | Complete | 2026-02-07 |
 
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-07 Phase 15 planned, ready for execution*
+*Last updated: 2026-02-07 Phase 15 complete*
