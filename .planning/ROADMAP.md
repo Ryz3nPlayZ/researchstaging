@@ -149,8 +149,12 @@ Plans:
   3. MemoryView passes `currentProjectId` from context
   4. Memory search returns results without 404 errors
 **Gap Closure**: Closes HIGH priority integration gap (Memory API route mismatch)
-**Research**: Unlikely (API route alignment - straightforward)
-**Plans**: TBD
+**Research**: Complete (backend routes confirmed project-scoped, frontend needs route alignment)
+
+**Plans:** 1 plan
+
+Plans:
+- [ ] 16-01-PLAN.md — Update memoryApi client with project-scoped routes and fix MemoryView to use ProjectContext
 
 #### Phase 17: WebSocket Connection Fixes
 **Goal**: Fix WebSocket connection to use correct backend port
@@ -197,7 +201,7 @@ Phases execute in numeric order: 10 → 11 → 12 → 13 → 14 → 15
 | 13. Real-Time Features | v1.1 | 2/2 | Complete | 2026-02-07 |
 | 14. Production Polish | v1.1 | 2/4 | See Phase 18 | - |
 | 15. Startup & Navigation Fixes | v1.1 | 2/2 | Complete | 2026-02-07 |
-| 16. Memory API Integration Fixes | v1.1 | 0/1 planned | Not Started | - |
+| 16. Memory API Integration Fixes | v1.1 | 1/1 | Ready | - |
 | 17. WebSocket Connection Fixes | v1.1 | 0/1 planned | Not Started | - |
 | 18. Complete Phase 14 Production Polish | v1.1 | 0/2 planned | Not Started | - |
 
