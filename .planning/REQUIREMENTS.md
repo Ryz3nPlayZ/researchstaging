@@ -19,24 +19,24 @@ Requirements for v1.1 frontend integration milestone. Goal: Integrate new React 
 
 ### View Integration
 
-- [ ] **FRONT-07**: Dashboard view connects to `/api/projects` backend endpoint
+- [x] **FRONT-07**: Dashboard view connects to `/api/projects` backend endpoint
   - Replace mock project data with real API calls
   - Display projects from backend database
   - "Create Project" button triggers backend project creation
-- [ ] **FRONT-08**: Files view connects to `/api/files` backend endpoints
+- [x] **FRONT-08**: Files view connects to `/api/files` backend endpoints
   - Replace mock file data with real API calls
   - File list loads from backend (documents, PDFs, datasets, code)
   - File metadata displays correctly (name, type, size, uploaded date, status)
-- [ ] **FRONT-09**: Library view connects to `/api/literature` backend endpoints
+- [x] **FRONT-09**: Library view connects to `/api/literature` backend endpoints
   - Replace mock paper data with real API calls
   - Literature search form submits to Semantic Scholar API via backend
   - Paper display includes title, authors, journal, year, abstract, PDF access
-- [ ] **FRONT-10**: Editor view integrates TipTap editor component
+- [x] **FRONT-10**: Editor view integrates TipTap editor component
   - Replace `contentEditable` div with actual TipTap editor
   - Toolbar buttons (bold, italic, link, quote, list) trigger TipTap commands
   - Document content loads from backend via `/api/documents/{id}`
   - Editor state persists to backend on changes
-- [ ] **FRONT-11**: AI sidebar chat connects to multi-agent backend system
+- [x] **FRONT-11**: AI sidebar chat connects to multi-agent backend system
   - Replace `geminiService.ts` with backend API calls to `/api/chat`
   - Chat messages route through backend orchestration service
   - Multi-agent selection (Document, Literature, Memory, General) works
@@ -194,7 +194,7 @@ Which phases cover which requirements. Updated by create-roadmap.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | FRONT-01, FRONT-02, FRONT-03, FRONT-04, FRONT-05, FRONT-06 | Phase 10 | Complete |
-| FRONT-07, FRONT-08, FRONT-09, FRONT-10, FRONT-11 | Phase 11 | Pending |
+| FRONT-07, FRONT-08, FRONT-09, FRONT-10, FRONT-11 | Phase 11 | Complete |
 | FRONT-12, FRONT-13, FRONT-14, FRONT-15, FRONT-16, FRONT-17, FRONT-18 | Phase 12 | Pending |
 | FRONT-19, FRONT-20 | Phase 13 | Pending |
 | FRONT-21, FRONT-22, FRONT-23, FRONT-24 | Phase 14 | Pending |
