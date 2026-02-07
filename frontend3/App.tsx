@@ -5,6 +5,8 @@ import DashboardView from './pages/DashboardView';
 import FilesView from './pages/FilesView';
 import EditorView from './pages/EditorView';
 import LibraryView from './pages/LibraryView';
+import AnalysisView from './pages/AnalysisView';
+import MemoryView from './pages/MemoryView';
 import { View } from './types';
 import { useSession } from './lib/auth';
 import { ProjectProvider } from './lib/context';
@@ -20,7 +22,7 @@ function WebSocketWrapper({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (currentProjectId) {
       // Connect to WebSocket when project is loaded
-      connect(currentProjectId, window.location.origin + '/api');
+      connect(currentProjectId, window.location.origin);
     }
 
     return () => {
@@ -64,6 +66,8 @@ const App: React.FC = () => {
       case View.FILES: return <FilesView />;
       case View.LIBRARY: return <LibraryView />;
       case View.EDITOR: return <EditorView />;
+      case View.ANALYSIS: return <AnalysisView />;
+      case View.MEMORY: return <MemoryView />;
       case View.CITATIONS: return <LibraryView />; // Using Library as a fallback for citations view
       default: return <DashboardView />;
     }
