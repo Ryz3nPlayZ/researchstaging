@@ -39,19 +39,48 @@ async function apiRequest<T>(
   }
 }
 
+// TypeScript types for API responses
+export interface Project {
+  id: string;
+  research_goal: string;
+  output_type: string;
+  audience?: string;
+  status: string;
+  task_counts?: Record<string, number>;
+  created_at: string;
+  updated_at: string;
+  started_at?: string;
+  completed_at?: string;
+}
+
+export interface File {
+  id: string;
+  name: string;
+  file_type: string;
+  size_bytes: number;
+  created_at: string;
+  path?: string;
+  description?: string;
+  mime_type?: string;
+  metadata?: Record<string, unknown>;
+}
+
 // Project APIs
 export const projectApi = {
-  list: () => apiRequest('/projects'),
-  get: (id: string) => apiRequest(`/projects/${id}`),
-  create: (data: unknown) => apiRequest('/projects', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  }),
+  list: () => apiRequest<Project[]>('/projects'),
+  get: (id: string) => apiRequest<Project>(`/projects/${id}`),
+  create: (data: { research_goal: string; output_type: string; audience?: string }) =>
+    apiRequest<Project>('/projects', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
 };
 
 // File APIs
 export const fileApi = {
-  list: () => apiRequest('/files'),
+  list: (projectId?: string) =>
+    apiRequest<File[]>(projectId ? `/files/projects/${projectId}/files` : '/files'),
+  get: (id: string) => apiRequest<File>(`/files/${id}`),
 };
 
 // Document APIs
