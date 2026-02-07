@@ -362,29 +362,22 @@ export const exportApi = {
 
 // Memory/Information Graph APIs
 export const memoryApi = {
-  search: async (query: string, limit: number = 20) =>
-    apiRequest<MemorySearchResult>(`/memory/search?q=${encodeURIComponent(query)}&limit=${limit}`),
+  search: async (projectId: string, query: string, limit: number = 20) =>
+    apiRequest<Claim[]>(`/memory/projects/${projectId}/claims/search?q=${encodeURIComponent(query)}&limit=${limit}`),
 
-  claims: async (paperId?: string, limit: number = 50) => {
+  claims: async (projectId: string, paperId?: string, limit: number = 50) => {
     const params = new URLSearchParams();
     if (paperId) params.append('paper_id', paperId);
     params.append('limit', limit.toString());
-    return apiRequest<Claim[]>(`/memory/claims?${params}`);
+    return apiRequest<Claim[]>(`/memory/projects/${projectId}/claims?${params}`);
   },
 
-  findings: async (claimIds?: string[], limit: number = 20) => {
+  findings: async (projectId: string, claimIds?: string[], limit: number = 20) => {
     const params = new URLSearchParams();
     if (claimIds && claimIds.length > 0) {
       claimIds.forEach(id => params.append('claim_ids', id));
     }
     params.append('limit', limit.toString());
-    return apiRequest<Finding[]>(`/memory/findings?${params}`);
-  },
-
-  relationships: async (claimId?: string, limit: number = 50) => {
-    const params = new URLSearchParams();
-    if (claimId) params.append('claim_id', claimId);
-    params.append('limit', limit.toString());
-    return apiRequest<Relationship[]>(`/memory/relationships?${params}`);
+    return apiRequest<Finding[]>(`/memory/projects/${projectId}/findings?${params}`);
   },
 };
