@@ -1,17 +1,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { fileApi, File } from '../lib/api';
+import { useProjectContext } from '../lib/context';
 
 const FilesView: React.FC = () => {
+  const { currentProjectId } = useProjectContext();
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentProjectId, setCurrentProjectId] = useState<string | undefined>(undefined);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
-
-  // Use a default project ID for now (will be context-based in production)
-  const projectId = currentProjectId || 'default-project';
 
   // Fetch files on component mount
   useEffect(() => {
@@ -19,6 +17,13 @@ const FilesView: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
+
+        if (!currentProjectId) {
+          setFiles([]);
+          setLoading(false);
+          return;
+        }
+
         const response = await fileApi.list(currentProjectId);
         if (response.error) {
           setError(response.error);
@@ -80,19 +85,27 @@ const FilesView: React.FC = () => {
   };
 
   const uploadFile = async (file: File) => {
+    if (!currentProjectId) return;
+
     setUploading(true);
     setUploadProgress(0);
 
     try {
-      await fileApi.upload(file, projectId);
-      // Refresh file list after upload
-      window.location.reload(); // Simple approach for now
+      await fileApi.upload(file, currentProjectId);
+
+      // Refresh file list from API
+      setLoading(true); // Show loading state
+      const response = await fileApi.list(currentProjectId);
+      if (response.data) {
+        setFiles(response.data);
+      }
     } catch (err) {
       console.error('Upload error:', err);
       alert(err instanceof Error ? err.message : 'Upload failed');
     } finally {
       setUploading(false);
       setUploadProgress(0);
+      setLoading(false);
     }
   };
 
