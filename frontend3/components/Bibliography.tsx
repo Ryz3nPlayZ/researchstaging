@@ -1,14 +1,6 @@
 import { useState, useEffect } from 'react';
 import { citationApi } from '../lib/api';
 
-interface BibliographyEntry {
-  authors: string;
-  year: number;
-  title: string;
-  journal?: string;
-  doi?: string;
-}
-
 interface BibliographyProps {
   documentId: string | null;
   format?: 'apa' | 'mla' | 'chicago';
@@ -95,7 +87,7 @@ export const Bibliography: React.FC<BibliographyProps> = ({ documentId, format =
           <label className="text-xs text-slate-600 dark:text-slate-400">Format:</label>
           <select
             value={selectedFormat}
-            onChange={(e) => setSelectedFormat(e.target.value as any)}
+            onChange={(e) => setSelectedFormat(e.target.value as 'apa' | 'mla' | 'chicago')}
             className="px-2 py-1 border border-slate-300 dark:border-slate-700 rounded text-xs bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-1 focus:ring-primary"
           >
             <option value="apa">APA</option>

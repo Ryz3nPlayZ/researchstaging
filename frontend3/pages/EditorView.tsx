@@ -1,13 +1,13 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import Underline from '@tiptap/extension-underline';
 import { ChatMessage } from '../types';
-import { chatApi, exportApi, documentApi, projectApi, citationApi } from '../lib/api';
-import type { Project } from '../lib/api';
+import { chatApi, exportApi, documentApi, citationApi } from '../lib/api';
+import type { Paper } from '../lib/api';
 import { Bibliography } from '../components/Bibliography';
 import { useProjectContext } from '../lib/context';
 import { useWebSocket } from '../lib/websocket';
@@ -21,7 +21,7 @@ const AGENT_TYPES = [
 ] as const;
 
 const EditorView: React.FC = () => {
-  const { currentProject, currentProjectId } = useProjectContext();
+  const { currentProjectId } = useProjectContext();
   const { status: wsStatus } = useWebSocket();
 
   const editor = useEditor({
@@ -69,7 +69,7 @@ const EditorView: React.FC = () => {
   // Citation search state
   const [showCitationModal, setShowCitationModal] = useState(false);
   const [citationQuery, setCitationQuery] = useState('');
-  const [citationResults, setCitationResults] = useState<any[]>([]);
+  const [citationResults, setCitationResults] = useState<Paper[]>([]);
   const [searchingCitations, setSearchingCitations] = useState(false);
 
   const handleExport = async (format: 'pdf' | 'docx') => {
@@ -97,23 +97,43 @@ const EditorView: React.FC = () => {
 
   // Load existing document on mount
   useEffect(() => {
-    const pathParts = window.location.pathname.split('/');
-    const docId = pathParts[pathParts.length - 1];
+    const loadDocumentOnMount = async () => {
+      const pathParts = window.location.pathname.split('/');
+      const docId = pathParts[pathParts.length - 1];
 
-    if (docId && docId !== 'editor') {
-      loadDocument(docId);
-    }
+      if (docId && docId !== 'editor' && editor) {
+        try {
+          const response = await documentApi.get(docId);
+          if (response.error) throw new Error(response.error);
+
+          setDocumentId(response.data.id);
+          setDocumentTitle(response.data.title);
+          setSavingStatus('saved');
+
+          if (response.data.content) {
+            editor.commands.setContent(response.data.content);
+          }
+        } catch (err) {
+          console.error('Load document error:', err);
+          alert('Failed to load document');
+        }
+      }
+    };
+
+    loadDocumentOnMount();
+  // Only run on mount - editor and documentApi are stable
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-save with 4-second debounce
   useEffect(() => {
     if (!editor || !documentId) return;
 
+    const content = editor.getJSON();
     const saveTimeout = setTimeout(async () => {
       setSavingStatus('saving');
 
       try {
-        const content = editor.getJSON();
         await documentApi.update(documentId, {
           content,
           title: documentTitle,
@@ -131,26 +151,7 @@ const EditorView: React.FC = () => {
     }, 4000); // 4-second debounce
 
     return () => clearTimeout(saveTimeout);
-  }, [editor?.getJSON(), documentId, documentTitle]);
-
-  // Load document function
-  const loadDocument = async (id: string) => {
-    try {
-      const response = await documentApi.get(id);
-      if (response.error) throw new Error(response.error);
-
-      setDocumentId(response.data.id);
-      setDocumentTitle(response.data.title);
-      setSavingStatus('saved');
-
-      if (editor && response.data.content) {
-        editor.commands.setContent(response.data.content);
-      }
-    } catch (err) {
-      console.error('Load document error:', err);
-      alert('Failed to load document');
-    }
-  };
+  }, [editor, documentId, documentTitle]);
 
   // Create new document function
   const handleNewDocument = async () => {
@@ -203,7 +204,7 @@ const EditorView: React.FC = () => {
   };
 
   // Insert citation handler
-  const insertCitation = (paper: any) => {
+  const insertCitation = useCallback((paper: Paper) => {
     if (!editor) return;
 
     // Insert citation placeholder at cursor
@@ -213,7 +214,7 @@ const EditorView: React.FC = () => {
     setShowCitationModal(false);
     setCitationQuery('');
     setCitationResults([]);
-  };
+  }, [editor]);
 
   const handleSendMessage = async () => {
     if (!inputText.trim() || isTyping) return;

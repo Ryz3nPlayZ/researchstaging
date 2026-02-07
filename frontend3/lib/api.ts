@@ -81,11 +81,20 @@ export interface Paper {
   journal?: string;
 }
 
+// TipTap JSON content type (simplified - full TipTap schema is complex)
+export interface TipTapContent {
+  type?: string;
+  content?: TipTapContent[];
+  attrs?: Record<string, unknown>;
+  text?: string;
+  marks?: Array<{ type: string; attrs?: Record<string, unknown> }>;
+}
+
 export interface Document {
   id: string;
   project_id: string;
   title: string;
-  content: any; // TipTap JSON
+  content: TipTapContent;
   citation_style: string;
   created_at: string;
   updated_at: string;
@@ -93,7 +102,7 @@ export interface Document {
 
 // Document update request type for type-safe updates
 export interface DocumentUpdateRequest {
-  content?: any;
+  content?: TipTapContent;
   title?: string;
   citation_style?: string;
 }
@@ -219,8 +228,7 @@ export const fileApi = {
   get: (id: string) => apiRequest<File>(`/files/${id}`),
   upload: async (file: File, projectId: string) => {
     const formData = new FormData();
-    // FormData.append() expects 'string | Blob', File is compatible at runtime
-    // Using 'any' to work around TypeScript lib type definition limitation
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     formData.append('file', file as any);
     formData.append('project_id', projectId);
 

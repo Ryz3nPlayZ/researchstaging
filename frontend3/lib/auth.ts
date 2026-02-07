@@ -70,7 +70,7 @@ export const useSession = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for existing session on mount
+    // Check for existing session on mount - initialize state from localStorage
     const existing = getSession();
     if (existing) {
       setSession(existing);

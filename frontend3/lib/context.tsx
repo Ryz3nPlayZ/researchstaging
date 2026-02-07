@@ -56,6 +56,7 @@ export function ProjectProvider({ children }: ProjectProviderProps) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useProjectContext() {
   const context = useContext(ProjectContext);
 
