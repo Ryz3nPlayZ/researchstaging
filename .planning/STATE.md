@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 **Milestone:** v1.1 Frontend Integration & Polish - STARTED 2026-02-06
 
 Phase: 11 of 14 (View Integration)
-Plan: Not started
-Status: Phase 10 complete
+Plan: 1 of 3 (View Integration)
+Status: In progress
 
-Last activity: 2026-02-06 — Phase 10 complete: Frontend foundation established with verified build system, Tailwind CSS + Material Symbols integration, and development environment proxy to backend API. 3/3 plans executed successfully, 12/12 must-haves verified.
+Last activity: 2026-02-06 — Plan 11-01 complete: Dashboard and Files views connected to backend APIs with loading/error states. API client extended with typed Project and File interfaces. 3/3 tasks executed successfully, all verification criteria passed.
 
-Progress: ████████░░ 82% (v1.0 complete: 9 phases, 31 plans. v1.1: 3/17 plans started)
+Progress: ████████░░ 83% (v1.0 complete: 9 phases, 31 plans. v1.1: 4/17 plans started)
 
 ## Accumulated Context
 
@@ -91,6 +91,15 @@ Progress: ████████░░ 82% (v1.0 complete: 9 phases, 31 plans.
 42. Environment template created (.env.template with VITE_API_URL documentation)
 43. Backend CORS includes localhost:3000 in allowed origins
 
+**From Phase 11 (View Integration):**
+44. API client extended with typed Project and File interfaces
+45. React useState/useEffect pattern for API data fetching established
+46. ApiResponse<T> wrapper for error handling implemented
+47. Relative time formatting for dates implemented
+48. Loading spinners and error banners pattern standardized
+49. DashboardView displays live projects from /api/projects endpoint
+50. FilesView displays live files from /api/files endpoint
+
 ### Technical Debt (From v1.0)
 
 **P1 - High Priority:**
@@ -113,4 +122,4 @@ Progress: ████████░░ 82% (v1.0 complete: 9 phases, 31 plans.
 
 ---
 
-*Last updated: 2026-02-06 after Phase 10 completion (Frontend Foundation & Setup)*
+*Last updated: 2026-02-06 after Plan 11-01 completion (View Integration)*
