@@ -13,12 +13,12 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 **Milestone:** v1.1 Frontend Integration & Polish - STARTED 2026-02-06
 
 Phase: 12 of 14 (Backend Feature Integration)
-Plan: 2 of X (Backend Feature Integration)
+Plan: 4 of X (Backend Feature Integration)
 Status: In progress
 
-Last activity: 2026-02-07 — Plan 12-02 complete: Document CRUD API client, TipTap editor backend integration with 4-second auto-save, citation search modal, bibliography component with format selection.
+Last activity: 2026-02-07 — Plan 12-04 complete: Memory/graph API client with TypeScript types, MemoryView search interface with tabbed results (Claims/Findings/Relationships).
 
-Progress: ████████░░ 89% (v1.0 complete: 9 phases, 31 plans. v1.1: 9/17 plans started)
+Progress: ████████░░ 89% (v1.0 complete: 9 phases, 31 plans. v1.1: 10/17 plans started)
 
 ## Accumulated Context
 
@@ -143,6 +143,14 @@ Progress: ████████░░ 89% (v1.0 complete: 9 phases, 31 plans.
 90. Bibliography positioned below editor content for visibility during writing
 91. Modal pattern for search with Enter key support and loading states
 
+**From Phase 12-04 (Memory API Client):**
+92. Memory/graph API client with TypeScript types (Claim, Finding, Relationship, MemorySearchResult)
+93. MemoryView search interface with three-tab navigation (Claims/Findings/Relationships)
+94. Color-coded relationship type badges (supports=green, contradicts=red, extends=blue)
+95. Provenance display pattern: confidence percentages, source IDs, extraction dates
+96. Tab-based results navigation pattern for organized multi-type results
+97. Graph visualization deferred to v2.0 (D3.js/Cytoscape.js out of MVP scope)
+
 ### Technical Debt (From v1.0)
 
 **P1 - High Priority:**
@@ -165,10 +173,10 @@ Progress: ████████░░ 89% (v1.0 complete: 9 phases, 31 plans.
 
 ## Session Continuity
 
-Last session: 2026-02-07T03:07:49Z
-Stopped at: Completed Phase 12, Plan 02 - Document CRUD & Citation Integration
+Last session: 2026-02-07T03:14:00Z
+Stopped at: Completed Phase 12, Plan 04 - Memory API Client
 Resume file: None (plan complete, ready for next plan)
 
 ---
 
-*Last updated: 2026-02-07 after Plan 12-02 completion (Backend Feature Integration)*
+*Last updated: 2026-02-07 after Plan 12-04 completion (Backend Feature Integration)*
