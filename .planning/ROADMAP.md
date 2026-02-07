@@ -153,8 +153,10 @@ Plans:
 
 **Plans:** 1 plan
 
+**Plans:** 1 plan
+
 Plans:
-- [ ] 16-01-PLAN.md — Update memoryApi client with project-scoped routes and fix MemoryView to use ProjectContext
+- [x] 16-01-PLAN.md — Update memoryApi client with project-scoped routes and fix MemoryView to use ProjectContext
 
 #### Phase 17: WebSocket Connection Fixes
 **Goal**: Fix WebSocket connection to use correct backend port
