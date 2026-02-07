@@ -9,6 +9,7 @@ import { ChatMessage } from '../types';
 import { chatApi, exportApi, documentApi, projectApi, citationApi } from '../lib/api';
 import type { Project } from '../lib/api';
 import { Bibliography } from '../components/Bibliography';
+import { useProjectContext } from '../lib/context';
 
 // Agent type constants
 const AGENT_TYPES = [
@@ -19,6 +20,8 @@ const AGENT_TYPES = [
 ] as const;
 
 const EditorView: React.FC = () => {
+  const { currentProject, currentProjectId } = useProjectContext();
+
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -60,8 +63,6 @@ const EditorView: React.FC = () => {
   const [documentId, setDocumentId] = useState<string | null>(null);
   const [documentTitle, setDocumentTitle] = useState('');
   const [savingStatus, setSavingStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
-  const [currentProject, setCurrentProject] = useState<Project | null>(null);
-  const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
 
   // Citation search state
   const [showCitationModal, setShowCitationModal] = useState(false);
@@ -76,9 +77,9 @@ const EditorView: React.FC = () => {
 
     try {
       if (format === 'pdf') {
-        await exportApi.pdf(documentId, projectId);
+        await exportApi.pdf(documentId, currentProjectId!);
       } else {
-        await exportApi.docx(documentId, projectId);
+        await exportApi.docx(documentId, currentProjectId!);
       }
     } catch (err) {
       console.error('Export error:', err);
@@ -91,23 +92,6 @@ const EditorView: React.FC = () => {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  // Load first project on mount
-  useEffect(() => {
-    const loadProject = async () => {
-      try {
-        const response = await projectApi.list();
-        if (response.data && response.data.length > 0) {
-          setCurrentProject(response.data[0]);
-          setCurrentProjectId(response.data[0].id);
-        }
-      } catch (err) {
-        console.error('Load project error:', err);
-      }
-    };
-
-    loadProject();
-  }, []);
 
   // Load existing document on mount
   useEffect(() => {
@@ -378,10 +362,26 @@ const EditorView: React.FC = () => {
             <span className="material-symbols-outlined text-[18px]">format_quote</span>
             Insert Citation
           </button>
-          <div className="text-sm text-slate-600 dark:text-slate-400 ml-2">
-            {savingStatus === 'saved' && '✓ Saved'}
-            {savingStatus === 'saving' && 'Saving...'}
-            {savingStatus === 'unsaved' && '● Unsaved changes'}
+          <div className="text-sm text-slate-600 dark:text-slate-400 ml-2 flex items-center gap-2">
+            <div className={`flex items-center gap-1 ${
+              wsStatus === 'connected' ? 'text-emerald-600' :
+              wsStatus === 'connecting' ? 'text-amber-600' : 'text-red-600'
+            }`}>
+              <span className="material-symbols-outlined text-sm">
+                {wsStatus === 'connected' ? 'cloud_done' :
+                 wsStatus === 'connecting' ? 'cloud_sync' : 'cloud_off'}
+              </span>
+              <span className="text-xs">
+                {wsStatus === 'connected' ? 'Live' :
+                 wsStatus === 'connecting' ? 'Connecting...' : 'Offline'}
+              </span>
+            </div>
+            <div className="w-[1px] h-4 bg-slate-300 dark:bg-slate-700"></div>
+            <div>
+              {savingStatus === 'saved' && '✓ Saved'}
+              {savingStatus === 'saving' && 'Saving...'}
+              {savingStatus === 'unsaved' && '● Unsaved changes'}
+            </div>
           </div>
           <button className="flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary rounded-lg text-xs font-bold hover:bg-primary/20">
             <span className="material-symbols-outlined text-[18px]">auto_awesome</span>
