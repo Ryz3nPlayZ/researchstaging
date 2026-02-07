@@ -3,6 +3,8 @@ export enum View {
   DASHBOARD = 'dashboard',
   LIBRARY = 'library',
   FILES = 'files',
+  ANALYSIS = 'analysis',
+  MEMORY = 'memory',
   CITATIONS = 'citations',
   SETTINGS = 'settings',
   EDITOR = 'editor'
