@@ -6,19 +6,19 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** Stateful research intelligence — Single workspace where AI agent remembers everything important (all chats, analyses, documents, file contents) and uses that context to provide genuinely helpful research assistance.
 
-**Current focus:** Phase 11 — View Integration
+**Current focus:** Phase 12 — Backend Feature Integration
 
 ## Current Position
 
 **Milestone:** v1.1 Frontend Integration & Polish - STARTED 2026-02-06
 
-Phase: 11 of 14 (View Integration)
-Plan: 4 of 4 (View Integration)
-Status: Phase complete
+Phase: 12 of 14 (Backend Feature Integration)
+Plan: 1 of X (Backend Feature Integration)
+Status: In progress
 
-Last activity: 2026-02-07 — Plan 11-04 complete: AI chat connected to backend multi-agent orchestration. Agent selection UI (4 types) implemented. Direct Gemini API calls replaced with backend /api/chat endpoint. Document context passed from TipTap editor.
+Last activity: 2026-02-07 — Plan 12-01 complete: Mock authentication with auto-login for local development, session persistence via localStorage, useSession React hook, file upload API client with FormData handling, drag-drop upload UI in FilesView.
 
-Progress: ████████░░ 88% (v1.0 complete: 9 phases, 31 plans. v1.1: 7/17 plans started)
+Progress: ████████░░ 89% (v1.0 complete: 9 phases, 31 plans. v1.1: 8/17 plans started)
 
 ## Accumulated Context
 
@@ -120,6 +120,15 @@ Progress: ████████░░ 88% (v1.0 complete: 9 phases, 31 plans.
 69. Document context passing from TipTap editor to backend (HTML content)
 70. geminiService.ts deprecated in favor of backend chat API
 
+**From Phase 12 (Backend Feature Integration):**
+71. Mock authentication for local development (test user auto-login)
+72. Session persistence via localStorage for MVP simplicity
+73. useSession React hook provides session, loading, login, logout
+74. Auto-login on app mount with loading spinner display
+75. File upload API client with FormData handling (no Content-Type header)
+76. Drag-drop file upload UI in FilesView with visual feedback
+77. Upload progress display with disabled states during upload
+
 ### Technical Debt (From v1.0)
 
 **P1 - High Priority:**
@@ -142,10 +151,10 @@ Progress: ████████░░ 88% (v1.0 complete: 9 phases, 31 plans.
 
 ## Session Continuity
 
-Last session: 2026-02-07T02:34:00Z
-Stopped at: Completed Phase 11, Plan 04 - AI chat backend integration
-Resume file: None (phase complete, ready for Phase 12)
+Last session: 2026-02-07T02:59:29Z
+Stopped at: Completed Phase 12, Plan 01 - Authentication & File Upload integration
+Resume file: None (plan complete, ready for next plan)
 
 ---
 
-*Last updated: 2026-02-07 after Plan 11-04 completion (View Integration)*
+*Last updated: 2026-02-07 after Plan 12-01 completion (Backend Feature Integration)*
