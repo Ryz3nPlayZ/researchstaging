@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { memoryApi } from '../lib/api';
 import type { Claim, Finding, Relationship } from '../lib/api';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const MemoryView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -92,11 +93,8 @@ const MemoryView: React.FC = () => {
 
         {/* Loading State */}
         {loading && (
-          <div className="mb-12">
-            <div className="flex flex-col items-center justify-center py-16 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mb-4"></div>
-              <p className="text-slate-500 dark:text-slate-400">Searching information graph...</p>
-            </div>
+          <div className="mb-12 py-16 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+            <LoadingSpinner text="Searching information graph..." />
           </div>
         )}
 

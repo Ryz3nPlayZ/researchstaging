@@ -1,12 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { projectApi, Project } from '../lib/api';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const DashboardView: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
 
   // Fetch projects on component mount
   useEffect(() => {
@@ -128,11 +128,8 @@ const DashboardView: React.FC = () => {
 
         {/* Loading State */}
         {loading && (
-          <div className="flex items-center justify-center py-20">
-            <div className="flex flex-col items-center gap-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-              <p className="text-slate-500 dark:text-slate-400">Loading projects...</p>
-            </div>
+          <div className="py-20">
+            <LoadingSpinner text="Loading projects..." />
           </div>
         )}
 

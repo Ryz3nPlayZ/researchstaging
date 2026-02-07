@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Paper } from '../types';
 import { literatureApi } from '../lib/api';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const LibraryView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -83,10 +84,8 @@ const LibraryView: React.FC = () => {
 
             {/* Loading state */}
             {isLoading && (
-              <div className="space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="animate-pulse bg-slate-200 dark:bg-slate-800 rounded-xl h-32"></div>
-                ))}
+              <div className="py-12">
+                <LoadingSpinner text="Searching literature..." />
               </div>
             )}
 

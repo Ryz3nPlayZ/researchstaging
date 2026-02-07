@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { analysisApi } from '../lib/api';
 import MonacoEditor from '../components/MonacoEditor';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 export const AnalysisView: React.FC = () => {
   const [code, setCode] = useState('# Write your Python or R code here\nprint("Hello, World!")');
   const [language, setLanguage] = useState<'python' | 'r'>('python');
-  const [results, setResults] = useState<any>(null);
+  const [results, setResults] = useState<{ success: boolean; output: string; error: string; execution_time: number; finding_id?: string } | null>(null);
   const [executing, setExecuting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [projectId] = useState('default-project'); // TODO: Get from route/context
@@ -58,12 +59,20 @@ export const AnalysisView: React.FC = () => {
       </div>
 
       {/* Code editor */}
-      <MonacoEditor
-        language={language}
-        value={code}
-        onChange={setCode}
-        height="400px"
-      />
+      <div className="relative">
+        <MonacoEditor
+          language={language}
+          value={code}
+          onChange={setCode}
+          height="400px"
+        />
+        {/* Loading overlay during execution */}
+        {executing && (
+          <div className="absolute inset-0 bg-white/80 dark:bg-slate-900/80 flex items-center justify-center">
+            <LoadingSpinner text="Running code..." />
+          </div>
+        )}
+      </div>
 
       {/* Results display */}
       {error && (
