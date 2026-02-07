@@ -524,3 +524,116 @@ async def clear_chat_history(
     _chat_messages[project_id] = []
 
     return {"message": "Chat history cleared"}
+
+
+# ============== Simple Chat Endpoint (MVP - No Project Required) ==============
+
+class SimpleChatRequest(BaseModel):
+    """Simple chat request model (no project required)."""
+    message: str = Field(..., min_length=1, max_length=10000)
+    agent_type: str = Field(default="general", description="Agent type: document, literature, memory, general")
+    context: Optional[str] = Field(None, description="Optional document context (HTML content)")
+
+
+class SimpleChatResponse(BaseModel):
+    """Simple chat response model."""
+    response: str
+    agent_type: str
+    sources: Optional[List[str]] = None
+
+
+@router.post("/chat", response_model=SimpleChatResponse)
+async def simple_chat(request: SimpleChatRequest):
+    """
+    Simple chat endpoint without project requirement.
+
+    Routes to multi-agent orchestration system based on agent_type.
+    For MVP, uses in-memory context without database persistence.
+
+    Args:
+        request: Chat message with agent type and optional context
+
+    Returns:
+        AI response from the specified agent
+    """
+    try:
+        # Create agent router
+        agent_router = AgentRouter(llm_service)
+
+        # Build minimal context
+        context = {}
+        if request.context:
+            context['document'] = {
+                'content': request.context,
+                'title': 'Current Document'
+            }
+
+        # Route to appropriate agent
+        # Note: For explicit agent_type, we'll bypass the keyword-based routing
+        # and directly use the specified agent
+        response_text = await _route_to_agent(
+            agent_router=agent_router,
+            agent_type=request.agent_type,
+            query=request.message,
+            context=context
+        )
+
+        if not response_text:
+            raise HTTPException(
+                status_code=503,
+                detail="AI service unavailable. Please configure an LLM API key."
+            )
+
+        return SimpleChatResponse(
+            response=response_text,
+            agent_type=request.agent_type,
+            sources=None
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to generate AI response: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate response: {str(e)}"
+        )
+
+
+async def _route_to_agent(
+    agent_router: AgentRouter,
+    agent_type: str,
+    query: str,
+    context: dict
+) -> str:
+    """
+    Route query to specific agent by type.
+
+    Args:
+        agent_router: AgentRouter instance
+        agent_type: Target agent type (document, literature, memory, general)
+        query: User query
+        context: Context dictionary
+
+    Returns:
+        Agent response text
+    """
+    # Map agent type string to agent class
+    from agent_service import DocumentAgent, LiteratureAgent, MemoryAgent, GeneralAgent
+
+    agent_map = {
+        'document': DocumentAgent,
+        'literature': LiteratureAgent,
+        'memory': MemoryAgent,
+        'general': GeneralAgent,
+    }
+
+    agent_class = agent_map.get(agent_type.lower(), GeneralAgent)
+    agent = agent_class(llm_service)
+
+    try:
+        response = await agent.handle(query, context)
+        return response
+    except Exception as e:
+        logger.error(f"Agent {agent_type} failed: {e}", exc_info=True)
+        return f"Sorry, the {agent_type} agent encountered an error. Please try again."

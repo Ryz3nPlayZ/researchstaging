@@ -81,6 +81,28 @@ export interface Paper {
   journal?: string;
 }
 
+// Chat types
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  agent_type?: string;
+}
+
+export interface ChatRequest {
+  message: string;
+  agent_type: 'document' | 'literature' | 'memory' | 'general';
+  context?: string;
+}
+
+export interface ChatResponse {
+  response: string;
+  agent_type: string;
+  sources?: string[];
+  error?: string;
+}
+
 // Project APIs
 export const projectApi = {
   list: () => apiRequest<Project[]>('/projects'),
@@ -108,4 +130,17 @@ export const documentApi = {
 export const literatureApi = {
   search: (query: string, limit: number = 20) =>
     apiRequest<Paper[]>(`/literature/search?q=${encodeURIComponent(query)}&limit=${limit}`),
+};
+
+// Chat APIs
+export const chatApi = {
+  send: (message: string, agentType: string = 'general', context?: string) =>
+    apiRequest<ChatResponse>('/chat', {
+      method: 'POST',
+      body: JSON.stringify({
+        message,
+        agent_type: agentType,
+        context,
+      }),
+    }),
 };
