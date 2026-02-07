@@ -11,8 +11,8 @@ v1.1 is a **frontend integration milestone** that replaces the existing React fr
 ## Milestones
 
 - ✅ **v1.0 Complete Research Workspace** - Phases 1-9 (shipped 2026-02-05)
-- 🚧 **v1.1 Frontend Integration & Polish** - Phases 10-15 (in progress)
-- 📋 **v2.0 [Future]** - Phases 16+ (planned)
+- 🚧 **v1.1 Frontend Integration & Polish** - Phases 10-18 (gap closure phases added)
+- 📋 **v2.0 [Future]** - Phases 19+ (planned)
 
 ## Phases
 
@@ -139,6 +139,44 @@ Plans:
 - [x] 15-01-PLAN.md — Update startup scripts to use frontend3/ with npm run dev and comprehensive logging
 - [x] 15-02-PLAN.md — Fix WebSocket URL and add Analysis/Memory navigation items
 
+#### Phase 16: Memory API Integration Fixes
+**Goal**: Fix Memory API routes to match backend implementation
+**Depends on**: Phase 15
+**Requirements**: FRONT-18 (Information graph queries integrated)
+**Success Criteria** (what must be TRUE):
+  1. Memory API calls include `projectId` parameter
+  2. API routes match backend pattern: `/memory/projects/{projectId}/claims/search`
+  3. MemoryView passes `currentProjectId` from context
+  4. Memory search returns results without 404 errors
+**Gap Closure**: Closes HIGH priority integration gap (Memory API route mismatch)
+**Research**: Unlikely (API route alignment - straightforward)
+**Plans**: TBD
+
+#### Phase 17: WebSocket Connection Fixes
+**Goal**: Fix WebSocket connection to use correct backend port
+**Depends on**: Phase 16
+**Requirements**: FRONT-19 (WebSocket connection established)
+**Success Criteria** (what must be TRUE):
+  1. WebSocket connects to `ws://localhost:8000/ws/{projectId}` (not 3000)
+  2. Vite proxy configured to forward WebSocket connections
+  3. Real-time features work (task updates, document collaboration)
+**Gap Closure**: Closes MEDIUM priority integration gap (WebSocket port mismatch)
+**Research**: Unlikely (Vite proxy configuration - documented)
+**Plans**: TBD
+
+#### Phase 18: Complete Phase 14 Production Polish
+**Goal**: Complete manual browser testing and responsive design fixes
+**Depends on**: Phase 17
+**Requirements**: FRONT-22, FRONT-23, FRONT-24
+**Success Criteria** (what must be TRUE):
+  1. All 10 manual browser test flows executed and passed
+  2. Responsive design works on desktop, tablet, mobile
+  3. Hamburger menu implemented for mobile navigation
+  4. No horizontal scroll at any viewport width
+**Gap Closure**: Completes Phase 14 (manual testing + responsive design)
+**Research**: Unlikely (testing and CSS fixes - straightforward)
+**Plans**: TBD
+
 ### 📋 v2.0 [Future] (Planned)
 
 **Milestone Goal:** To be determined based on v1.1 usage feedback and user requests
@@ -157,8 +195,11 @@ Phases execute in numeric order: 10 → 11 → 12 → 13 → 14 → 15
 | 11. View Integration | v1.1 | 4/4 | Complete | 2026-02-06 |
 | 12. Backend Feature Integration | v1.1 | 4/4 | Complete | 2026-02-07 |
 | 13. Real-Time Features | v1.1 | 2/2 | Complete | 2026-02-07 |
-| 14. Production Polish | v1.1 | 2/4 | In Progress | - |
+| 14. Production Polish | v1.1 | 2/4 | See Phase 18 | - |
 | 15. Startup & Navigation Fixes | v1.1 | 2/2 | Complete | 2026-02-07 |
+| 16. Memory API Integration Fixes | v1.1 | 0/1 planned | Not Started | - |
+| 17. WebSocket Connection Fixes | v1.1 | 0/1 planned | Not Started | - |
+| 18. Complete Phase 14 Production Polish | v1.1 | 0/2 planned | Not Started | - |
 
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-07 Phase 15 complete*
+*Last updated: 2026-02-07 Gap closure phases 16-18 added*
