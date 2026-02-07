@@ -44,38 +44,38 @@ Requirements for v1.1 frontend integration milestone. Goal: Integrate new React 
 
 ### Backend API Integration
 
-- [ ] **FRONT-12**: Authentication flow integrated
+- [x] **FRONT-12**: Authentication flow integrated
   - Mock authentication for local development (auto-login as test user)
   - Google OAuth preserved for production backend integration
   - User session persists in localStorage
   - Protected routes redirect to login if not authenticated
-- [ ] **FRONT-13**: File upload functionality implemented
+- [x] **FRONT-13**: File upload functionality implemented
   - Drag-drop upload zone calls `/api/files/upload` multipart endpoint
   - Upload progress bar displays (if supported by backend)
   - File type validation matches backend (PDF, DOCX, MD, CSV, Excel, Python, R, JS)
   - File size limits enforced (50MB default)
   - Duplicate file auto-renaming works (filename (N).ext pattern)
-- [ ] **FRONT-14**: Document CRUD operations functional
+- [x] **FRONT-14**: Document CRUD operations functional
   - Create document: "New Document" button calls `/api/documents` POST endpoint
   - Read document: Load document content from `/api/documents/{id}` GET endpoint
   - Update document: TipTap changes debounce to `/api/documents/{id}` PUT endpoint (4-second debounce)
   - Delete document: Delete option calls `/api/documents/{id}` DELETE endpoint
-- [ ] **FRONT-15**: Citation formatting integrated
+- [x] **FRONT-15**: Citation formatting integrated
   - @-mention citations search literature database via backend
   - Citation autocomplete dropdown displays matching papers
   - Selected citation inserts in proper format (APA, MLA, Chicago)
   - Bibliography auto-generates from document citations via backend `/api/citations`
-- [ ] **FRONT-16**: Data analysis execution integrated
+- [x] **FRONT-16**: Data analysis execution integrated
   - Monaco editor component loads for Python/R code editing
   - Code submission sends to `/api/analysis/execute` backend endpoint
   - Analysis results display (tables via backend HTML, charts via Plotly.js, text output)
   - Result download buttons work (CSV, PNG, TXT formats)
-- [ ] **FRONT-17**: Document export functionality integrated
+- [x] **FRONT-17**: Document export functionality integrated
   - Export dropdown in toolbar offers PDF and DOCX formats
   - PDF export calls `/api/export/pdf` with document content
   - DOCX export calls `/api/export/docx` with document content
   - Exported file downloads to browser via blob handling
-- [ ] **FRONT-18**: Information graph queries integrated
+- [x] **FRONT-18**: Information graph queries integrated
   - Claims, findings, relationships display from backend `/api/memory` queries
   - Search queries submit to backend relevance scoring endpoint
   - Graph visualization optional (defer to v1.2 if not in scope)
@@ -195,7 +195,7 @@ Which phases cover which requirements. Updated by create-roadmap.
 |-------------|-------|--------|
 | FRONT-01, FRONT-02, FRONT-03, FRONT-04, FRONT-05, FRONT-06 | Phase 10 | Complete |
 | FRONT-07, FRONT-08, FRONT-09, FRONT-10, FRONT-11 | Phase 11 | Complete |
-| FRONT-12, FRONT-13, FRONT-14, FRONT-15, FRONT-16, FRONT-17, FRONT-18 | Phase 12 | Pending |
+| FRONT-12, FRONT-13, FRONT-14, FRONT-15, FRONT-16, FRONT-17, FRONT-18 | Phase 12 | Complete |
 | FRONT-19, FRONT-20 | Phase 13 | Pending |
 | FRONT-21, FRONT-22, FRONT-23, FRONT-24 | Phase 14 | Pending |
 
@@ -207,4 +207,4 @@ Which phases cover which requirements. Updated by create-roadmap.
 ---
 
 *Requirements defined: 2026-02-06*
-*Last updated: 2026-02-06 after v1.1 milestone initialization*
+*Last updated: 2026-02-07 after Phase 12 completion*

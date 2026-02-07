@@ -61,10 +61,10 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 11-01: Connect Dashboard and Files views to backend APIs
-- [ ] 11-02: Connect Library view to literature search backend
-- [ ] 11-03: Integrate TipTap editor in Editor view
-- [ ] 11-04: Connect AI sidebar chat to multi-agent backend
+- [x] 11-01: Connect Dashboard and Files views to backend APIs
+- [x] 11-02: Connect Library view to literature search backend
+- [x] 11-03: Integrate TipTap editor in Editor view
+- [x] 11-04: Connect AI sidebar chat to multi-agent backend
 
 #### Phase 12: Backend Feature Integration
 **Goal**: Integrate backend features for full v1.0 feature parity
@@ -82,10 +82,10 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 12-01: Implement authentication flow and file upload functionality
-- [ ] 12-02: Integrate document CRUD operations and citation formatting
-- [ ] 12-03: Integrate data analysis execution and document export
-- [ ] 12-04: Integrate information graph queries
+- [x] 12-01: Implement authentication flow and file upload functionality
+- [x] 12-02: Integrate document CRUD operations and citation formatting
+- [x] 12-03: Integrate data analysis execution and document export
+- [x] 12-04: Integrate information graph queries
 
 #### Phase 13: Real-Time Features
 **Goal**: Implement WebSocket connection and auto-save functionality
@@ -135,12 +135,12 @@ Phases execute in numeric order: 10 → 11 → 12 → 13 → 14
 |-------|-----------|----------------|--------|-----------|
 | 1-9 | v1.0 | 31/31 | Complete | 2026-02-05 |
 | 10. Frontend Foundation | v1.1 | 3/3 | Complete | 2026-02-06 |
-| 11. View Integration | v1.1 | 0/4 | Not started | - |
-| 12. Backend Feature Integration | v1.1 | 0/4 | Not started | - |
+| 11. View Integration | v1.1 | 4/4 | Complete | 2026-02-06 |
+| 12. Backend Feature Integration | v1.1 | 4/4 | Complete | 2026-02-07 |
 | 13. Real-Time Features | v1.1 | 0/2 | Not started | - |
 | 14. Production Polish | v1.1 | 0/4 | Not started | - |
 
 ---
 
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-06 after v1.1 milestone initialization*
+*Last updated: 2026-02-07 after Phase 12 completion*
