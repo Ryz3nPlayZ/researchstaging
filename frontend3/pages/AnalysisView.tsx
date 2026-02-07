@@ -35,7 +35,7 @@ export const AnalysisView: React.FC = () => {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-4 md:p-6 max-w-6xl mx-auto">
       <h1 className="text-2xl font-bold mb-4 text-slate-800 dark:text-slate-200">Data Analysis</h1>
 
       {/* Language selector and execute button */}

@@ -39,6 +39,7 @@ function WebSocketWrapper({ children }: { children: React.ReactNode }) {
 
 const App: React.FC = () => {
   const [activeView, setActiveView] = useState<View>(View.DASHBOARD);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { session, loading, login } = useSession();
 
   // Auto-login for local development if no session
@@ -73,12 +74,25 @@ const App: React.FC = () => {
       <ProjectProvider>
         <WebSocketWrapper>
           <div className="flex h-screen overflow-hidden text-slate-900 dark:text-slate-100 font-sans">
-            <Sidebar activeView={activeView} onViewChange={setActiveView} />
+            <Sidebar
+              activeView={activeView}
+              onViewChange={setActiveView}
+              isOpen={mobileMenuOpen}
+              onClose={() => setMobileMenuOpen(false)}
+            />
 
             <div className="flex-1 flex flex-col min-w-0">
               {/* Top Header Bar */}
-              <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between px-8 z-30 shrink-0">
-                <div className="flex items-center gap-6">
+              <header className="h-16 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between px-4 md:px-8 z-30 shrink-0">
+                <div className="flex items-center gap-4 md:gap-6">
+                  {/* Hamburger menu button - mobile only */}
+                  <button
+                    className="md:hidden p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
+                    onClick={() => setMobileMenuOpen(true)}
+                    aria-label="Open menu"
+                  >
+                    <span className="material-symbols-outlined">menu</span>
+                  </button>
                   <div className="flex items-center gap-2 cursor-pointer" onClick={() => setActiveView(View.DASHBOARD)}>
                     <span className="material-symbols-outlined text-primary text-2xl">auto_stories</span>
                     <span className="font-bold text-lg hidden sm:block">Research Hub</span>

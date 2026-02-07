@@ -5,9 +5,11 @@ import { View } from '../types';
 interface SidebarProps {
   activeView: View;
   onViewChange: (view: View) => void;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange }) => {
+const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange, isOpen = true, onClose }) => {
   const navItems = [
     { id: View.DASHBOARD, label: 'Dashboard', icon: 'dashboard' },
     { id: View.LIBRARY, label: 'Library', icon: 'menu_book' },
@@ -16,8 +18,51 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange }) => {
   ];
 
   return (
-    <aside className="w-64 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col shrink-0 h-screen sticky top-0">
-      <div className="p-6 flex items-center gap-3">
+    <>
+      {/* Mobile backdrop overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 md:hidden"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={`
+          fixed md:sticky inset-y-0 left-0 z-40
+          w-64 h-screen
+          transform transition-transform duration-300 ease-in-out
+          ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+          md:translate-x-0
+          border-r border-slate-200 dark:border-slate-800
+          bg-white dark:bg-slate-900
+          flex flex-col shrink-0
+        `}
+      >
+      {/* Mobile close button */}
+      <div className="md:hidden flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800">
+        <div className="flex items-center gap-3">
+          <div className="size-10 rounded-lg bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/20">
+            <span className="material-symbols-outlined">auto_awesome</span>
+          </div>
+          <div>
+            <h1 className="text-sm font-bold leading-none tracking-tight">Research AI</h1>
+            <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-1">Workspace</p>
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
+          aria-label="Close menu"
+        >
+          <span className="material-symbols-outlined">close</span>
+        </button>
+      </div>
+
+      {/* Desktop header */}
+      <div className="hidden md:flex p-6 items-center gap-3">
         <div className="size-10 rounded-lg bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/20">
           <span className="material-symbols-outlined">auto_awesome</span>
         </div>
@@ -27,7 +72,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange }) => {
         </div>
       </div>
 
-      <nav className="flex-1 px-4 py-2 space-y-1">
+      <nav className="flex-1 px-4 py-2 space-y-1 overflow-y-auto">
         {navItems.map((item) => (
           <button
             key={item.id}
@@ -76,6 +121,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange }) => {
         </div>
       </div>
     </aside>
+    </>
   );
 };
 

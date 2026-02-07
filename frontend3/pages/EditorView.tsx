@@ -404,7 +404,7 @@ const EditorView: React.FC = () => {
       </main>
 
       {/* AI Assistant Sidebar */}
-      <aside className="w-80 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col shrink-0">
+      <aside className="hidden lg:flex w-80 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col shrink-0">
         <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2">
