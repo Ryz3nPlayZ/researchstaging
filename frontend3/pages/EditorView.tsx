@@ -6,7 +6,15 @@ import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
 import Underline from '@tiptap/extension-underline';
 import { ChatMessage } from '../types';
-import { askResearchAssistant } from '../services/geminiService';
+import { chatApi } from '../lib/api';
+
+// Agent type constants
+const AGENT_TYPES = [
+  { value: 'document', label: 'Document', icon: 'description', description: 'Analyze documents' },
+  { value: 'literature', label: 'Literature', icon: 'menu_book', description: 'Search literature' },
+  { value: 'memory', label: 'Memory', icon: 'psychology', description: 'Query memory' },
+  { value: 'general', label: 'General', icon: 'chat', description: 'General assistance' },
+] as const;
 
 const EditorView: React.FC = () => {
   const editor = useEditor({
@@ -42,6 +50,7 @@ const EditorView: React.FC = () => {
   ]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [selectedAgent, setSelectedAgent] = useState<string>('general');
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -151,15 +160,38 @@ const EditorView: React.FC = () => {
       {/* AI Assistant Sidebar */}
       <aside className="w-80 bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 flex flex-col shrink-0">
         <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center">
-              <span className="material-symbols-outlined text-[20px]">smart_toy</span>
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-primary/20 text-primary flex items-center justify-center">
+                <span className="material-symbols-outlined text-[20px]">smart_toy</span>
+              </div>
+              <span className="font-bold text-sm">Research AI</span>
             </div>
-            <span className="font-bold text-sm">Research AI</span>
+            <p className="text-xs text-slate-500 mt-1">
+              {AGENT_TYPES.find(a => a.value === selectedAgent)?.description}
+            </p>
           </div>
           <button className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded">
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
+        </div>
+
+        {/* Agent Selection */}
+        <div className="flex flex-wrap gap-2 px-4 py-3 border-b border-slate-200 dark:border-slate-800">
+          {AGENT_TYPES.map(agent => (
+            <button
+              key={agent.value}
+              onClick={() => setSelectedAgent(agent.value)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                selectedAgent === agent.value
+                  ? 'bg-primary text-white'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              <span className="material-symbols-outlined text-sm">{agent.icon}</span>
+              {agent.label}
+            </button>
+          ))}
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
