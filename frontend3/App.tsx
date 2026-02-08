@@ -7,6 +7,7 @@ import EditorView from './pages/EditorView';
 import LibraryView from './pages/LibraryView';
 import AnalysisView from './pages/AnalysisView';
 import MemoryView from './pages/MemoryView';
+import SettingsView from './pages/SettingsView';
 import { View } from './types';
 import { useSession } from './lib/auth';
 import { ProjectProvider } from './lib/context';
@@ -81,6 +82,7 @@ const App: React.FC = () => {
       case View.EDITOR: return <EditorView />;
       case View.ANALYSIS: return <AnalysisView />;
       case View.MEMORY: return <MemoryView />;
+      case View.SETTINGS: return <SettingsView />;
       case View.CITATIONS: return <LibraryView />; // Using Library as a fallback for citations view
       default: return <DashboardView />;
     }
