@@ -247,7 +247,7 @@ async def get_file_details(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/files/{file_id}/download")
+@router.get("/{file_id}/download")
 async def download_file(
     file_id: str,
     disposition: str = "attachment",
