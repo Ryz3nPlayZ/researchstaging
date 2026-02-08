@@ -255,7 +255,7 @@ const DashboardView: React.FC = () => {
                     {openMenuId === project.id && (
                       <div
                         onClick={(e) => e.stopPropagation()}
-                        className="absolute top-12 right-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-lg z-10 min-w-[160px] py-1"
+                        className="absolute top-12 right-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-lg z-50 min-w-[160px] py-1"
                       >
                         <button
                           onClick={() => {
@@ -408,7 +408,7 @@ const DashboardView: React.FC = () => {
                     {openMenuId === project.id && (
                       <div
                         onClick={(e) => e.stopPropagation()}
-                        className="absolute top-12 right-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-lg z-10 min-w-[160px] py-1"
+                        className="absolute top-12 right-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-lg z-50 min-w-[160px] py-1"
                       >
                         <button
                           onClick={() => {
