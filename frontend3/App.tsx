@@ -17,24 +17,22 @@ import ErrorBoundary from './components/ErrorBoundary';
 // WebSocket wrapper component
 function WebSocketWrapper({ children }: { children: React.ReactNode }) {
   const { currentProjectId } = useProjectContext();
-  const { connect, disconnect, status } = useWebSocket();
+  const { connect, disconnect, status, setEnabled } = useWebSocket();
 
   useEffect(() => {
-    if (currentProjectId) {
-      // Connect to WebSocket when project is loaded
-      connect(currentProjectId);
-    }
+    // Disable WebSocket for now - connection issues causing console spam
+    setEnabled(false);
 
     return () => {
       // Disconnect on unmount
       disconnect();
     };
-  }, [currentProjectId, connect, disconnect]);
+  }, [disconnect, setEnabled]);
 
-  // Log connection status for debugging
-  useEffect(() => {
-    console.log('WebSocket status:', status);
-  }, [status]);
+  // Remove status logging to reduce console spam
+  // useEffect(() => {
+  //   console.log('WebSocket status:', status);
+  // }, [status]);
 
   return <>{children}</>;
 }

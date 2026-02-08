@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 
 // WebSocket event types
 export interface WebSocketEvent {
@@ -19,11 +19,17 @@ class WebSocketManager {
   private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
   private listeners: Map<string, Set<(event: WebSocketEvent) => void>> = new Map();
   private statusListeners: Set<(status: ConnectionStatus) => void> = new Set();
-  private isConnecting: boolean = false; // Prevent multiple simultaneous connections
-  private reconnectAttempts: number = 0; // Track reconnect attempts
-  private maxReconnectAttempts: number = 5; // Max reconnect attempts before giving up
+  private isConnecting: boolean = false;
+  private reconnectAttempts: number = 0;
+  private maxReconnectAttempts: number = 5;
+  private isEnabled: boolean = true; // Master switch for WebSocket
 
   connect(projectId: string) {
+    // Master switch - if disabled, don't connect
+    if (!this.isEnabled) {
+      return;
+    }
+
     // Prevent multiple simultaneous connection attempts
     if (this.isConnecting) {
       return;
@@ -49,7 +55,7 @@ class WebSocketManager {
 
       ws.onopen = () => {
         this.isConnecting = false;
-        this.reconnectAttempts = 0; // Reset reconnect counter on successful connection
+        this.reconnectAttempts = 0;
         console.log('WebSocket connected for project:', projectId);
         this.notifyStatus('connected');
       };
@@ -63,41 +69,41 @@ class WebSocketManager {
         try {
           const data = JSON.parse(event.data) as WebSocketEvent;
           this.emit(data.type, data);
-        } catch (error) {
+        } catch {
           // Suppress parse errors for non-JSON messages
         }
       };
 
-      ws.onerror = (error) => {
+      ws.onerror = (event) => {
         this.isConnecting = false;
-        // Only log error occasionally to reduce spam
+        // Only log first error to reduce spam
         if (this.reconnectAttempts === 0) {
           console.warn('WebSocket connection failed for project:', projectId);
         }
         this.notifyStatus('error');
       };
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         this.isConnecting = false;
-        // Only log close on first disconnect or after successful connection
-        if (this.reconnectAttempts === 0 && this.ws?.readyState === WebSocket.OPEN) {
-          console.log('WebSocket closed for project:', projectId);
-        }
         this.notifyStatus('disconnected');
         this.cleanup();
 
         // Auto-reconnect with exponential backoff, up to max attempts
-        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+        if (this.reconnectAttempts < this.maxReconnectAttempts && this.isEnabled) {
           this.reconnectAttempts++;
+          // Exponential backoff: 3s, 6s, 12s, 24s, 30s max
           const backoffDelay = Math.min(3000 * Math.pow(2, this.reconnectAttempts - 1), 30000);
+
           this.reconnectTimeout = setTimeout(() => {
-            if (this.projectId === projectId) {
+            // Only reconnect if still for the same project
+            if (this.projectId === projectId && this.isEnabled) {
               this.connect(projectId);
             }
           }, backoffDelay);
-        } else {
+        } else if (this.reconnectAttempts >= this.maxReconnectAttempts) {
           console.warn('WebSocket max reconnect attempts reached for project:', projectId);
-          this.projectId = null; // Give up on this project
+          this.projectId = null;
+          this.reconnectAttempts = 0;
         }
       };
 
@@ -112,7 +118,7 @@ class WebSocketManager {
 
   disconnect() {
     this.isConnecting = false;
-    this.reconnectAttempts = 0; // Reset reconnect counter
+    this.reconnectAttempts = 0;
     this.cleanup();
     if (this.ws) {
       this.ws.close();
@@ -168,7 +174,15 @@ class WebSocketManager {
     this.statusListeners.forEach(callback => callback(status));
   }
 
-  // Reset reconnect attempts (useful for manual retry)
+  // Enable/disable WebSocket entirely
+  setEnabled(enabled: boolean) {
+    this.isEnabled = enabled;
+    if (!enabled) {
+      this.disconnect();
+    }
+  }
+
+  // Reset reconnect attempts
   resetReconnectAttempts() {
     this.reconnectAttempts = 0;
   }
@@ -193,12 +207,40 @@ export function useWebSocket() {
     };
   }, []);
 
+  // Use useCallback to memoize functions and prevent infinite re-renders
+  const connect = useCallback((projectId: string) => {
+    manager.connect(projectId);
+  }, []);
+
+  const disconnect = useCallback(() => {
+    manager.disconnect();
+  }, []);
+
+  const on = useCallback((eventType: string, callback: (event: WebSocketEvent) => void) => {
+    manager.on(eventType, callback);
+    // Return cleanup function
+    return () => manager.off(eventType, callback);
+  }, []);
+
+  const off = useCallback((eventType: string, callback: (event: WebSocketEvent) => void) => {
+    manager.off(eventType, callback);
+  }, []);
+
+  const resetReconnectAttempts = useCallback(() => {
+    manager.resetReconnectAttempts();
+  }, []);
+
+  const setEnabled = useCallback((enabled: boolean) => {
+    manager.setEnabled(enabled);
+  }, []);
+
   return {
     status,
-    connect: (projectId: string) => manager.connect(projectId),
-    disconnect: () => manager.disconnect(),
-    on: (eventType: string, callback: (event: WebSocketEvent) => void) => manager.on(eventType, callback),
-    off: (eventType: string, callback: (event: WebSocketEvent) => void) => manager.off(eventType, callback),
-    resetReconnectAttempts: () => manager.resetReconnectAttempts(),
+    connect,
+    disconnect,
+    on,
+    off,
+    resetReconnectAttempts,
+    setEnabled,
   };
 }
