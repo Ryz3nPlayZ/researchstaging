@@ -22,7 +22,7 @@ function WebSocketWrapper({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (currentProjectId) {
       // Connect to WebSocket when project is loaded
-      connect(currentProjectId, window.location.origin);
+      connect(currentProjectId);
     }
 
     return () => {
