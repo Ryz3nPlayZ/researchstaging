@@ -20,7 +20,7 @@ class WebSocketManager {
   private listeners: Map<string, Set<(event: WebSocketEvent) => void>> = new Map();
   private statusListeners: Set<(status: ConnectionStatus) => void> = new Set();
 
-  connect(projectId: string, baseUrl: string = '/api') {
+  connect(projectId: string) {
     if (this.ws?.readyState === WebSocket.OPEN) {
       return; // Already connected
     }
@@ -28,8 +28,9 @@ class WebSocketManager {
     this.projectId = projectId;
     this.notifyStatus('connecting');
 
-    // Convert HTTP base URL to WebSocket URL
-    const wsUrl = baseUrl.replace('http', 'ws').replace('https', 'wss');
+    // Construct WebSocket URL from VITE_API_URL environment variable
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    const wsUrl = apiUrl.replace('http://', 'ws://').replace('https://', 'wss://');
     const ws = new WebSocket(`${wsUrl}/ws/${projectId}`);
 
     ws.onopen = () => {
@@ -64,7 +65,7 @@ class WebSocketManager {
       // Auto-reconnect after 3 seconds
       this.reconnectTimeout = setTimeout(() => {
         if (this.projectId) {
-          this.connect(this.projectId, baseUrl);
+          this.connect(this.projectId);
         }
       }, 3000);
     };
@@ -151,7 +152,7 @@ export function useWebSocket() {
 
   return {
     status,
-    connect: (projectId: string, baseUrl?: string) => manager.connect(projectId, baseUrl),
+    connect: (projectId: string) => manager.connect(projectId),
     disconnect: () => manager.disconnect(),
     on: (eventType: string, callback: (event: WebSocketEvent) => void) => manager.on(eventType, callback),
     off: (eventType: string, callback: (event: WebSocketEvent) => void) => manager.off(eventType, callback),
