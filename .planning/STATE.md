@@ -6,23 +6,23 @@ See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** Stateful research intelligence — Single workspace where AI agent remembers everything important (all chats, analyses, documents, file contents) and uses that context to provide genuinely helpful research assistance.
 
-**Current focus:** Phase 21 - Complete Verification Testing
+**Current focus:** Phase 22 - Fix All Bugs
 
 ## Current Position
 
-Phase: 21 of 24 (Complete Verification Testing)
-Plan: 0 of 1 in current phase
-Status: Ready to plan
-Last activity: 2026-02-08 — v1.2 roadmap created, 4 phases defined (21-24), manual testing revealed 22 bugs
+Phase: 22 of 24 (Fix All Bugs)
+Plan: 1 of 4 in current phase
+Status: In progress
+Last activity: 2026-02-08 — Fixed all 6 P0 blocker bugs, ready for P1 bug fixes
 
-Progress: [██████████░░░░░░░░░░░░] 87.9%
+Progress: [██████████░░░░░░░░░░░░] 88.3%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 58
+- Total plans completed: 59
 - Average duration: ~45 min
-- Total execution time: ~43.5 hours
+- Total execution time: ~44.5 hours
 
 **By Phase:**
 
@@ -30,13 +30,14 @@ Progress: [██████████░░░░░░░░░░░░] 8
 |-------|-------|-------|----------|
 | v1.0 (Phases 1-9) | 31 | 9 phases | ~3.4 plans/phase |
 | v1.1 (Phases 10-20) | 27 | 11 phases | ~2.5 plans/phase |
-| v1.2 (Phases 21-24) | 0 | 4 phases | TBD |
+| v1.2 (Phases 21-24) | 1 | 4 phases | TBD |
 
 **Recent Trend:**
 - Last 5 plans (v1.1 Phase 20): ~40-50 min per plan
 - Trend: Stable (consistent execution patterns established)
 
 *Updated after each plan completion*
+| Phase 22 P01 | 2min | 6 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -48,6 +49,7 @@ Recent decisions affecting current work:
 - Phase 10-20 (v1.1): New React 19 + TypeScript + Vite frontend integrated, all views connected to backend APIs, WebSocket real-time updates established, auto-save with debouncing implemented
 - Phase 20: Manual browser testing completed, 22 bugs discovered and categorized (6 P0 blockers, 12 P1 major, 6 P2 minor)
 - Phase 21-24 (v1.2): Completion milestone — all bugs must be fixed before ship decision, production deployment configuration must be verified
+- [Phase 22]: Used CustomEvent for dashboard-to-app navigation (quick fix, could be refactored to NavigationContext in future phase)
 
 ### Pending Todos
 
@@ -56,9 +58,11 @@ None yet.
 ### Blockers/Concerns
 
 **From Phase 20 (manual browser testing results):**
-- 22 bugs discovered during testing (6 P0 blockers, 12 P1 major, 5 P2 minor)
-- All P0/P1 bugs must be fixed before ship decision (SHIP-01 requirement)
-- P0 blockers prevent core functionality (literature search, analysis execution, project navigation, file download, bibliography, citation search)
+- 22 bugs discovered during testing (6 P0 blockers, 12 P1 major, 6 P2 minor)
+- ✅ All 6 P0 blockers FIXED in Phase 22-01 (literature search, analysis, chat, bibliography, file download, project navigation)
+- 12 P1 bugs remain (auto-save, file viewing, UI features)
+- 6 P2 bugs remain (feature completeness)
+- All P1/P2 bugs must be fixed before ship decision (SHIP-01 requirement)
 
 **From Phase 21-24 planning:**
 - Production deployment configuration must be verified (CORS, WebSocket URLs, environment variables)
@@ -67,15 +71,15 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-02-08 (v1.2 roadmap creation)
-Stopped at: Roadmap and state files created, ready to begin Phase 21 planning
+Last session: 2026-02-08 (Phase 22-01: Fix P0 Blocker Bugs)
+Stopped at: Completed Phase 22-01, all 6 P0 bugs fixed, ready for P1 bug fixes
 Resume file: None
 
 **Milestone Status:**
 - v1.0: COMPLETE ✓ (shipped 2026-02-05)
 - v1.1: COMPLETE ✓ (shipped 2026-02-08)
-- v1.2: IN PROGRESS - 4 phases planned (21-24), 0 plans started
+- v1.2: IN PROGRESS - Phase 22-01 complete, 3 plans remaining
 
 ---
 
-*Last updated: 2026-02-08 after v1.2 roadmap creation*
+*Last updated: 2026-02-08 after Phase 22-01 completion*
