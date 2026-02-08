@@ -153,7 +153,7 @@ const LibraryView: React.FC = () => {
                           {paper.citation_count !== undefined && (
                             <>
                               <span>•</span>
-                              <span className="flex items-center gap-1"><span className="material-symbols-outlined text-xs">format_quote</span> {paper.citation_count.toLocaleString()} Citations</span>
+                              <span className="flex items-center gap-1"><span className="material-symbols-outlined text-xs">format_quote</span> {(paper.citation_count || 0).toLocaleString()} Citations</span>
                             </>
                           )}
                         </div>
@@ -210,7 +210,13 @@ const LibraryView: React.FC = () => {
                 <span className="text-slate-400">Citations count</span>
                 <span className="font-bold text-primary">02</span>
               </div>
-              <button className="w-full rounded-lg bg-slate-900 dark:bg-slate-800 py-2.5 text-xs font-bold text-white hover:bg-slate-800 dark:hover:bg-slate-700 transition-colors">
+              <button
+                onClick={async () => {
+                  // TODO: Implement bibliography generation for current project
+                  alert('Bibliography generation will be implemented once you have a document with citations. Create a document and insert citations first.');
+                }}
+                className="w-full rounded-lg bg-slate-900 dark:bg-slate-800 py-2.5 text-xs font-bold text-white hover:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
+              >
                 Generate Bibliography
               </button>
             </div>

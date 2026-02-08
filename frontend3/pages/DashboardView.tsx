@@ -229,7 +229,7 @@ const DashboardView: React.FC = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setOpenMenuId(openMenuId === project.id ? null : project.id);
+                          setOpenMenuId(openMenuId === `recent-${project.id}` ? null : `recent-${project.id}`);
                         }}
                         className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
                       >
@@ -252,7 +252,7 @@ const DashboardView: React.FC = () => {
                         {formatRelativeTime(project.created_at)}
                       </span>
                     </div>
-                    {openMenuId === project.id && (
+                    {openMenuId === `recent-${project.id}` && (
                       <div
                         onClick={(e) => e.stopPropagation()}
                         className="absolute top-12 right-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-lg z-50 min-w-[160px] py-1"
@@ -389,7 +389,7 @@ const DashboardView: React.FC = () => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setOpenMenuId(openMenuId === project.id ? null : project.id);
+                            setOpenMenuId(openMenuId === `all-${project.id}` ? null : `all-${project.id}`);
                           }}
                           className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
                         >
@@ -405,7 +405,7 @@ const DashboardView: React.FC = () => {
                         </span>
                       </div>
                     </div>
-                    {openMenuId === project.id && (
+                    {openMenuId === `all-${project.id}` && (
                       <div
                         onClick={(e) => e.stopPropagation()}
                         className="absolute top-12 right-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-lg z-50 min-w-[160px] py-1"
