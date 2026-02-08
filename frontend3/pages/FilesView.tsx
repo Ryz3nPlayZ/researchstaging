@@ -125,6 +125,15 @@ const FilesView: React.FC = () => {
     await uploadFile(file);
   };
 
+  const handleDownload = async (fileId: string, fileName: string) => {
+    try {
+      await fileApi.download(fileId, fileName);
+    } catch (err) {
+      console.error('Download error:', err);
+      alert(err instanceof Error ? err.message : 'Download failed');
+    }
+  };
+
   return (
     <div className="flex-1 overflow-y-auto bg-slate-50 dark:bg-slate-950">
       <div className="max-w-5xl mx-auto px-8 py-10">
@@ -235,8 +244,12 @@ const FilesView: React.FC = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <button className="p-2 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors">
-                          <span className="material-symbols-outlined text-[20px]">preview</span>
+                        <button
+                          onClick={() => handleDownload(file.id, file.name)}
+                          className="p-2 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-primary rounded-lg transition-colors"
+                          title="Download file"
+                        >
+                          <span className="material-symbols-outlined text-[20px]">download</span>
                         </button>
                         <button className="p-2 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors">
                           <span className="material-symbols-outlined text-[20px]">more_vert</span>

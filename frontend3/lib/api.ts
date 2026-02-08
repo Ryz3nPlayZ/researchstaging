@@ -250,6 +250,50 @@ export const fileApi = {
 
     return response.json();
   },
+  download: async (fileId: string, fileName: string) => {
+    const response = await fetch(`${API_BASE}/files/${fileId}/download?disposition=attachment`);
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Download failed' }));
+      throw new Error(error.detail || 'Download failed');
+    }
+
+    // Check if response is JSON (presigned URL for S3) or binary (local file)
+    const contentType = response.headers.get('content-type');
+
+    if (contentType && contentType.includes('application/json')) {
+      // S3/R2 presigned URL response
+      const data = await response.json();
+
+      // Open presigned URL in new tab or trigger download
+      const a = document.createElement('a');
+      a.href = data.download_url;
+      a.download = data.filename || fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } else {
+      // Local file - binary response
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    }
+  },
+  getContent: async (fileId: string, projectId: string) => {
+    return apiRequest<{
+      file_id: string;
+      content?: string;
+      tiptap?: unknown;
+      extension: string;
+      format: string;
+    }>(`/files/${fileId}/content?project_id=${encodeURIComponent(projectId)}`);
+  },
 };
 
 // Document APIs
