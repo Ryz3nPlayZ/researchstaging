@@ -38,7 +38,7 @@ const DashboardView: React.FC = () => {
     try {
       const response = await projectApi.create({
         research_goal: 'New Research Project',
-        output_type: 'paper'
+        output_type: 'research_paper'
       });
       if (response.error) {
         setError(response.error);
@@ -68,8 +68,9 @@ const DashboardView: React.FC = () => {
   // Get icon for output type
   const getProjectIcon = (outputType: string): string => {
     const icons: Record<string, string> = {
-      'paper': '📄',
+      'research_paper': '📄',
       'literature_review': '📚',
+      'research_brief': '📝',
       'analysis': '📊',
       'presentation': '📽️',
       'report': '📝'
