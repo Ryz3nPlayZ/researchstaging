@@ -2,23 +2,23 @@
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-06)
+See: .planning/PROJECT.md (updated 2026-02-08)
 
 **Core value:** Stateful research intelligence — Single workspace where AI agent remembers everything important (all chats, analyses, documents, file contents) and uses that context to provide genuinely helpful research assistance.
 
-**Current focus:** Phase 19 - v1.1 Gap Closure
+**Current focus:** v1.2 Ship MVP - Complete manual testing, fix bugs, verify production readiness, SHIP
 
 ## Current Position
 
-**Milestone:** v1.1 Frontend Integration & Polish - Gap Closure Phase
+**Milestone:** v1.2 Ship MVP
 
-Phase: 19 of 20 (Fix AnalysisView ProjectContext Integration) - In Progress
-Plan: 1 of 1 - COMPLETE
-Status: Phase 19 Plan 01 Complete - AnalysisView ProjectContext integration fixed
+Phase: Not started (defining requirements)
+Plan: —
+Status: Initializing v1.2 milestone - Complete manual testing, fix any bugs, verify production readiness, SHIP
 
-Last activity: 2026-02-08T03:35 — Completed Phase 19 Plan 01: AnalysisView ProjectContext Integration. Fixed hardcoded 'default-project' to use currentProjectId from ProjectContext. Added null check to prevent execution without selected project. ESLint passes, TypeScript compiles, follows established pattern from FilesView/MemoryView/EditorView.
+Last activity: 2026-02-08T04:00 — Starting v1.2 Ship MVP milestone. All v1.1 features complete (19 phases, 29 plans, 182 decisions). Focus: Complete manual testing, fix any bugs discovered, verify production readiness, SHIP MVP.
 
-Progress: ████████░░ 98.4% (v1.0 complete: 9 phases, 31 plans. v1.1: 26/26 plans complete - 1 gap closure plan in progress)
+Progress: ████████░░ 98.4% (v1.0: 9 phases, 31 plans complete. v1.1: 19 phases, 29 plans complete. v1.2: 0 phases started)
 
 ## Accumulated Context
 
@@ -293,22 +293,15 @@ Progress: ████████░░ 98.4% (v1.0 complete: 9 phases, 31 plan
 
 ## Session Continuity
 
-Last session: 2026-02-08T03:35:45Z
-Stopped at: Completed Phase 19 Plan 01 - AnalysisView ProjectContext Integration
-Resume file: None (Phase 19-01 complete, ready for next gap closure plan or manual testing)
+Last session: 2026-02-08T04:00:00Z
+Stopped at: v1.2 milestone initialized - requirements definition next
+Resume file: None (ready to define requirements for v1.2)
 
-**Recommended Next Steps:**
-1. Continue with remaining gap closure plans from v1.1 milestone audit (if any)
-2. Execute manual browser testing (14-03-TEST-PLAN.md) - 2-4 hours estimated
-3. Document test results and fix any bugs found
-4. Proceed to production deployment after testing passes
-
-**Completed Gap Closures:**
-- Phase 19-01: AnalysisView ProjectContext integration (MEDIUM priority) ✓
-
-**Remaining v1.1 Gaps:**
-- (See v1.1 milestone audit report for remaining items)
+**Milestone Status:**
+- v1.0: COMPLETE ✓ (shipped 2026-02-05)
+- v1.1: COMPLETE ✓ (shipped 2026-02-08)
+- v1.2: IN PROGRESS - Ship MVP milestone
 
 ---
 
-*Last updated: 2026-02-08 after Phase 19 Plan 01 completion (AnalysisView ProjectContext Integration)*
+*Last updated: 2026-02-08 after v1.2 milestone initialization*
