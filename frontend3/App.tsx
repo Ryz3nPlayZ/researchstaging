@@ -49,6 +49,21 @@ const App: React.FC = () => {
     }
   }, [loading, session, login]);
 
+  // Handle custom navigation events from child components
+  useEffect(() => {
+    const handleNavigateToProject = (event: Event) => {
+      const customEvent = event as CustomEvent<{ projectId: string }>;
+      // Navigate to EDITOR view when project is selected
+      setActiveView(View.EDITOR);
+    };
+
+    window.addEventListener('navigate-to-project', handleNavigateToProject);
+
+    return () => {
+      window.removeEventListener('navigate-to-project', handleNavigateToProject);
+    };
+  }, []);
+
   // Show loading state while checking session
   if (loading) {
     return (

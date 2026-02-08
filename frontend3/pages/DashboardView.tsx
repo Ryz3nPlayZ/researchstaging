@@ -1,12 +1,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { projectApi, Project } from '../lib/api';
+import { View } from '../types';
+import { useProjectContext } from '../lib/context';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const DashboardView: React.FC = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { setCurrentProject } = useProjectContext();
 
   // Fetch projects on component mount
   useEffect(() => {
@@ -100,6 +103,14 @@ const DashboardView: React.FC = () => {
     return bgs[index % bgs.length];
   };
 
+  // Handle project tile click
+  const handleProjectClick = (project: Project) => {
+    setCurrentProject(project);
+    // Dispatch custom event to notify App to switch view
+    const event = new CustomEvent('navigate-to-project', { detail: { projectId: project.id } });
+    window.dispatchEvent(event);
+  };
+
   // Split projects into recent (first 3) and all projects
   const recentProjectsData = projects.slice(0, 3);
   const allProjectsData = projects;
@@ -160,7 +171,7 @@ const DashboardView: React.FC = () => {
             {recentProjectsData.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {recentProjectsData.map((project, i) => (
-                  <div key={project.id} className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:border-primary/50 hover:shadow-lg transition-all cursor-pointer">
+                  <div key={project.id} onClick={() => handleProjectClick(project)} className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:border-primary/50 hover:shadow-lg transition-all cursor-pointer">
                     <div className="flex justify-between items-start mb-4">
                       <div className={`size-12 rounded-lg flex items-center justify-center text-2xl ${getRecentProjectBg(i)}`}>
                         {getProjectIcon(project.output_type)}
@@ -211,7 +222,7 @@ const DashboardView: React.FC = () => {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {allProjectsData.map((project, i) => (
-                <div key={project.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
+                <div key={project.id} onClick={() => handleProjectClick(project)} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
                   <div className={`h-1.5 w-full ${getProjectColor(i)}`}></div>
                   <div className="p-5">
                     <div className="flex justify-between items-center mb-3">
