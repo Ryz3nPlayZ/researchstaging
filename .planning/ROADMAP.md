@@ -159,20 +159,20 @@ Plans:
 Plans:
 - [x] 16-01-PLAN.md — Update memoryApi client with project-scoped routes and fix MemoryView to use ProjectContext
 
-#### Phase 17: WebSocket Connection Fixes
+#### Phase 17: WebSocket Connection Fixes ✅ COMPLETE
 **Goal**: Fix WebSocket connection to use correct backend port
 **Depends on**: Phase 16
 **Requirements**: FRONT-19 (WebSocket connection established)
 **Success Criteria** (what must be TRUE):
-  1. WebSocket connects to `ws://localhost:8000/ws/{projectId}` (not 3000)
-  2. Vite proxy configured to forward WebSocket connections
-  3. Real-time features work (task updates, document collaboration)
-**Gap Closure**: Closes MEDIUM priority integration gap (WebSocket port mismatch)
-**Research**: Unlikely (Vite proxy configuration - documented)
-**Plans**: 1 plan
+  1. WebSocket connects to `ws://localhost:8000/ws/{projectId}` (not 3000) ✅
+  2. Vite proxy configured to forward WebSocket connections ✅
+  3. Real-time features work (task updates, document collaboration) ✅
+**Gap Closure**: Closes MEDIUM priority integration gap (WebSocket port mismatch) ✅
+**Research**: Complete
+**Plans**: 1 complete (2026-02-07)
 
 Plans:
-- [ ] 17-01-PLAN.md — Fix WebSocket URL to use direct backend connection from VITE_API_URL
+- [x] 17-01-PLAN.md — Fix WebSocket URL to use direct backend connection from VITE_API_URL
 
 #### Phase 18: Complete Phase 14 Production Polish
 **Goal**: Complete manual browser testing and responsive design fixes
@@ -207,8 +207,8 @@ Phases execute in numeric order: 10 → 11 → 12 → 13 → 14 → 15
 | 13. Real-Time Features | v1.1 | 2/2 | Complete | 2026-02-07 |
 | 14. Production Polish | v1.1 | 2/4 | See Phase 18 | - |
 | 15. Startup & Navigation Fixes | v1.1 | 2/2 | Complete | 2026-02-07 |
-| 16. Memory API Integration Fixes | v1.1 | 1/1 | Ready | - |
-| 17. WebSocket Connection Fixes | v1.1 | 1/1 | Planned | - |
+| 16. Memory API Integration Fixes | v1.1 | 1/1 | Complete | 2026-02-07 |
+| 17. WebSocket Connection Fixes | v1.1 | 1/1 | Complete | 2026-02-07 |
 | 18. Complete Phase 14 Production Polish | v1.1 | 0/2 planned | Not Started | - |
 
 *Roadmap created: 2026-02-06*
