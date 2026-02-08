@@ -9,6 +9,8 @@ const LibraryView: React.FC = () => {
   const [papers, setPapers] = useState<Paper[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<string | null>(null);
+  const [sortOrder, setSortOrder] = useState<'recent' | 'citations'>('recent');
 
   const handleSearch = async () => {
     if (!searchQuery.trim()) return;
@@ -32,6 +34,15 @@ const LibraryView: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  // Filter and sort papers
+  const filteredPapers = papers.filter(paper => {
+    if (activeFilter === 'year') return paper.year && paper.year >= 2020;
+    return true;
+  }).sort((a, b) => {
+    if (sortOrder === 'citations') return (b.citation_count || 0) - (a.citation_count || 0);
+    return 0; // Keep original order for 'recent'
+  });
 
   return (
     <div className="flex-1 flex overflow-hidden">
@@ -62,15 +73,31 @@ const LibraryView: React.FC = () => {
               </button>
             </div>
             <div className="flex flex-wrap gap-2">
-              {['Year', 'Subject', 'Citations'].map(filter => (
-                <button key={filter} className="flex items-center gap-2 rounded-lg bg-white dark:bg-slate-800 px-3 py-1.5 text-xs font-medium border border-slate-200 dark:border-slate-700 shadow-sm hover:border-primary transition-colors">
-                  <span>{filter}</span>
-                  <span className="material-symbols-outlined text-xs">expand_more</span>
-                </button>
-              ))}
+              {['Year', 'Subject', 'Citations'].map(filter => {
+                const filterKey = filter.toLowerCase();
+                return (
+                  <button
+                    key={filter}
+                    onClick={() => setActiveFilter(activeFilter === filterKey ? null : filterKey)}
+                    className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium border transition-colors ${
+                      activeFilter === filterKey
+                        ? 'bg-primary text-white border-primary'
+                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 shadow-sm hover:border-primary'
+                    }`}
+                  >
+                    <span>{filter}</span>
+                    <span className="material-symbols-outlined text-xs">expand_more</span>
+                  </button>
+                );
+              })}
             </div>
             <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
-              <button className="px-3 py-1 text-xs font-medium rounded-md bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white">Sort by</button>
+              <button
+                onClick={() => setSortOrder(sortOrder === 'recent' ? 'citations' : 'recent')}
+                className="px-3 py-1 text-xs font-medium rounded-md bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-600 transition-colors"
+              >
+                Sort by {sortOrder === 'recent' ? 'Recent' : 'Citations'}
+              </button>
             </div>
           </div>
 
@@ -98,7 +125,7 @@ const LibraryView: React.FC = () => {
             )}
 
             {/* Paper results */}
-            {papers.map((paper, idx) => {
+            {filteredPapers.map((paper, idx) => {
               const pdfUrl = paper.pdf_url || paper.open_access_pdf_url;
               return (
                 <div
