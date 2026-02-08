@@ -66,7 +66,7 @@ def get_analysis_agent():
 
 @router.post("/projects/{project_id}/generate-code", response_model=CodeGenerationResponse)
 async def generate_code(
-    project_id: int,
+    project_id: str,
     request: CodeGenerationRequest,
     agent: AnalysisAgent = Depends(get_analysis_agent)
 ):
