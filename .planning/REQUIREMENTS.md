@@ -84,7 +84,7 @@ Requirements for v1.2 Ship MVP milestone. Goal: Complete all manual testing, fix
   - Impact: Cannot insert citations in documents
   - Fix: Verify literature search backend handles citation queries
 
-**P1 Major Issues (Discovered via manual testing - 9 issues):**
+**P1 Major Issues (Discovered via manual testing - 11 issues):**
 - [ ] **BUG-07**: Fix Dashboard - Filter button functionality
   - Issue: Filter button does nothing when clicked
   - Impact: Cannot filter projects
@@ -140,7 +140,12 @@ Requirements for v1.2 Ship MVP milestone. Goal: Complete all manual testing, fix
   - Impact: Files seem lost, confusing
   - Fix: Verify database connection and file query logic
 
-**P2 Minor Issues (Discovered via manual testing - 3 issues):**
+- [ ] **BUG-17A**: Fix Library View Menu Buttons
+  - Issue: Year, Subject, Citation, Sort By buttons do nothing
+  - Impact: Cannot filter/sort literature results
+  - Fix: Implement filter/sort logic for literature search results
+
+**P2 Minor Issues (Discovered via manual testing - 5 issues):**
 - [ ] **BUG-18**: Fix Double Logo in UI
   - Issue: Two logos visible (sidebar "Research AI workspace" + top bar "ResearchHub book logo")
   - Impact: Visual clutter, unprofessional appearance
@@ -151,10 +156,20 @@ Requirements for v1.2 Ship MVP milestone. Goal: Complete all manual testing, fix
   - Impact: Confusing UX, users expect these to work
   - Fix: Either implement functionality or remove/disable elements
 
+- [ ] **BUG-19A**: Fix Dead UI Elements (sidebar profile section)
+  - Issue: Profile pic, name, "Pro Account" in sidebar do nothing when clicked
+  - Impact: Confusing UX, users expect profile management
+  - Fix: Either implement functionality or remove/disable elements
+
 - [ ] **BUG-20**: Fix Editor Toolbar Padding
   - Issue: Top utility bar has extra padding on bottom ("chin")
   - Impact: Visual inconsistency
   - Fix: Adjust CSS padding to match other views
+
+- [ ] **BUG-20A**: Improve Library Sidebar Context
+  - Issue: Library sidebar doesn't make sense for literature view
+  - Impact: Confusing navigation, unclear what options mean
+  - Fix: Adjust sidebar to show library-relevant filters/actions (defer UI redesign if needed, just ensure functional)
 
 **Regression Testing:**
 - [ ] **BUG-21**: Verify all bug fixes don't break other flows
@@ -296,16 +311,16 @@ Which phases cover which requirements. Updated by roadmap creation.
 | SHIP-01, SHIP-02, SHIP-03, SHIP-04 | Phase 24 | Pending |
 
 **Coverage:**
-- v1.2 requirements: 33 total (16 original + 17 bug fixes)
-- Mapped to phases: 33
+- v1.2 requirements: 35 total (16 original + 19 bug fixes)
+- Mapped to phases: 35
 - Unmapped: 0 ✓
 
 **Bug Breakdown:**
 - P0 Blockers: 6 (BUG-01 through BUG-06) - Core functionality completely broken
-- P1 Major: 11 (BUG-07 through BUG-17) - Severe UX degradation
-- P2 Minor: 4 (BUG-18 through BUG-21) - Cosmetic issues
+- P1 Major: 12 (BUG-07 through BUG-17A) - Severe UX degradation
+- P2 Minor: 6 (BUG-18 through BUG-21) - Cosmetic issues
 
-**Note:** TEST-01 through TEST-03 are pending (automated/backend verification). TEST-04 is complete (manual browser testing revealed 20 bugs). BUG-01 through BUG-21 must all be fixed before ship decision.
+**Note:** TEST-01 through TEST-03 are pending (automated/backend verification). TEST-04 is complete (manual browser testing revealed 22 bugs). BUG-01 through BUG-21 must all be fixed before ship decision.
 
 ---
 
