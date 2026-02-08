@@ -11,8 +11,8 @@ v1.1 is a **frontend integration milestone** that replaces the existing React fr
 ## Milestones
 
 - ✅ **v1.0 Complete Research Workspace** - Phases 1-9 (shipped 2026-02-05)
-- 🚧 **v1.1 Frontend Integration & Polish** - Phases 10-18 (gap closure phases added)
-- 📋 **v2.0 [Future]** - Phases 19+ (planned)
+- 🚧 **v1.1 Frontend Integration & Polish** - Phases 10-20 (gap closure phases 19-20 added)
+- 📋 **v2.0 [Future]** - Phases 21+ (planned)
 
 ## Phases
 
@@ -189,6 +189,39 @@ Plans:
 - [x] 18-01-PLAN.md — Automated verification of test flows (API, build, WebSocket, responsive code audit)
 - [x] 18-02-PLAN.md — Final summary and release readiness assessment
 
+#### Phase 19: Fix AnalysisView ProjectContext Integration
+**Goal**: Fix hardcoded projectId bug in AnalysisView
+**Depends on**: Phase 18
+**Requirements**: FRONT-16 (Data analysis execution - complete the integration)
+**Gap Closure**: Closes integration gap from v1.1 audit (AnalysisView missing ProjectContext)
+**Success Criteria** (what must be TRUE):
+  1. AnalysisView uses `currentProjectId` from ProjectContext instead of hardcoded 'default-project'
+  2. TODO comment removed from line 12
+  3. Analysis executions are associated with the correct project
+**Estimated Time**: 15 minutes
+**Priority**: P1 (High) - Affects data correctness
+**Plans**:
+
+Plans:
+- [ ] 19-01-PLAN.md — Replace hardcoded projectId with ProjectContext in AnalysisView
+
+#### Phase 20: Manual Browser Testing
+**Goal**: Execute all 10 test flows and verify responsive design at actual viewports
+**Depends on**: Phase 19
+**Requirements**: FRONT-23, FRONT-24
+**Gap Closure**: Closes deferred requirements from v1.1 audit (manual testing + viewport testing)
+**Success Criteria** (what must be TRUE):
+  1. All 10 test flows executed with documented pass/fail results
+  2. Responsive layout verified at 375px (mobile), 768px (tablet), 1280px+ (desktop)
+  3. No horizontal scroll at any viewport width
+  4. Any bugs found fixed or documented in bug tracker
+**Estimated Time**: 2-4 hours
+**Priority**: P1 (High) - Recommended before production deployment
+**Plans**:
+
+Plans:
+- [ ] 20-01-PLAN.md — Execute manual browser testing for all 10 user flows
+
 ### 📋 v2.0 [Future] (Planned)
 
 **Milestone Goal:** To be determined based on v1.1 usage feedback and user requests
@@ -198,7 +231,7 @@ See [PROJECT.md](.planning/PROJECT.md) for potential v2.0 directions (informatio
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18
+Phases execute in numeric order: 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -212,6 +245,8 @@ Phases execute in numeric order: 10 → 11 → 12 → 13 → 14 → 15 → 16 �
 | 16. Memory API Integration Fixes | v1.1 | 1/1 | Complete | 2026-02-07 |
 | 17. WebSocket Connection Fixes | v1.1 | 1/1 | Complete | 2026-02-07 |
 | 18. Complete Phase 14 Production Polish | v1.1 | 2/2 | Complete | 2026-02-08 |
+| 19. Fix AnalysisView ProjectContext | v1.1 | 0/1 | Pending | - |
+| 20. Manual Browser Testing | v1.1 | 0/1 | Pending | - |
 
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-08 Phase 18 complete - v1.1 milestone at 100% code completion*
+*Last updated: 2026-02-08 - Added Phases 19-20 for gap closure*
