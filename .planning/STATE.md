@@ -12,13 +12,13 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Milestone:** v1.1 Frontend Integration & Polish - IN PROGRESS
 
-Phase: 16 of 17 (Memory API Integration Fixes) - COMPLETE
+Phase: 17 of 17 (WebSocket Connection Fixes) - IN PROGRESS
 Plan: 1 of 1 - COMPLETE
-Status: Phase 16 Complete
+Status: Phase 17 Complete
 
-Last activity: 2026-02-07T23:20 — Completed Phase 16: Memory API Integration Fixes. Fixed frontend memoryApi to include projectId parameter and use project-scoped routes. Fixed backend route ordering bug (/search before /{claim_id}). Integrated ProjectContext into MemoryView.
+Last activity: 2026-02-08T01:34 — Completed Phase 17 Plan 01: WebSocket Connection Fix. Fixed WebSocket to connect directly to backend port 8000 using VITE_API_URL instead of Vite proxy on port 3000. Reduced console logging for reconnection attempts.
 
-Progress: ███████░░ 92% (v1.0 complete: 9 phases, 31 plans. v1.1: 22/23 plans complete)
+Progress: ████████░ 96% (v1.0 complete: 9 phases, 31 plans. v1.1: 23/24 plans complete)
 
 ## Accumulated Context
 
@@ -217,6 +217,14 @@ Progress: ███████░░ 92% (v1.0 complete: 9 phases, 31 plans. v1
 143. Backend route ordering fixed: /claims/search before /{claim_id} to prevent FastAPI path matching bugs
 144. Frontend memoryApi.relationships removed (no backend equivalent for global relationships query)
 
+**From Phase 17-01 (WebSocket Connection Fix):**
+145. WebSocket URL constructed from VITE_API_URL environment variable (defaults to http://localhost:8000)
+146. WebSocket connects directly to backend port 8000 instead of through Vite proxy on port 3000
+147. Auto-reconnect persists indefinitely with 3-second delay and minimal console logging
+148. Only state changes (connected/closed) and errors logged, not retry attempts
+149. Removed baseUrl parameter from WebSocketManager.connect() method signature
+150. Removed window.location.origin parameter from App.tsx connect() call
+
 ### Technical Debt (From v1.0)
 
 **P1 - High Priority:**
@@ -239,10 +247,10 @@ Progress: ███████░░ 92% (v1.0 complete: 9 phases, 31 plans. v1
 
 ## Session Continuity
 
-Last session: 2026-02-07T23:20:00Z
-Stopped at: Completed Phase 16 - Memory API Integration Fixes
-Resume file: None (phase complete, ready for next phase)
+Last session: 2026-02-08T01:34:00Z
+Stopped at: Completed Phase 17 Plan 01 - WebSocket Connection Fix
+Resume file: None (plan complete, ready for next plan if exists)
 
 ---
 
-*Last updated: 2026-02-07 after Phase 16 completion (Memory API Integration Fixes)*
+*Last updated: 2026-02-08 after Phase 17 Plan 01 completion (WebSocket Connection Fix)*
