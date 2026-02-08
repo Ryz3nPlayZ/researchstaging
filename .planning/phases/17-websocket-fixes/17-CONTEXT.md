@@ -3,64 +3,64 @@
 **Gathered:** 2026-02-07
 **Status:** Ready for planning
 
-<domain>
 ## Phase Boundary
 
 Fix WebSocket connection to use correct backend port. The WebSocket currently connects to `ws://localhost:3000/api/ws/{projectId}` (frontend port) but should connect to `ws://localhost:8000/ws/{projectId}` (backend port). Vite proxy doesn't handle WebSocket upgrades correctly.
 
-**This is an infrastructure fix** - we're fixing broken connectivity, not adding new capabilities. Real-time features (task updates, document collaboration) already exist from v1.0 but don't work due to connection issues.
+**This is an infrastructure fix** - we're fixing broken connectivity, not adding new capabilities.
 
-</domain>
+---
 
-<decisions>
-## Implementation Decisions
+## Decisions
 
 ### Connection approach
-- Use direct WebSocket URL to backend (`ws://localhost:8000/ws/{projectId}`), NOT through Vite proxy
-- Proxy approach is problematic: requires complex proxy configuration, doesn't work well with WebSocket upgrades
-- Direct connection is simpler and more reliable
-- In production, the backend URL would come from environment variable (already have `VITE_API_URL` pattern)
+**Direct to backend (not through Vite proxy)**
 
-### URL construction
-- Build WebSocket URL from `VITE_API_URL` environment variable
-- Replace `http://` → `ws://` and `https://` → `wss://`
-- Add `/ws/{projectId}` path
-- This works for both local development and production
+- Use direct WebSocket URL: `ws://localhost:8000/ws/{projectId}`
+- Derive URL from `VITE_API_URL` environment variable
+- URL construction: `VITE_API_URL.replace('http://', 'ws://').replace('https://', 'wss://') + '/ws/' + projectId`
+- This matches the pattern used by other API calls
 
 ### Error handling
-- Keep existing auto-reconnect with 3-second delay (already implemented)
-- Show connection status indicator (already exists: Live/Connecting/Offline)
-- Don't spam console with errors during reconnection attempts
-- If connection fails after ~5 attempts, show user-friendly message but don't block app functionality
+**Reduce noise, keep auto-reconnect**
+
+- Keep retrying indefinitely (WebSocket should persist connection)
+- Only log when connection state changes (not every retry attempt)
+- Rely on existing status indicator (Live/Connecting/Offline dot)
+- No "Reconnected!" toast - status indicator is sufficient
+- No user-facing error messages for connection failures
+
+### Fallback behavior
+**App works offline, real-time features disabled**
+
+- App continues working when WebSocket fails
+- Status indicator shows offline state
+- Real-time features (task updates, document collaboration) won't update
+- No blocking errors or warnings
+- No manual reconnect button (auto-reconnect is sufficient)
 
 ### Connection lifecycle
-- Connect when `currentProjectId` becomes available (already implemented via ProjectContext)
-- Disconnect when component unmounts (already implemented)
-- Reconnect when project switches (already implemented)
-- Keep existing 30-second ping/pong heartbeat (already implemented)
+**Keep existing behavior, just fix the URL**
 
-### Claude's Discretion
-- Exact retry limit before showing user message
-- Console log formatting (reduce noise during reconnection)
-- Whether to add a manual "reconnect" button in offline state
+- Connect immediately when `currentProjectId` is available
+- On project switch: disconnect old connection, then connect new one
+- Keep connection alive when app is in background (standard behavior)
+- No manual toggle or disconnect button
 
-</decisions>
+---
 
-<specifics>
-## Specific Ideas
+## Implementation Notes
 
-- Use the same `VITE_API_URL` pattern that other API calls use for consistency
-- WebSocket URL construction: `const wsUrl = API_BASE.replace('http://', 'ws://').replace('https://', 'wss://')`
-- Reuse existing `useProjectContext` to get `currentProjectId` for connection
+### What to change
+1. In `lib/websocket.ts`, change the URL construction to use direct backend URL
+2. Reduce console logging for reconnection attempts
+3. Test that connection status indicator works correctly
 
-</specifics>
-
-<deferred>
-## Deferred Ideas
-
-None — discussion stayed within phase scope.
-
-</deferred>
+### What to keep
+- Existing auto-reconnect logic (3-second delay)
+- Existing ping/pong heartbeat (30-second interval)
+- Existing status indicator (Live/Connecting/Offline dot)
+- Existing ProjectContext integration
 
 ---
 
