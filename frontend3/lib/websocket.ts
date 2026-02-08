@@ -19,62 +19,100 @@ class WebSocketManager {
   private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
   private listeners: Map<string, Set<(event: WebSocketEvent) => void>> = new Map();
   private statusListeners: Set<(status: ConnectionStatus) => void> = new Set();
+  private isConnecting: boolean = false; // Prevent multiple simultaneous connections
+  private reconnectAttempts: number = 0; // Track reconnect attempts
+  private maxReconnectAttempts: number = 5; // Max reconnect attempts before giving up
 
   connect(projectId: string) {
-    if (this.ws?.readyState === WebSocket.OPEN) {
-      return; // Already connected
+    // Prevent multiple simultaneous connection attempts
+    if (this.isConnecting) {
+      return;
     }
 
+    // If already connected to the same project, do nothing
+    if (this.ws?.readyState === WebSocket.OPEN && this.projectId === projectId) {
+      return;
+    }
+
+    // Clean up existing connection before creating a new one
+    this.disconnect();
+
+    this.isConnecting = true;
     this.projectId = projectId;
     this.notifyStatus('connecting');
 
-    // Construct WebSocket URL from VITE_API_URL environment variable
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-    const wsUrl = apiUrl.replace('http://', 'ws://').replace('https://', 'wss://');
-    const ws = new WebSocket(`${wsUrl}/ws/${projectId}`);
+    try {
+      // Construct WebSocket URL from VITE_API_URL environment variable
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const wsUrl = apiUrl.replace('http://', 'ws://').replace('https://', 'wss://');
+      const ws = new WebSocket(`${wsUrl}/ws/${projectId}`);
 
-    ws.onopen = () => {
-      console.log('WebSocket connected for project:', projectId);
-      this.notifyStatus('connected');
-    };
+      ws.onopen = () => {
+        this.isConnecting = false;
+        this.reconnectAttempts = 0; // Reset reconnect counter on successful connection
+        console.log('WebSocket connected for project:', projectId);
+        this.notifyStatus('connected');
+      };
 
-    ws.onmessage = (event) => {
-      // Ignore ping/pong messages
-      if (event.data === 'ping' || event.data === 'pong') {
-        return;
-      }
-
-      try {
-        const data = JSON.parse(event.data) as WebSocketEvent;
-        this.emit(data.type, data);
-      } catch (error) {
-        console.error('WebSocket parse error:', error);
-      }
-    };
-
-    ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      this.notifyStatus('error');
-    };
-
-    ws.onclose = () => {
-      console.log('WebSocket closed for project:', projectId);
-      this.notifyStatus('disconnected');
-      this.cleanup();
-
-      // Auto-reconnect after 3 seconds
-      this.reconnectTimeout = setTimeout(() => {
-        if (this.projectId) {
-          this.connect(this.projectId);
+      ws.onmessage = (event) => {
+        // Ignore ping/pong messages
+        if (event.data === 'ping' || event.data === 'pong') {
+          return;
         }
-      }, 3000);
-    };
 
-    this.ws = ws;
-    this.startPing();
+        try {
+          const data = JSON.parse(event.data) as WebSocketEvent;
+          this.emit(data.type, data);
+        } catch (error) {
+          // Suppress parse errors for non-JSON messages
+        }
+      };
+
+      ws.onerror = (error) => {
+        this.isConnecting = false;
+        // Only log error occasionally to reduce spam
+        if (this.reconnectAttempts === 0) {
+          console.warn('WebSocket connection failed for project:', projectId);
+        }
+        this.notifyStatus('error');
+      };
+
+      ws.onclose = () => {
+        this.isConnecting = false;
+        // Only log close on first disconnect or after successful connection
+        if (this.reconnectAttempts === 0 && this.ws?.readyState === WebSocket.OPEN) {
+          console.log('WebSocket closed for project:', projectId);
+        }
+        this.notifyStatus('disconnected');
+        this.cleanup();
+
+        // Auto-reconnect with exponential backoff, up to max attempts
+        if (this.reconnectAttempts < this.maxReconnectAttempts) {
+          this.reconnectAttempts++;
+          const backoffDelay = Math.min(3000 * Math.pow(2, this.reconnectAttempts - 1), 30000);
+          this.reconnectTimeout = setTimeout(() => {
+            if (this.projectId === projectId) {
+              this.connect(projectId);
+            }
+          }, backoffDelay);
+        } else {
+          console.warn('WebSocket max reconnect attempts reached for project:', projectId);
+          this.projectId = null; // Give up on this project
+        }
+      };
+
+      this.ws = ws;
+      this.startPing();
+    } catch (error) {
+      this.isConnecting = false;
+      console.error('Failed to create WebSocket connection:', error);
+      this.notifyStatus('error');
+    }
   }
 
   disconnect() {
+    this.isConnecting = false;
+    this.reconnectAttempts = 0; // Reset reconnect counter
     this.cleanup();
     if (this.ws) {
       this.ws.close();
@@ -129,6 +167,11 @@ class WebSocketManager {
   private notifyStatus(status: ConnectionStatus) {
     this.statusListeners.forEach(callback => callback(status));
   }
+
+  // Reset reconnect attempts (useful for manual retry)
+  resetReconnectAttempts() {
+    this.reconnectAttempts = 0;
+  }
 }
 
 // Singleton instance
@@ -156,5 +199,6 @@ export function useWebSocket() {
     disconnect: () => manager.disconnect(),
     on: (eventType: string, callback: (event: WebSocketEvent) => void) => manager.on(eventType, callback),
     off: (eventType: string, callback: (event: WebSocketEvent) => void) => manager.off(eventType, callback),
+    resetReconnectAttempts: () => manager.resetReconnectAttempts(),
   };
 }
