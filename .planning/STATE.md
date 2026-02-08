@@ -6,19 +6,19 @@ See: .planning/PROJECT.md (updated 2026-02-06)
 
 **Core value:** Stateful research intelligence — Single workspace where AI agent remembers everything important (all chats, analyses, documents, file contents) and uses that context to provide genuinely helpful research assistance.
 
-**Current focus:** Phase 14 — Production Polish (remaining work)
+**Current focus:** Phase 17 — WebSocket Connection Fixes
 
 ## Current Position
 
 **Milestone:** v1.1 Frontend Integration & Polish - IN PROGRESS
 
-Phase: 15 of 15 (Startup and Navigation Fixes) - COMPLETE
-Plan: 2 of 2 - COMPLETE
-Status: Phase 15 Complete
+Phase: 16 of 17 (Memory API Integration Fixes) - COMPLETE
+Plan: 1 of 1 - COMPLETE
+Status: Phase 16 Complete
 
-Last activity: 2026-02-07T15:30 — Completed Phase 15: Startup Script & Navigation Fixes. Fixed run-all.sh to use frontend3/ with comprehensive logging, fixed WebSocket URL construction, added Analysis/Memory navigation to Sidebar.
+Last activity: 2026-02-07T23:20 — Completed Phase 16: Memory API Integration Fixes. Fixed frontend memoryApi to include projectId parameter and use project-scoped routes. Fixed backend route ordering bug (/search before /{claim_id}). Integrated ProjectContext into MemoryView.
 
-Progress: ███████░░ 90% (v1.0 complete: 9 phases, 31 plans. v1.1: 21/23 plans complete)
+Progress: ███████░░ 92% (v1.0 complete: 9 phases, 31 plans. v1.1: 22/23 plans complete)
 
 ## Accumulated Context
 
@@ -209,6 +209,14 @@ Progress: ███████░░ 90% (v1.0 complete: 9 phases, 31 plans. v1
 137. App.tsx routing for AnalysisView and MemoryView components
 138. Material Symbol icons with filled variant for active navigation state
 
+**From Phase 16 (Memory API Integration Fixes):**
+139. Frontend memoryApi.search accepts (projectId, query, limit) parameters
+140. Frontend memoryApi routes use /memory/projects/{projectId}/ pattern
+141. Frontend Claim interface extended to match backend ClaimResponse model
+142. MemoryView integrated with ProjectContext via useProjectContext hook
+143. Backend route ordering fixed: /claims/search before /{claim_id} to prevent FastAPI path matching bugs
+144. Frontend memoryApi.relationships removed (no backend equivalent for global relationships query)
+
 ### Technical Debt (From v1.0)
 
 **P1 - High Priority:**
@@ -231,10 +239,10 @@ Progress: ███████░░ 90% (v1.0 complete: 9 phases, 31 plans. v1
 
 ## Session Continuity
 
-Last session: 2026-02-07T15:29:00Z
-Stopped at: Completed Plan 15-01 - Startup Scripts Update
-Resume file: None (plan complete, ready for next plan)
+Last session: 2026-02-07T23:20:00Z
+Stopped at: Completed Phase 16 - Memory API Integration Fixes
+Resume file: None (phase complete, ready for next phase)
 
 ---
 
-*Last updated: 2026-02-07 after Plan 15-01 completion (Startup Scripts Update)*
+*Last updated: 2026-02-07 after Phase 16 completion (Memory API Integration Fixes)*

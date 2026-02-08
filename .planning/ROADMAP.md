@@ -139,17 +139,18 @@ Plans:
 - [x] 15-01-PLAN.md — Update startup scripts to use frontend3/ with npm run dev and comprehensive logging
 - [x] 15-02-PLAN.md — Fix WebSocket URL and add Analysis/Memory navigation items
 
-#### Phase 16: Memory API Integration Fixes
+#### Phase 16: Memory API Integration Fixes ✅ COMPLETE
 **Goal**: Fix Memory API routes to match backend implementation
 **Depends on**: Phase 15
 **Requirements**: FRONT-18 (Information graph queries integrated)
 **Success Criteria** (what must be TRUE):
-  1. Memory API calls include `projectId` parameter
-  2. API routes match backend pattern: `/memory/projects/{projectId}/claims/search`
-  3. MemoryView passes `currentProjectId` from context
-  4. Memory search returns results without 404 errors
-**Gap Closure**: Closes HIGH priority integration gap (Memory API route mismatch)
-**Research**: Complete (backend routes confirmed project-scoped, frontend needs route alignment)
+  1. Memory API calls include `projectId` parameter ✅
+  2. API routes match backend pattern: `/memory/projects/{projectId}/claims/search` ✅
+  3. MemoryView passes `currentProjectId` from context ✅
+  4. Memory search returns results without 404 errors ✅
+**Gap Closure**: Closes HIGH priority integration gap (Memory API route mismatch) ✅
+**Research**: Complete
+**Plans**: 1 complete (2026-02-07)
 
 **Plans:** 1 plan
 
