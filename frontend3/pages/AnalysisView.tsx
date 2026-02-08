@@ -1,25 +1,32 @@
 import React, { useState } from 'react';
 import { analysisApi } from '../lib/api';
+import { useProjectContext } from '../lib/context';
 import MonacoEditor from '../components/MonacoEditor';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 export const AnalysisView: React.FC = () => {
+  const { currentProjectId } = useProjectContext();
   const [code, setCode] = useState('# Write your Python or R code here\nprint("Hello, World!")');
   const [language, setLanguage] = useState<'python' | 'r'>('python');
   const [results, setResults] = useState<{ success: boolean; output: string; error: string; execution_time: number; finding_id?: string } | null>(null);
   const [executing, setExecuting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [projectId] = useState('default-project'); // TODO: Get from route/context
 
   const handleExecute = async () => {
     if (!code.trim()) return;
+
+    // Check if project is selected
+    if (!currentProjectId) {
+      setError('No project selected. Please select a project first.');
+      return;
+    }
 
     setExecuting(true);
     setError(null);
     setResults(null);
 
     try {
-      const response = await analysisApi.execute(code, language, projectId);
+      const response = await analysisApi.execute(code, language, currentProjectId);
 
       if (response.error || !response.data) {
         throw new Error(response.error || 'Execution failed');
