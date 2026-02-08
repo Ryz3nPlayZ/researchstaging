@@ -322,18 +322,18 @@ export const documentApi = {
 // Citation APIs
 export const citationApi = {
   search: async (query: string, limit: number = 10) =>
-    apiRequest<Paper[]>(`/literature/search?q=${encodeURIComponent(query)}&limit=${limit}`),
+    apiRequest<Paper[]>(`/literature/search?query=${encodeURIComponent(query)}&limit=${limit}`),
 
   generate: async (documentId: string, format: 'apa' | 'mla' | 'chicago' = 'apa') =>
     apiRequest<{ bibliography: string; count: number; style: string }>(
-      `/documents/${documentId}/bibliography?style=${format}`
+      `/memory/documents/${documentId}/bibliography?style=${format}`
     ),
 };
 
 // Literature APIs
 export const literatureApi = {
   search: (query: string, limit: number = 20) =>
-    apiRequest<Paper[]>(`/literature/search?q=${encodeURIComponent(query)}&limit=${limit}`),
+    apiRequest<Paper[]>(`/literature/search?query=${encodeURIComponent(query)}&limit=${limit}`),
 };
 
 // Chat APIs

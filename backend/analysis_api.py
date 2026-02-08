@@ -15,7 +15,7 @@ from database import get_db
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/analysis", tags=["analysis"])
+router = APIRouter(prefix="/analysis", tags=["analysis"])
 
 # ============== Request/Response Models ==============
 
