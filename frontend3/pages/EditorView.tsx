@@ -36,10 +36,10 @@ const EditorView: React.FC = () => {
       }),
       Underline,
       Placeholder.configure({
-        placeholder: 'Start writing your document...',
+        placeholder: '',
       }),
     ],
-    content: '<p>Start writing your document...</p>',
+    content: '<p></p>',
     editorProps: {
       attributes: {
         class: 'prose prose-sm sm:prose-base lg:prose-lg xl:prose-xl max-w-none focus:outline-none min-h-[500px] px-8 py-6',
