@@ -95,13 +95,13 @@ const Sidebar: React.FC<SidebarProps> = ({ activeView, onViewChange, isOpen = tr
         </div>
       </nav>
 
-      <div className="p-4 border-t border-slate-100 dark:border-slate-800">
+      <div className="p-4 border-t border-slate-100 dark:border-slate-800 opacity-50">
         <div className="flex items-center gap-3 p-2">
           <div className="size-8 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
-            <img 
-              alt="User Profile" 
-              className="w-full h-full object-cover" 
-              src="https://picsum.photos/seed/drjulian/200" 
+            <img
+              alt="User Profile"
+              className="w-full h-full object-cover"
+              src="https://picsum.photos/seed/drjulian/200"
             />
           </div>
           <div className="overflow-hidden">
