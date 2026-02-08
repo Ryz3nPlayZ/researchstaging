@@ -6,7 +6,7 @@ v1.1 is a **frontend integration milestone** that replaces the existing React fr
 
 **Scope:** Complete frontend replacement with backend integration, not greenfield development. All backend APIs exist and work from v1.0. The new frontend provides a polished, modern interface with Material Symbols icons and cleaner component architecture.
 
-**Phase numbering:** Continues from v1.0 (which ended at Phase 9). v1.1 uses phases 10-14.
+**Phase numbering:** Continues from v1.0 (which ended at Phase 9). v1.1 uses phases 10-18.
 
 ## Milestones
 
@@ -154,8 +154,6 @@ Plans:
 
 **Plans:** 1 plan
 
-**Plans:** 1 plan
-
 Plans:
 - [x] 16-01-PLAN.md — Update memoryApi client with project-scoped routes and fix MemoryView to use ProjectContext
 
@@ -185,7 +183,11 @@ Plans:
   4. No horizontal scroll at any viewport width
 **Gap Closure**: Completes Phase 14 (manual testing + responsive design)
 **Research**: Unlikely (testing and CSS fixes - straightforward)
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 18-01-PLAN.md — Automated verification of test flows (API, build, WebSocket, responsive code audit)
+- [ ] 18-02-PLAN.md — Final summary and release readiness assessment
 
 ### 📋 v2.0 [Future] (Planned)
 
@@ -196,7 +198,7 @@ See [PROJECT.md](.planning/PROJECT.md) for potential v2.0 directions (informatio
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 10 → 11 → 12 → 13 → 14 → 15
+Phases execute in numeric order: 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -212,4 +214,4 @@ Phases execute in numeric order: 10 → 11 → 12 → 13 → 14 → 15
 | 18. Complete Phase 14 Production Polish | v1.1 | 0/2 planned | Not Started | - |
 
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-07 Phase 17 plan created*
+*Last updated: 2026-02-07 Phase 18 plans created*
