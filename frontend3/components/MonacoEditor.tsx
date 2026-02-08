@@ -14,7 +14,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   height = '400px',
 }) => {
   return (
-    <div className="flex-1 h-full min-h-[400px] border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+    <div className="flex-1 w-full h-full min-h-[400px] border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}

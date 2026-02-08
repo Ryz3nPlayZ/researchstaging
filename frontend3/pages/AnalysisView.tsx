@@ -42,7 +42,7 @@ export const AnalysisView: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full p-4 md:p-6 max-w-6xl mx-auto">
+    <div className="flex flex-col h-full p-4 md:p-6">
       <h1 className="text-2xl font-bold mb-4 text-slate-800 dark:text-slate-200">Data Analysis</h1>
 
       {/* Language selector and execute button */}
@@ -66,7 +66,7 @@ export const AnalysisView: React.FC = () => {
       </div>
 
       {/* Code editor */}
-      <div className="flex-1 min-h-[500px] relative">
+      <div className="flex-1 w-full min-h-[500px] relative">
         <MonacoEditor
           language={language}
           value={code}
