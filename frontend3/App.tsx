@@ -120,9 +120,11 @@ const App: React.FC = () => {
                   <div className="hidden md:flex items-center w-80 relative">
                     <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">search</span>
                     <input
-                      className="w-full pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary/50 transition-all placeholder-slate-400"
-                      placeholder="Search papers, projects, notes..."
+                      className="w-full pl-10 pr-4 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary/50 transition-all placeholder-slate-400 opacity-50 cursor-not-allowed"
+                      placeholder="Search (coming soon)"
                       type="text"
+                      disabled
+                      title="Search coming soon"
                     />
                   </div>
                 </div>
@@ -136,11 +138,17 @@ const App: React.FC = () => {
                     <span>New Document</span>
                   </button>
                   <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 mx-2 hidden sm:block"></div>
-                  <button className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg relative">
+                  <button
+                    className="p-2 text-slate-300 dark:text-slate-600 rounded-lg relative cursor-not-allowed"
+                    disabled
+                    title="Notifications coming soon"
+                  >
                     <span className="material-symbols-outlined">notifications</span>
-                    <span className="absolute top-2 right-2 size-2 bg-red-500 border-2 border-white dark:border-slate-900 rounded-full"></span>
                   </button>
-                  <div className="size-9 rounded-full bg-slate-200 dark:bg-slate-700 border-2 border-white dark:border-slate-900 overflow-hidden cursor-pointer">
+                  <div
+                    className="size-9 rounded-full bg-slate-200 dark:bg-slate-700 border-2 border-white dark:border-slate-900 overflow-hidden opacity-50"
+                    title="Profile coming soon"
+                  >
                     <img
                       className="w-full h-full object-cover"
                       alt="User Profile"
