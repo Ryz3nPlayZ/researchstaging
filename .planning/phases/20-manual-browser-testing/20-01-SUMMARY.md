@@ -135,6 +135,23 @@ It did NOT check:
 
 ### Immediate (Before Production)
 
+### Systematic Testing in Progress
+Created `TESTING-PLAN.md` with all 10 test flows:
+
+**Currently Testing:**
+- Flow 2: File Upload/Download (download just added)
+
+**Ready to Test:**
+- Flow 3: Write and Format Text (TipTap Editor)
+- Flow 10: Auto-Save Functionality
+- Flow 4: Insert Citations & Generate Bibliography
+- Flow 5: Search Literature & Import Papers
+- Flow 8: Chat with AI Assistant (All Agent Types)
+- Flow 6: Execute Data Analysis & View Results
+- Flow 7: Export Documents to PDF and DOCX
+
+### Future Work (After Testing Complete)
+
 1. **Fix WebSocket connection** (P0)
    - Investigate backend `/ws/{project_id}` endpoint
    - Verify Redis pub/sub working
@@ -149,8 +166,6 @@ It did NOT check:
 3. **Fix Project Creation UX** (P2)
    - Navigate to Editor after creating project
    - Set new project as current project
-
-4. **Complete Manual Testing** (All 10 flows)
 
 ### Longer-term
 
