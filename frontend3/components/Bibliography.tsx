@@ -41,6 +41,16 @@ export const Bibliography: React.FC<BibliographyProps> = ({ documentId, format =
     };
 
     fetchBibliography();
+
+    // Listen for manual refresh events
+    const handleRefresh = () => {
+      fetchBibliography();
+    };
+
+    window.addEventListener('refresh-bibliography', handleRefresh);
+    return () => {
+      window.removeEventListener('refresh-bibliography', handleRefresh);
+    };
   }, [documentId, selectedFormat]);
 
   if (!documentId) {
