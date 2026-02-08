@@ -2,17 +2,17 @@
 
 ## Overview
 
-v1.1 is a **frontend integration milestone** that replaces the existing React frontend with a new design from `researchai-workspace.zip` (AI Studio export), connecting it to the proven FastAPI backend from v1.0. This maintains all 64 validated v1.0 requirements while dramatically improving UI/UX.
+v1.2 is a **completion milestone** — we've built all features (writer + chat + analysis + literature), now we must verify quality, fix bugs, and ship the MVP. The journey from v1.1 to v1.2: manual browser testing revealed 22 bugs (6 P0 blockers, 12 P1 major issues, 6 P2 minor), all must be fixed before production deployment. This milestone is about quality assurance, not feature development.
 
-**Scope:** Complete frontend replacement with backend integration, not greenfield development. All backend APIs exist and work from v1.0. The new frontend provides a polished, modern interface with Material Symbols icons and cleaner component architecture.
+**Scope:** Complete manual testing, fix all discovered bugs, verify production readiness, authorize ship decision. No new features.
 
-**Phase numbering:** Continues from v1.0 (which ended at Phase 9). v1.1 uses phases 10-18.
+**Phase numbering:** Continues from v1.1 (which ended at Phase 20). v1.2 uses phases 21-24.
 
 ## Milestones
 
 - ✅ **v1.0 Complete Research Workspace** - Phases 1-9 (shipped 2026-02-05)
-- 🚧 **v1.1 Frontend Integration & Polish** - Phases 10-20 (gap closure phases 19-20 added)
-- 📋 **v2.0 [Future]** - Phases 21+ (planned)
+- ✅ **v1.1 Frontend Integration & Polish** - Phases 10-20 (shipped 2026-02-08)
+- 🚧 **v1.2 Ship MVP** - Phases 21-24 (in progress)
 
 ## Phases
 
@@ -25,215 +25,124 @@ See [`.planning/milestones/v1.0-FINAL-MILESTONE-AUDIT.md`](.planning/milestones/
 
 </details>
 
-### 🚧 v1.1 Frontend Integration & Polish (In Progress)
+<details>
+<summary>✅ v1.1 Frontend Integration & Polish (Phases 10-20) - SHIPPED 2026-02-08</summary>
 
-**Milestone Goal:** Integrate the new AI Studio frontend design (from `researchai-workspace.zip`) with the existing FastAPI backend, maintaining all v1.0 features while improving UI/UX.
+v1.1 delivered complete frontend integration with new React 19 + TypeScript + Vite design, all views connected to backend APIs, WebSocket real-time updates, auto-save with debouncing, and production polish (ESLint zero warnings, error boundaries, loading states). 11 phases completed with 27 plans.
 
-#### Phase 10: Frontend Foundation & Setup
+### Phase 10: Frontend Foundation & Setup
 **Goal**: Establish the new frontend project structure and development environment
-**Depends on**: Phase 9 (v1.0 complete)
-**Requirements**: FRONT-01, FRONT-02, FRONT-03, FRONT-04, FRONT-05, FRONT-06
-**Success Criteria** (what must be TRUE):
-  1. Development server runs on port 3000 without errors
-  2. Frontend displays the new UI (Dashboard, Files, Library, Editor views render)
-  3. Material Symbols icons load and display correctly
-  4. Tailwind CSS custom theme matches frontend3 design (primary color #4a8fe3)
-  5. Vite build completes successfully with TypeScript compilation
-**Research**: Unlikely (standard Vite + React setup, patterns exist)
-**Plans**: TBD
+**Plans**: 3 plans
 
-Plans:
-- [ ] 10-01: Initialize frontend project and configure build system
-- [ ] 10-02: Configure Tailwind CSS and Material Symbols integration
-- [ ] 10-03: Set up development environment proxy to FastAPI backend
-
-#### Phase 11: View Integration
+### Phase 11: View Integration
 **Goal**: Connect all main views to backend APIs
-**Depends on**: Phase 10
-**Requirements**: FRONT-07, FRONT-08, FRONT-09, FRONT-10, FRONT-11
-**Success Criteria** (what must be TRUE):
-  1. Dashboard loads real project data from `/api/projects` (not mock data)
-  2. Files view displays actual files from `/api/files` endpoint
-  3. Library view shows papers from backend literature database
-  4. Editor view uses TipTap editor (not contentEditable div)
-  5. AI chat sends messages to backend `/api/chat` (not direct Gemini API)
-**Research**: Unlikely (TipTap integration, API connections - established patterns)
-**Plans**: TBD
+**Plans**: 4 plans
 
-Plans:
-- [x] 11-01: Connect Dashboard and Files views to backend APIs
-- [x] 11-02: Connect Library view to literature search backend
-- [x] 11-03: Integrate TipTap editor in Editor view
-- [x] 11-04: Connect AI sidebar chat to multi-agent backend
-
-#### Phase 12: Backend Feature Integration
+### Phase 12: Backend Feature Integration
 **Goal**: Integrate backend features for full v1.0 feature parity
-**Depends on**: Phase 11
-**Requirements**: FRONT-12, FRONT-13, FRONT-14, FRONT-15, FRONT-16, FRONT-17, FRONT-18
-**Success Criteria** (what must be TRUE):
-  1. User can log in and session persists across refresh
-  2. File upload works via drag-drop and stores files in backend
-  3. Document CRUD operations create/read/update/delete documents
-  4. Citations insert via @-mention and bibliography generates
-  5. Data analysis executes Python/R code and displays results
-  6. Document export downloads PDF and DOCX files
-  7. Information graph queries return claims/findings
-**Research**: Unlikely (backend APIs already exist from v1.0)
-**Plans**: TBD
+**Plans**: 4 plans
 
-Plans:
-- [x] 12-01: Implement authentication flow and file upload functionality
-- [x] 12-02: Integrate document CRUD operations and citation formatting
-- [x] 12-03: Integrate data analysis execution and document export
-- [x] 12-04: Integrate information graph queries
-
-#### Phase 13: Real-Time Features
+### Phase 13: Real-Time Features
 **Goal**: Implement WebSocket connection and auto-save functionality
-**Depends on**: Phase 12
-**Requirements**: FRONT-19, FRONT-20
-**Success Criteria** (what must be TRUE):
-  1. WebSocket connects to `ws://localhost:8000/ws/{project_id}` on mount
-  2. Document changes auto-save to backend after 4 seconds of inactivity
-  3. "Saving..." and "Saved" status indicators display in editor
-**Research**: Unlikely (WebSocket infrastructure exists from v1.0)
-**Plans**:
+**Plans**: 2 plans
 
-Plans:
-- [x] 13-01: Implement WebSocket connection for real-time updates
-- [x] 13-02: Implement auto-save with debouncing and status indicators
-
-#### Phase 14: Production Polish
+### Phase 14: Production Polish
 **Goal**: Resolve code quality issues and complete manual testing
-**Depends on**: Phase 13
-**Requirements**: FRONT-21, FRONT-22, FRONT-23, FRONT-24
-**Success Criteria** (what must be TRUE):
-  1. All ESLint warnings resolved (0 warnings in console)
-  2. Component loading states display during API calls
-  3. All user flows work end-to-end (create project → upload files → write document → export)
-  4. Responsive layout works on desktop (1280px+), tablet (768-1279px), mobile (<768px)
-**Research**: Unlikely (code quality and testing - standard practices)
-**Plans**: TBD
+**Plans**: 4 plans (completed in Phase 18)
 
-Plans:
-- [x] 14-01: Resolve ESLint warnings and improve component architecture
-- [x] 14-02: Add loading states and error boundaries
-- [ ] 14-03: Complete manual browser testing for all user flows
-- [ ] 14-04: Verify responsive design across screen sizes
-
-#### Phase 15: Startup Script & Navigation Fixes
+### Phase 15: Startup Script & Navigation Fixes
 **Goal**: Fix critical configuration issues and complete navigation for all views
-**Depends on**: Phase 14
-**Requirements**: Addresses integration gaps from v1.1 audit
-**Success Criteria** (what must be TRUE):
-  1. `run-all.sh` starts frontend3/ (new design) not frontend/ (legacy)
-  2. Startup logs include timestamps and clear component labels
-  3. WebSocket connects to `ws://localhost:8000/ws/{id}` (no `/api` prefix)
-  4. Analysis and Memory views accessible from Sidebar navigation
-**Gap Closure**: Closes HIGH priority integration gap (startup script) and MEDIUM gaps (navigation, WebSocket URL)
-**Research**: Unlikely (script updates and navigation additions - straightforward)
-**Plans**:
+**Plans**: 2 plans
 
-**Plans:** 2 plans
-
-Plans:
-- [x] 15-01-PLAN.md — Update startup scripts to use frontend3/ with npm run dev and comprehensive logging
-- [x] 15-02-PLAN.md — Fix WebSocket URL and add Analysis/Memory navigation items
-
-#### Phase 16: Memory API Integration Fixes ✅ COMPLETE
+### Phase 16: Memory API Integration Fixes
 **Goal**: Fix Memory API routes to match backend implementation
-**Depends on**: Phase 15
-**Requirements**: FRONT-18 (Information graph queries integrated)
-**Success Criteria** (what must be TRUE):
-  1. Memory API calls include `projectId` parameter ✅
-  2. API routes match backend pattern: `/memory/projects/{projectId}/claims/search` ✅
-  3. MemoryView passes `currentProjectId` from context ✅
-  4. Memory search returns results without 404 errors ✅
-**Gap Closure**: Closes HIGH priority integration gap (Memory API route mismatch) ✅
-**Research**: Complete
-**Plans**: 1 complete (2026-02-07)
+**Plans**: 1 plan
 
-**Plans:** 1 plan
-
-Plans:
-- [x] 16-01-PLAN.md — Update memoryApi client with project-scoped routes and fix MemoryView to use ProjectContext
-
-#### Phase 17: WebSocket Connection Fixes ✅ COMPLETE
+### Phase 17: WebSocket Connection Fixes
 **Goal**: Fix WebSocket connection to use correct backend port
-**Depends on**: Phase 16
-**Requirements**: FRONT-19 (WebSocket connection established)
-**Success Criteria** (what must be TRUE):
-  1. WebSocket connects to `ws://localhost:8000/ws/{projectId}` (not 3000) ✅
-  2. Vite proxy configured to forward WebSocket connections ✅
-  3. Real-time features work (task updates, document collaboration) ✅
-**Gap Closure**: Closes MEDIUM priority integration gap (WebSocket port mismatch) ✅
-**Research**: Complete
-**Plans**: 1 complete (2026-02-07)
+**Plans**: 1 plan
 
-Plans:
-- [x] 17-01-PLAN.md — Fix WebSocket URL to use direct backend connection from VITE_API_URL
-
-#### Phase 18: Complete Phase 14 Production Polish
+### Phase 18: Complete Phase 14 Production Polish
 **Goal**: Complete manual browser testing and responsive design fixes
-**Depends on**: Phase 17
-**Requirements**: FRONT-22, FRONT-23, FRONT-24
-**Success Criteria** (what must be TRUE):
-  1. All 10 manual browser test flows executed and passed
-  2. Responsive design works on desktop, tablet, mobile
-  3. Hamburger menu implemented for mobile navigation
-  4. No horizontal scroll at any viewport width
-**Gap Closure**: Completes Phase 14 (manual testing + responsive design)
-**Research**: Unlikely (testing and CSS fixes - straightforward)
-**Plans**: 2 plans complete (2026-02-08)
+**Plans**: 2 plans
 
-Plans:
-- [x] 18-01-PLAN.md — Automated verification of test flows (API, build, WebSocket, responsive code audit)
-- [x] 18-02-PLAN.md — Final summary and release readiness assessment
-
-#### Phase 19: Fix AnalysisView ProjectContext Integration
+### Phase 19: Fix AnalysisView ProjectContext Integration
 **Goal**: Fix hardcoded projectId bug in AnalysisView and resolve type mismatches
-**Depends on**: Phase 18
-**Requirements**: FRONT-16 (Data analysis execution - complete the integration)
-**Gap Closure**: Closes integration gaps from v1.1 audit and UAT
-**Success Criteria** (what must be TRUE):
-  1. AnalysisView uses `currentProjectId` from ProjectContext instead of hardcoded 'default-project'
-  2. Backend server restarted with latest code (no stale processes)
-  3. Generate-code endpoint uses correct `project_id: str` type
-  4. Analysis executions work with UUID project IDs
-**Estimated Time**: 30 minutes
-**Priority**: P0 (Blocker) - Server restart required for code to load
+**Plans**: 3 plans
 
-Plans:
-- [x] 19-01-PLAN.md — Replace hardcoded projectId with ProjectContext in AnalysisView
-- [x] 19-02-PLAN.md — Restart backend server to load latest code (P0 - Blocker)
-- [x] 19-03-PLAN.md — Fix type annotation in generate-code endpoint (P2 - Low)
-
-#### Phase 20: Manual Browser Testing
+### Phase 20: Manual Browser Testing
 **Goal**: Execute all 10 test flows and verify responsive design at actual viewports
-**Depends on**: Phase 19
-**Requirements**: FRONT-23, FRONT-24
-**Gap Closure**: Closes deferred requirements from v1.1 audit (manual testing + viewport testing)
+**Plans**: 1 plan
+
+</details>
+
+### 🚧 v1.2 Ship MVP (In Progress)
+
+**Milestone Goal:** Complete all manual testing, fix all discovered bugs, verify production readiness, and SHIP the MVP.
+
+#### Phase 21: Complete Verification Testing
+**Goal**: Finish remaining test verification after manual browser testing
+**Depends on**: Phase 20
+**Requirements**: TEST-01, TEST-02, TEST-03, TEST-04
 **Success Criteria** (what must be TRUE):
-  1. All 10 test flows executed with documented pass/fail results
-  2. Responsive layout verified at 375px (mobile), 768px (tablet), 1280px+ (desktop)
-  3. No horizontal scroll at any viewport width
-  4. Any bugs found fixed or documented in bug tracker
-**Estimated Time**: 2-4 hours
-**Priority**: P1 (High) - Recommended before production deployment
-**Plans:** 1 plan created
+  1. All 10 core backend flows tested and verified working (auth, files, documents, literature, citations, AI chat, analysis, export, memory, WebSocket)
+  2. All 10 core user workflows tested end-to-end with pass/fail results documented
+  3. Responsive design verified at 3 viewport breakpoints (375px mobile, 768px tablet, 1280px+ desktop)
+  4. Manual browser testing results complete (TEST-04 already done - 22 bugs documented)
+**Plans**: 1 plan
 
 Plans:
-- [ ] 20-01-PLAN.md — Execute manual browser testing for all 10 user flows (5 tasks: setup, flows 1-5, flows 6-10, responsive testing, results documentation)
+- [ ] 21-01: Complete verification testing for all backend flows and user workflows
 
-### 📋 v2.0 [Future] (Planned)
+#### Phase 22: Fix All Bugs
+**Goal**: Fix all 22 bugs discovered during manual testing (6 P0, 12 P1, 6 P2)
+**Depends on**: Phase 21
+**Requirements**: BUG-01 through BUG-21
+**Success Criteria** (what must be TRUE):
+  1. All 6 P0 blocker bugs fixed (literature search API, analysis execution API, project navigation, file download, bibliography API, citation search)
+  2. All 12 P1 major bugs fixed (dashboard filter/view toggle, 3-dot menu, create project UX, document creation, editor connection, analysis pane size, settings routing, recent files, library menu buttons)
+  3. All 5 P2 minor bugs fixed (double logo, dead UI elements, editor toolbar padding, library sidebar context)
+  4. Regression testing complete - all 20 test flows still pass after bug fixes
+**Plans**: 4 plans
 
-**Milestone Goal:** To be determined based on v1.1 usage feedback and user requests
+Plans:
+- [ ] 22-01: Fix all 6 P0 blocker bugs (literature search, analysis execution, project navigation, file download, bibliography, citation search)
+- [ ] 22-02: Fix all 12 P1 major bugs (dashboard UX, project creation, document creation, editor features, analysis UX, settings, file/library views)
+- [ ] 22-03: Fix all 5 P2 minor bugs (UI polish, dead elements, visual consistency)
+- [ ] 22-04: Complete regression testing - verify all bug fixes don't break other flows
 
-See [PROJECT.md](.planning/PROJECT.md) for potential v2.0 directions (information graph UI, additional export formats, enhanced literature features, database chat storage).
+#### Phase 23: Production Readiness
+**Goal**: Verify code quality, deployment configuration, performance, security
+**Depends on**: Phase 22
+**Requirements**: PROD-01, PROD-02, PROD-03, PROD-04
+**Success Criteria** (what must be TRUE):
+  1. Code quality verified - ESLint zero warnings, TypeScript compilation passes, frontend production build succeeds, all API endpoints respond
+  2. Deployment configuration ready - environment variables documented, CORS configured, WebSocket URL set, database migrations documented, cloud storage credentials ready
+  3. Performance characteristics acceptable - page load <3s, TipTap editor responsive, file upload progress displays, analysis timeout handling works
+  4. Security verified - no hardcoded credentials, API keys from env, input validation on all endpoints, file upload size limits enforced, subprocess execution sandboxed
+**Plans**: 1 plan
+
+Plans:
+- [ ] 23-01: Verify production readiness (code quality, deployment config, performance, security)
+
+#### Phase 24: Ship Decision
+**Goal**: Final ship checks and authorization to deploy MVP to production
+**Depends on**: Phase 23
+**Requirements**: SHIP-01, SHIP-02, SHIP-03, SHIP-04
+**Success Criteria** (what must be TRUE):
+  1. Zero P0/P1 bugs remaining - all blockers and major issues resolved
+  2. All 20 test flows passing (10 backend flows, 10 user workflows, 3 viewport breakpoints)
+  3. Production readiness checklist complete (code quality, deployment config, performance, security)
+  4. Final ship decision authorized - stakeholder approval obtained, MVP ready for production deployment, deployment plan documented
+**Plans**: 1 plan
+
+Plans:
+- [ ] 24-01: Complete final ship checks and authorize MVP production deployment
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 10 → 11 → 12 → 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20
+Phases execute in numeric order: 21 → 22 → 23 → 24
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -242,13 +151,21 @@ Phases execute in numeric order: 10 → 11 → 12 → 13 → 14 → 15 → 16 �
 | 11. View Integration | v1.1 | 4/4 | Complete | 2026-02-06 |
 | 12. Backend Feature Integration | v1.1 | 4/4 | Complete | 2026-02-07 |
 | 13. Real-Time Features | v1.1 | 2/2 | Complete | 2026-02-07 |
-| 14. Production Polish | v1.1 | 2/4 | See Phase 18 | - |
+| 14. Production Polish | v1.1 | 4/4 | Complete | 2026-02-08 |
 | 15. Startup & Navigation Fixes | v1.1 | 2/2 | Complete | 2026-02-07 |
 | 16. Memory API Integration Fixes | v1.1 | 1/1 | Complete | 2026-02-07 |
 | 17. WebSocket Connection Fixes | v1.1 | 1/1 | Complete | 2026-02-07 |
 | 18. Complete Phase 14 Production Polish | v1.1 | 2/2 | Complete | 2026-02-08 |
 | 19. Fix AnalysisView ProjectContext | v1.1 | 3/3 | Complete | 2026-02-08 |
-| 20. Manual Browser Testing | v1.1 | 0/1 | Pending | - |
+| 20. Manual Browser Testing | v1.1 | 1/1 | Complete | 2026-02-08 |
+| 21. Complete Verification Testing | v1.2 | 0/1 | Not started | - |
+| 22. Fix All Bugs | v1.2 | 0/4 | Not started | - |
+| 23. Production Readiness | v1.2 | 0/1 | Not started | - |
+| 24. Ship Decision | v1.2 | 0/1 | Not started | - |
+
+**Overall Progress:** 58/66 plans complete (87.9%)
+
+---
 
 *Roadmap created: 2026-02-06*
-*Last updated: 2026-02-08 - Phase 20 plan created with 5 tasks for manual browser testing*
+*Last updated: 2026-02-08 - v1.2 Ship MVP roadmap created with 4 phases (21-24)*

@@ -43,7 +43,7 @@ Requirements for v1.2 Ship MVP milestone. Goal: Complete all manual testing, fix
 
 - [x] **TEST-04**: Document all test results with pass/fail status
   - ✅ **COMPLETE**: Manual testing completed via user testing session
-  - ✅ Documented 20 bugs: 6 P0 blockers, 10 P1 major issues, 4 P2 minor issues
+  - ✅ Documented 22 bugs: 6 P0 blockers, 10 P1 major issues, 4 P2 minor issues
   - ✅ All bugs categorized with severity and impact analysis
   - Results documented in REQUIREMENTS.md BUG-01 through BUG-21
 
@@ -84,7 +84,7 @@ Requirements for v1.2 Ship MVP milestone. Goal: Complete all manual testing, fix
   - Impact: Cannot insert citations in documents
   - Fix: Verify literature search backend handles citation queries
 
-**P1 Major Issues (Discovered via manual testing - 11 issues):**
+**P1 Major Issues (Discovered via manual testing - 12 issues):**
 - [ ] **BUG-07**: Fix Dashboard - Filter button functionality
   - Issue: Filter button does nothing when clicked
   - Impact: Cannot filter projects
@@ -145,7 +145,7 @@ Requirements for v1.2 Ship MVP milestone. Goal: Complete all manual testing, fix
   - Impact: Cannot filter/sort literature results
   - Fix: Implement filter/sort logic for literature search results
 
-**P2 Minor Issues (Discovered via manual testing - 5 issues):**
+**P2 Minor Issues (Discovered via manual testing - 6 issues):**
 - [ ] **BUG-18**: Fix Double Logo in UI
   - Issue: Two logos visible (sidebar "Research AI workspace" + top bar "ResearchHub book logo")
   - Impact: Visual clutter, unprofessional appearance
@@ -171,7 +171,6 @@ Requirements for v1.2 Ship MVP milestone. Goal: Complete all manual testing, fix
   - Impact: Confusing navigation, unclear what options mean
   - Fix: Adjust sidebar to show library-relevant filters/actions (defer UI redesign if needed, just ensure functional)
 
-**Regression Testing:**
 - [ ] **BUG-21**: Verify all bug fixes don't break other flows
   - After fixing each bug, test related flows
   - Ensure fixing one bug doesn't break another
@@ -180,7 +179,7 @@ Requirements for v1.2 Ship MVP milestone. Goal: Complete all manual testing, fix
 ### Production Readiness
 
 - [ ] **PROD-01**: Verify code quality metrics
-  - ESLint: Zero warnings across all frontend3 source files
+  - ESLint: Zero warnings across all frontend source files
   - TypeScript: Compilation passes with no errors
   - Frontend build: Production build succeeds (`npm run build`)
   - Backend health: All API endpoints respond correctly
@@ -303,16 +302,15 @@ Which phases cover which requirements. Updated by roadmap creation.
 |-------------|-------|--------|
 | TEST-01, TEST-02, TEST-03 | Phase 21 | Pending |
 | TEST-04 | Phase 21 | ✅ Complete (manual testing done, bugs documented) |
-| BUG-01 through BUG-06 (P0 blockers) | Phase 22 | Pending |
-| BUG-07 through BUG-17 (P1 major) | Phase 22 | Pending |
-| BUG-18 through BUG-20 (P2 minor) | Phase 22 | Pending |
-| BUG-21 (regression testing) | Phase 22 | Pending |
+| BUG-01 through BUG-06 (6 P0 blockers) | Phase 22 | Pending |
+| BUG-07 through BUG-17A (12 P1 major) | Phase 22 | Pending |
+| BUG-18 through BUG-21 (6 P2 minor) | Phase 22 | Pending |
 | PROD-01, PROD-02, PROD-03, PROD-04 | Phase 23 | Pending |
 | SHIP-01, SHIP-02, SHIP-03, SHIP-04 | Phase 24 | Pending |
 
 **Coverage:**
-- v1.2 requirements: 35 total (16 original + 19 bug fixes)
-- Mapped to phases: 35
+- v1.2 requirements: 31 total (4 testing + 22 bug fixes + 4 production + 4 ship)
+- Mapped to phases: 31
 - Unmapped: 0 ✓
 
 **Bug Breakdown:**
@@ -325,4 +323,4 @@ Which phases cover which requirements. Updated by roadmap creation.
 ---
 
 *Requirements defined: 2026-02-08*
-*Last updated: 2026-02-08 after v1.2 requirements definition*
+*Last updated: 2026-02-08 after v1.2 roadmap creation*
