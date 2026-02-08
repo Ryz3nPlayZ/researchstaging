@@ -10,12 +10,12 @@ Requirements for v1.1 frontend integration milestone. Goal: Integrate new React 
 
 ### Frontend Architecture & Setup
 
-- [ ] **FRONT-01**: Frontend project initialized with new design from researchai-workspace.zip
-- [ ] **FRONT-02**: Build system configured with Vite + React 19 + TypeScript
-- [ ] **FRONT-03**: Development environment proxy configured to existing FastAPI backend (http://localhost:8000)
-- [ ] **FRONT-04**: Material Symbols icons integrated with proper loading
-- [ ] **FRONT-05**: Tailwind CSS configured with custom theme matching researchai-workspace.zip design
-- [ ] **FRONT-06**: Development server runs without errors (`npm run dev` serves frontend)
+- [x] **FRONT-01**: Frontend project initialized with new design from researchai-workspace.zip
+- [x] **FRONT-02**: Build system configured with Vite + React 19 + TypeScript
+- [x] **FRONT-03**: Development environment proxy configured to existing FastAPI backend (http://localhost:8000)
+- [x] **FRONT-04**: Material Symbols icons integrated with proper loading
+- [x] **FRONT-05**: Tailwind CSS configured with custom theme matching researchai-workspace.zip design
+- [x] **FRONT-06**: Development server runs without errors (`npm run dev` serves frontend)
 
 ### View Integration
 
@@ -95,11 +95,11 @@ Requirements for v1.1 frontend integration milestone. Goal: Integrate new React 
 
 ### Production Polish
 
-- [ ] **FRONT-21**: All ESLint warnings resolved
+- [x] **FRONT-21**: All ESLint warnings resolved
   - Fix missing useCallback dependencies in current frontend
   - Fix duplicate markdown_to_tiptap function shadowing warning
   - No console errors or warnings in browser dev tools
-- [ ] **FRONT-22**: Component architecture follows React best practices
+- [x] **FRONT-22**: Component architecture follows React best practices
   - All hooks declared before conditional returns
   - No prop drilling (use React Context where appropriate)
   - Proper error boundaries for route-level error handling
@@ -198,14 +198,19 @@ Which phases cover which requirements. Updated by create-roadmap.
 | FRONT-12, FRONT-13, FRONT-14, FRONT-15, FRONT-16, FRONT-17 | Phase 12 | Complete |
 | FRONT-18 | Phase 16 | Complete |
 | FRONT-19, FRONT-20 | Phase 13 | Complete |
-| FRONT-21, FRONT-22, FRONT-23, FRONT-24 | Phase 14 | Pending |
+| FRONT-21, FRONT-22 | Phase 14/18 | Complete (automated verification) |
+| FRONT-23, FRONT-24 | Phase 14/18 | Pending (manual testing recommended) |
 
 **Coverage:**
 - v1.1 requirements: 24 total
+- Complete: 22 (FRONT-01 through FRONT-22)
+- Pending: 2 (FRONT-23, FRONT-24 - manual browser testing and viewport testing)
 - Mapped to phases: 24
 - Unmapped: 0 ✓
+
+**Note:** FRONT-23 and FRONT-24 (manual browser testing and responsive design testing) have test plans created but manual execution not performed. Code verification completed for responsive design implementation.
 
 ---
 
 *Requirements defined: 2026-02-06*
-*Last updated: 2026-02-07 after Phase 16 completion*
+*Last updated: 2026-02-08 after Phase 18 completion*
