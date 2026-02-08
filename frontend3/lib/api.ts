@@ -339,7 +339,7 @@ export const literatureApi = {
 // Chat APIs
 export const chatApi = {
   send: (message: string, agentType: string = 'general', context?: string) =>
-    apiRequest<ChatResponse>('/chat', {
+    apiRequest<ChatResponse>('/chat/chat', {
       method: 'POST',
       body: JSON.stringify({
         message,
