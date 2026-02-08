@@ -59,8 +59,10 @@ const DashboardView: React.FC = () => {
         console.error('Failed to create project:', response.error);
       } else if (response.data) {
         setProjects([response.data, ...projects]);
-        // Navigate to the newly created project
-        handleProjectClick(response.data);
+        // Set project context but stay on dashboard (workspace view)
+        setCurrentProject(response.data);
+        // Show success notification
+        console.log(`Project '${response.data.research_goal}' created successfully`);
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Unknown error';
@@ -219,9 +221,9 @@ const DashboardView: React.FC = () => {
             {recentProjectsData.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {recentProjectsData.map((project, i) => (
-                  <div key={project.id} className="relative group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:border-primary/50 hover:shadow-lg transition-all cursor-pointer">
+                  <div key={project.id} onClick={() => handleProjectClick(project)} className="relative group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:border-primary/50 hover:shadow-lg transition-all cursor-pointer">
                     <div className="flex justify-between items-start mb-4">
-                      <div className={`size-12 rounded-lg flex items-center justify-center text-2xl ${getRecentProjectBg(i)}`} onClick={() => handleProjectClick(project)}>
+                      <div className={`size-12 rounded-lg flex items-center justify-center text-2xl ${getRecentProjectBg(i)}`}>
                         {getProjectIcon(project.output_type)}
                       </div>
                       <button
@@ -339,11 +341,10 @@ const DashboardView: React.FC = () => {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                            project.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                            project.status === 'in_progress' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
-                            'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-400'
-                          }`}>
+                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${project.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                              project.status === 'in_progress' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
+                                'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-400'
+                            }`}>
                             {project.status}
                           </span>
                         </td>
@@ -376,11 +377,15 @@ const DashboardView: React.FC = () => {
 
                 {/* Existing Projects */}
                 {allProjectsData.map((project, i) => (
-                  <div key={project.id} className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden hover:shadow-md transition-shadow cursor-pointer">
+                  <div
+                    key={project.id}
+                    onClick={() => handleProjectClick(project)}
+                    className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                  >
                     <div className={`h-1.5 w-full ${getProjectColor(i)}`}></div>
                     <div className="p-5">
                       <div className="flex justify-between items-center mb-3">
-                        <span className="text-xl" onClick={() => handleProjectClick(project)}>{getProjectIcon(project.output_type)}</span>
+                        <span className="text-xl">{getProjectIcon(project.output_type)}</span>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -391,7 +396,7 @@ const DashboardView: React.FC = () => {
                           <span className="material-symbols-outlined">more_vert</span>
                         </button>
                       </div>
-                      <h4 className="font-bold text-base mb-1 truncate" onClick={() => handleProjectClick(project)}>{project.research_goal}</h4>
+                      <h4 className="font-bold text-base mb-1 truncate">{project.research_goal}</h4>
                       <p className="text-xs text-slate-400 mb-4">Edited {formatRelativeTime(project.updated_at)}</p>
                       <div className="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
                         <span className="text-xs text-slate-500">{project.task_counts?.total || 0} tasks</span>
