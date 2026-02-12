@@ -1,252 +1,201 @@
-# Coding Conventions
+# Code Conventions
 
-**Analysis Date:** 2026-01-31
+**Analysis Date:** 2026-02-11
 
-## Naming Patterns
+## Backend Conventions
 
-**Files:**
-- Python: `snake_case.py` (e.g., `llm_service.py`, `task_worker.py`, `database/connection.py`)
-- JavaScript/JSX: `PascalCase.jsx` for components, `camelCase.js` for utilities (e.g., `Dashboard.jsx`, `use-toast.js`, `App.js`)
-- Directories: `snake_case` (e.g., `database/`, `workers/`, `components/`)
+### Language & Style
+- **Language**: Python 3.14+
+- **Style Guide**: PEP 8 with Black formatting
+- **Line Length**: 88 characters (Black default)
+- **Indentation**: 4 spaces
 
-**Functions:**
-- Python: `snake_case` (e.g., `generate_research_plan`, `get_db_session`, `_execute_literature_search`)
-- JavaScript: `camelCase` (e.g., `useProject`, `setSelectedProject`, `handleCreateProject`)
+### Naming
+**Files:** `snake_case.py` (e.g., `llm_service.py`, `literature_service.py`)
+**Classes:** `PascalCase` (e.g., `OrchestrationEngine`, `ProjectService`)
+**Functions:** `snake_case` (e.g., `get_project`, `create_task`)
+**Constants:** `UPPER_SNAKE_CASE` (e.g., `MAX_RETRIES`)
 
-**Variables:**
-- Python: `snake_case` (e.g., `project_id`, `research_goal`, `task_data`)
-- JavaScript: `camelCase` (e.g., `selectedProject`, `refreshTrigger`, `navWidth`)
-
-**Types/Classes:**
-- Python: `PascalCase` (e.g., `LLMService`, `TaskWorker`, `ProjectCreate`, `TaskStatus`)
-- JavaScript: `PascalCase` for components and types (e.g., `ProjectProvider`, `ThemeProvider`, `Button`)
-
-**Constants:**
-- Python: `UPPER_SNAKE_CASE` (e.g., `MODELS`, `PROVIDER_ORDER`, `TEST_PROJECT_ID`)
-- JavaScript: `UPPER_SNAKE_CASE` or `PascalCase` (e.g., `VIEW_STATES`, `Button`)
-
-## Code Style
-
-**Formatting:**
-- Python: No formal formatter configured (manual formatting observed)
-- JavaScript: ESLint with `plugin:react-hooks/recommended` rules configured via craco
-  - Located in: `/home/zemul/Programming/research/frontend/craco.config.js`
-- Tailwind CSS for styling (utility-first CSS classes)
-
-**Linting:**
-- JavaScript: ESLint 9.23.0 with React Hooks rules
-  - `react-hooks/rules-of-hooks`: error
-  - `react-hooks/exhaustive-deps`: warn
-- No Python linting configuration detected (no `.pylintrc`, `ruff.toml`, or `black` config found)
-
-**Import Organization:**
-
-Python (order observed in `backend/server.py`, `backend/llm_service.py`):
-1. Standard library imports
-2. Third-party imports (fastapi, sqlalchemy, dotenv, etc.)
-3. Local application imports (database, orchestration, workers, services)
-4. Blank lines between groups
+### Type Hints
+**Status:** Partially implemented
+**Issues:**
+- Inconsistent type annotations across services
+- Many functions lack return type hints
+- `Optional` used inconsistently
 
 ```python
-# Standard library
-import os
-import logging
-from typing import List, Optional, Dict, Any
+# Good
+async def get_project(project_id: str) -> Optional[Project]:
+    return await db.get(Project, project_id)
 
-# Third-party
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
-from dotenv import load_dotenv
-
-# Local
-from database import get_db, init_db
-from llm_service import llm_service
+# Bad (no return type)
+async def get_project(project_id: str):
+    return await db.get(Project, project_id)
 ```
 
-JavaScript (order observed in `frontend/src/App.js`):
-1. React imports
-2. Third-party npm package imports (lucide-react, class-variance-authority, etc.)
-3. Absolute imports using `@/` alias
-4. Relative imports
-5. CSS imports last
+### Async Patterns
+**Convention:** All database operations must be async
+```python
+async def create_project(data: ProjectCreate) -> Project:
+    async with AsyncSessionLocal() as session:
+        project = Project(**data.dict())
+        session.add(project)
+        await session.commit()
+        await session.refresh(project)
+        return project
+```
+
+### Error Handling
+**Pattern:** Mixed - inconsistent across codebase
+**Issues:**
+- Some services raise custom exceptions
+- Others return None or empty results
+- No standardized error response format
+
+## Frontend Conventions
+
+### Language & Style
+- **Language:** JavaScript (moving toward TypeScript)
+- **Style:** ESLint with React rules
+- **Formatting:** Prettier (inferred from config)
+
+### Naming
+**Files:** `PascalCase.jsx` for components, `camelCase.js` for utilities
+**Components:** `PascalCase` (e.g., `DashboardView`, `EditorView`)
+**Functions:** `camelCase` (e.g., `useEffect`, `handleClick`)
+**Constants:** `UPPER_SNAKE_CASE`
+
+### Type Safety
+**Status:** Poor - extensive use of `any` and `unknown`
+**Issue:** TypeScript provides no actual safety when types aren't defined
+
+```typescript
+// Bad: any types defeat type safety
+const data: any = await response.json();
+
+// Better: proper interface
+interface Paper {
+  id: string;
+  title: string;
+  authors: string[];
+}
+const data: Paper[] = await response.json();
+```
+
+### Component Patterns
+**Hooks:** Functional components with hooks
+**State:** React Context for global, useState for local
+**Effects:** useEffect for side effects
 
 ```javascript
-import { useState, useCallback } from 'react';
-import { ThemeProvider } from './context/ThemeContext';
-import { StatusBar } from './components/layout/StatusBar';
-import { Toaster } from './components/ui/sonner';
-import './App.css';
+// Good pattern
+function DashboardView() {
+  const { projects, fetchProjects } = useProjectContext();
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    fetchProjects();
+  }, []);
+
+  return <div>...</div>;
+}
 ```
 
-**Path Aliases:**
-- Frontend: `@/` maps to `src/` directory (configured in `/home/zemul/Programming/research/frontend/craco.config.js`)
+## Import Conventions
 
-## Error Handling
-
-**Python Patterns:**
-- FastAPI endpoints: Use `HTTPException` for API errors
-  ```python
-  if not project:
-      raise HTTPException(status_code=404, detail="Project not found")
-  ```
-- Service layer: Log errors with `logger.error()` and raise `ValueError` or custom exceptions
-  ```python
-  if not self.available_providers:
-      logger.warning("No LLM providers configured")
-      raise ValueError("No LLM providers configured")
-  ```
-- Database transactions: Use try/except with rollback
-  ```python
-  try:
-      await db.commit()
-  except Exception as e:
-      logger.error(f"Failed: {e}", exc_info=True)
-      await db.rollback()
-      raise HTTPException(status_code=500, detail=str(e))
-  ```
-- Worker tasks: Log error, update task state to FAILED, continue processing
-  ```python
-  except Exception as e:
-      logger.error(f"Task {task_id} failed: {e}")
-      await orchestration_engine.fail_task_run(session, run.id, error_message=str(e))
-      return None
-  ```
-
-**JavaScript Patterns:**
-- Context hooks: Throw error if used outside provider
-  ```javascript
-  if (!context) {
-    throw new Error('useProject must be used within a ProjectProvider');
-  }
-  ```
-- Async operations: Try/catch with console logging (observed pattern)
-- No global error boundary detected in frontend
-
-## Logging
-
-**Python Framework:** Standard library `logging` module
-
-**Configuration (from `backend/server.py`):**
+### Backend
 ```python
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# Standard library first
+import os
+from typing import Optional
+
+# Third-party imports
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+
+# Local imports
+from database.models import Project
+from services.project_service import ProjectService
 ```
 
-**Patterns:**
-- Use module-level loggers: `logger = logging.getLogger(__name__)`
-- Log levels: INFO for normal operations, WARNING for degraded conditions, ERROR for failures
-- Include context in messages: `logger.info(f"Created project {project.id}")`
-- Use `exc_info=True` for exception stack traces: `logger.error(f"Failed: {e}", exc_info=True)`
+### Frontend
+```javascript
+// External libraries first
+import React, { useState, useEffect } from 'react';
+import { ChevronRight } from 'lucide-react';
 
-**JavaScript:** No formal logging framework (uses `console.log` implicitly)
-
-## Comments
-
-**When to Comment:**
-- Module docstrings for all Python files (triple-quoted strings at top)
-- Class docstrings explaining purpose and behavior
-- Function docstrings for complex operations (especially service layer)
-- Section comment blocks in large files (e.g., `# ============== Project Endpoints ==============`)
-
-**Docstring Style (Python):**
-- Google-style docstrings observed in `backend/llm_service.py`
-```python
-async def generate(
-    self,
-    prompt: str,
-    system_message: str = "You are a helpful research assistant.",
-    provider: Optional[str] = None,
-) -> str:
-    """
-    Generate text using specified or auto-selected LLM provider.
-
-    Args:
-        prompt: The user prompt
-        system_message: System message for context
-        provider: Specific provider to use (openai, gemini, mistral, groq, openrouter)
-
-    Returns:
-        Generated text response
-    """
+// Local imports
+import { useProjectContext } from '../context/ProjectContext';
+import { Button } from './ui/button';
 ```
 
-**JSDoc:** Not commonly used in observed codebase
+## Inconsistencies
 
-**Inline Comments:** Minimal, used for complex logic only
+### Type Safety
+- **Issue:** Heavy use of `any` in TypeScript
+- **Files Affected:**
+  - `frontend3/types.ts`: 30+ instances of `any`
+  - `frontend3/lib/api.ts`: Missing return types
+  - Most components use `unknown` for props
 
-## Function Design
+### Error Handling
+- **Issue:** No standard pattern
+- **Backend:** Mix of try/except, error propagation, silent failures
+- **Frontend:** Mix of error boundaries, try/catch, silent failures
 
-**Size:**
-- Python service functions: 50-150 lines typical (e.g., `generate_research_plan` in `llm_service.py`)
-- FastAPI endpoints: 20-80 lines typical (e.g., `create_project` in `server.py`)
-- JavaScript components: 100-200 lines typical (e.g., `App.js`)
+### Async Patterns
+- **Issue:** Inconsistent await usage
+- **Backend:** Generally good async/await usage
+- **Frontend:** Missing await in some Promise chains
 
-**Parameters:**
-- Python: Use type hints for all parameters
-  - Required positional params first
-  - Optional params with defaults last
-  - Use `*` to separate keyword-only params when needed
-- JavaScript: Destructured props for components
-  ```javascript
-  const Button = React.forwardRef(({ className, variant, size, ...props }, ref) => {
-  ```
+### TODO Comments
+**Count:** 5+ TODO comments in code
+**Examples:**
+- `// TODO: Implement delete` (DashboardView.tsx)
+- `// TODO: Add proper error handling` (multiple files)
+- `// TODO: Rename functionality` (server.py)
 
-**Return Values:**
-- Python: Always specify return type in type hints
-  - Return Pydantic models from API endpoints
-  - Return domain objects or primitive types from services
-  - Use `Optional[T]` for nullable returns
-- JavaScript: Implicit return types (no TypeScript detected in main frontend codebase)
+### Large Functions
+**Issue:** Functions violating single responsibility
+**Examples:**
+- `backend/server.py`: 1000+ lines in main file
+- `frontend3/pages/EditorView.tsx`: 500+ lines
+- `frontend3/lib/api.ts`: Large mixed API client
 
-## Module Design
+## Code Quality Issues
 
-**Exports:**
-- Python services: Export singleton instances at module bottom
-  ```python
-  llm_service = LLMService()
-  ```
-- FastAPI: Use `APIRouter` for endpoint grouping
-- JavaScript components: Named exports preferred
-  ```javascript
-  export { Button, buttonVariants }
-  export const useProject = () => { ... }
-  ```
+### Magic Numbers
+```javascript
+// Bad: unexplained constants
+setTimeout(() => {}, 5000);
 
-**Barrel Files:**
-- Python: `database/__init__.py` exports common models and functions
-- JavaScript: No barrel files observed
+// Good: named constants
+const STATUS_CHECK_INTERVAL = 5000;
+setTimeout(() => {}, STATUS_CHECK_INTERVAL);
+```
 
-**State Management:**
-- Backend: Database-centric (PostgreSQL as source of truth, Redis for queue/pubsub)
-- Frontend: React Context API for global state (see `/home/zemul/Programming/research/frontend/src/context/ProjectContext.js`)
+### Duplicated Code
+- API client code duplicated across frontend versions
+- Error handling repeated in multiple files
+- Component patterns repeated without abstraction
 
-## React-Specific Conventions
+### Inconsistent State Management
+- Some components use Context
+- Others use local state
+- No clear pattern for when to use which
 
-**Component Structure:**
-- Functional components with hooks (no class components observed)
-- Custom hooks in `hooks/` directory (e.g., `use-toast.js`)
-- Context providers for global state
+## Formatting
 
-**Hook Usage:**
-- `useCallback` for event handlers to prevent re-renders
-- `useState` for local component state
-- Custom hooks follow `use*` naming convention
+### Backend
+- **Tool:** Black
+- **Config:** Default (88 character line length)
+- **Status:** Applied inconsistently
 
-**Styling:**
-- Tailwind CSS utility classes exclusively
-- Use `cn()` utility from `lib/utils.js` for conditional class merging
-  ```javascript
-  import { cn } from "@/lib/utils"
-  className={cn(buttonVariants({ variant, size }), className)}
-  ```
-
-**Component Props:**
-- Destructure props in function signature
-- Use `...props` spread for forwarding attributes to underlying elements
+### Frontend
+- **Tool:** ESLint + Prettier
+- **Config:** `frontend3/eslint.config.js`
+- **Status:** Config exists, enforcement unclear
 
 ---
 
-*Convention analysis: 2026-01-31*
+*Conventions analysis: 2026-02-11*

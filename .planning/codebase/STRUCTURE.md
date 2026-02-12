@@ -1,242 +1,162 @@
 # Codebase Structure
 
-**Analysis Date:** 2025-01-31
+**Analysis Date:** 2026-02-11
 
 ## Directory Layout
 
 ```
 /home/zemul/Programming/research/
-├── backend/               # Python FastAPI backend
-│   ├── database/          # SQLAlchemy models and connection
-│   ├── orchestration/     # Task orchestration engine
-│   ├── realtime/          # WebSocket and pub/sub
-│   ├── workers/           # Task execution workers
-│   ├── scripts/           # Database migration scripts
-│   ├── tests/             # Backend tests
-│   ├── venv/              # Python virtual environment
-│   ├── server.py          # FastAPI application entry point
-│   ├── llm_service.py     # LLM integration
-│   ├── literature_service.py  # Academic search APIs
-│   ├── pdf_service.py     # PDF processing
-│   ├── reference_service.py   # Citation extraction
-│   ├── export_service.py  # Document export
-│   ├── auth_service.py    # Authentication
-│   ├── credit_service.py  # Usage tracking
-│   ├── models.py          # Pydantic models
-│   └── requirements.txt   # Python dependencies
-├── frontend/              # React web UI
-│   ├── public/            # Static assets
-│   ├── build/             # Production build output
-│   ├── node_modules/      # npm dependencies
-│   ├── plugins/           # Vite/CRACo plugins
-│   └── src/
-│       ├── components/    # React components
-│       │   ├── artifacts/ # Artifact display components
-│       │   ├── chat/      # Chat interface components
-│       │   ├── dialogs/   # Dialog components
-│       │   ├── editor/    # Rich text editor (TipTap)
-│       │   ├── graphs/    # Task/citation graph visualizations
-│       │   ├── layout/    # Layout components (Navigator, Workspace, Inspector)
-│       │   ├── pages/     # Page components (Dashboard, PlanningFlow)
-│       │   ├── tasks/     # Task-related components
-│       │   ├── ui/        # UI primitives (buttons, inputs, etc.)
-│       │   └── viewer/    # PDF viewer
-│       ├── context/       # React context providers
-│       ├── hooks/         # Custom React hooks
-│       ├── lib/           # API client and utilities
-│       ├── pages/         # Page components
-│       ├── utils/         # Utility functions
-│       ├── App.js         # Root React component
-│       ├── index.js       # React entry point
-│       └── index.css      # Global styles
-├── research_tui/          # Textual TUI
-│   ├── screens/           # TUI screen components
-│   │   ├── projects_tab.py
-│   │   ├── tasks_tab.py
-│   │   ├── artifacts_tab.py
-│   │   ├── papers_tab.py
-│   │   ├── chat_tab.py
-│   │   └── monitor_tab.py
-│   ├── venv/              # Python virtual environment
-│   ├── api_client.py      # HTTP client for backend API
-│   ├── state.py           # TUI state management
-│   ├── messages.py        # TUI message definitions
-│   ├── main.py            # TUI entry point
-│   └── pyproject.toml     # Python dependencies
-├── .planning/             # Planning documents
-│   └── codebase/          # Codebase analysis documents
-├── tests/                 # Integration tests
-├── memory/                # Shared memory for AI agents
-├── test_reports/          # Test execution reports
-├── docker-compose.yml     # Docker services
-├── run-all.sh            # Start all services
-├── start-backend.sh      # Start backend only
-├── start-frontend.sh     # Start frontend only
-└── setup.sh              # Environment setup script
+├── backend/                    # Python/FastAPI backend
+│   ├── database/              # Data models and connection
+│   ├── orchestration/         # Task orchestration (unused)
+│   ├── workers/              # Task workers
+│   ├── realtime/             # WebSocket handlers
+│   └── *.py                  # Service files and API endpoints
+├── frontend/                  # React frontend (primary)
+│   ├── src/
+│   │   ├── components/        # UI components
+│   │   ├── context/          # React contexts
+│   │   ├── hooks/            # Custom hooks
+│   │   └── lib/              # Utilities and API clients
+│   └── package.json         # Dependencies
+├── frontend3/                # Alternative frontend (incomplete)
+│   └── vite.config.ts        # Build config only
+├── research_tui/              # Terminal UI (separate package)
+│   ├── main.py               # Textual app entry point
+│   └── state.py              # TUI state management
+└── .planning/                # Project documentation
 ```
 
 ## Directory Purposes
 
-**backend/**:
-- Purpose: FastAPI server providing REST API and WebSocket endpoints
-- Contains: All Python backend code, services, database models, worker processes
-- Key files: `server.py` (FastAPI app), `orchestration/engine.py` (workflow engine), `workers/task_worker.py` (task execution)
+### Backend ( /home/zemul/Programming/research/backend/ )
+- **Purpose**: API server and business logic
+- **Contains**:
+  - Service classes (15+ files)
+  - API endpoints (20+ routes)
+  - Database models
+  - Orchestration engine (unused)
+- **Key files**:
+  - `server.py`: Main application entry point (1000+ lines)
+  - `models.py`: Database schema
+  - `orchestration/engine.py`: Unused state management
 
-**frontend/**:
-- Purpose: React-based web user interface
-- Contains: React components, API client, styling, build configuration
-- Key files: `src/App.js` (root component), `src/lib/api.js` (API client), `src/index.js` (entry point)
+### Frontend ( /home/zemul/Programming/research/frontend/ )
+- **Purpose**: Primary React web interface
+- **Contains**: Main application UI components
+- **Key files**:
+  - `src/index.js`: Application entry point
+  - `src/App.js`: Root component
+  - `src/lib/api.js`: WebSocket and HTTP clients
+  - `src/context/ProjectContext.js`: Global state
 
-**research_tui/**:
-- Purpose: Terminal-based user interface using Textual framework
-- Contains: TUI screens, API client, state management
-- Key files: `main.py` (Textual app), `api_client.py` (HTTP client)
+### Frontend3 ( /home/zemul/Programming/research/frontend3/ )
+- **Purpose**: Alternative frontend implementation
+- **Status**: Incomplete - only build configuration
+- **Issue**: Parallel implementation creates confusion
 
-**.planning/**:
-- Purpose: Project planning and codebase documentation
-- Contains: Analysis documents generated by GSD codebase mapper
-- Generated: Yes (by GSD commands)
-- Committed: Yes
+### Research TUI ( /home/zemul/Programming/research/research_tui/ )
+- **Purpose**: Terminal-based interface
+- **Status**: Separate Python package
+- **Issue**: Third interface dilutes development focus
 
-**memory/**:
-- Purpose: Shared persistent memory for AI agents
-- Contains: Research context, conversation history
-- Generated: Partially (by AI agents)
+### Database Layer ( /home/zemul/Programming/research/backend/database/ )
+- **Purpose**: Data models and connection management
+- **Contains**:
+  - `models.py`: Core SQLAlchemy models
+  - `connection.py`: Database utilities
+  - Specialized model files for features
+- **Key files**:
+  - `models.py`: Main data schema
+  - `connection.py`: Database connection setup
 
 ## Key File Locations
 
-**Entry Points:**
-- `/home/zemul/Programming/research/backend/server.py`: FastAPI application entry point
-- `/home/zemul/Programming/research/frontend/src/index.js`: React DOM entry point
-- `/home/zemul/Programming/research/research_tui/main.py`: Textual TUI entry point
+### Entry Points
+- **Backend**: `/home/zemul/Programming/research/backend/server.py`
+- **Frontend**: `/home/zemul/Programming/research/frontend/src/index.js`
+- **TUI**: `/home/zemul/Programming/research/research_tui/main.py`
 
-**Configuration:**
-- `/home/zemul/Programming/research/backend/.env`: Backend environment variables (database URLs, API keys)
-- `/home/zemul/Programming/research/backend/.env.template`: Environment variable template
-- `/home/zemul/Programming/research/frontend/package.json`: Frontend dependencies and scripts
-- `/home/zemul/Programming/research/docker-compose.yml`: Docker services (PostgreSQL, Redis)
+### Configuration
+- **Backend**: `/home/zemul/Programming/research/backend/.env`
+- **Frontend**: `/home/zemul/Programming/research/frontend/package.json`
+- **Build**: `/home/zemul/Programming/research/frontend/vite.config.js` (missing)
 
-**Core Logic:**
-- `/home/zemul/Programming/research/backend/orchestration/engine.py`: Task orchestration engine
-- `/home/zemul/Programming/research/backend/workers/task_worker.py`: Task execution worker
-- `/home/zemul/Programming/research/backend/database/models.py`: SQLAlchemy database models
-- `/home/zemul/Programming/research/backend/llm_service.py`: LLM integration (OpenAI, Google, etc.)
-- `/home/zemul/Programming/research/backend/literature_service.py`: Academic paper search
-- `/home/zemul/Programming/research/frontend/src/App.js`: React app root
-- `/home/zemul/Programming/research/frontend/src/lib/api.js`: Frontend API client
+### Core Logic
+- **Services**: `/home/zemul/Programming/research/backend/*_service.py`
+- **API**: `/home/zemul/Programming/research/backend/server.py`
+- **Models**: `/home/zemul/Programming/research/backend/database/models.py`
 
-**Testing:**
-- `/home/zemul/Programming/research/backend/tests/`: Backend API tests
-- `/home/zemul/Programming/research/tests/`: Integration tests
-- `/home/zemul/Programming/research/backend_test.py`: Legacy backend tests (being phased out)
-
-**Documentation:**
-- `/home/zemul/Programming/research/README.md`: Project overview
-- `/home/zemul/Programming/research/SETUP.md`: Setup instructions
-- `/home/zemul/Programming/research/CLAUDE.md`: Claude-specific documentation
-- `/home/zemul/Programming/research/SECURITY.md`: Security policies
+### Testing
+- **Backend**: `/home/zemul/Programming/research/backend/tests/` (minimal)
+- **Frontend**: No test files detected
 
 ## Naming Conventions
 
-**Files:**
-- Backend Python: `snake_case.py` (e.g., `llm_service.py`, `task_worker.py`)
-- Frontend JavaScript: `PascalCase.jsx` for components (e.g., `Dashboard.jsx`), `camelCase.js` for utilities (e.g., `api.js`)
-- TUI Python: `snake_case.py` (e.g., `projects_tab.py`)
+### Files
+- **Services**: `*_service.py` (consistent)
+- **APIs**: `*_api.py` (consistent)
+- **Models**: `*_models.py` (inconsistent - some files lack suffix)
+- **Frontend**: PascalCase components, camelCase utilities
 
-**Directories:**
-- Backend: `snake_case` (e.g., `orchestration/`, `realtime/`)
-- Frontend: `snake_case` (e.g., `components/`, `context/`)
-
-**Database Tables:**
-- SQLAlchemy models: `PascalCase` (e.g., `Project`, `Task`, `Artifact`)
-- Table names: `lowercase` (e.g., `projects`, `tasks`, `artifacts`)
-
-**React Components:**
-- Component files: `PascalCase.jsx` (e.g., `Dashboard.jsx`, `TaskGraph.jsx`)
-- Component exports: Default export for main component
-
-**API Endpoints:**
-- REST: `/api/{resource}` or `/api/{resource}/{id}` (e.g., `/api/projects`, `/api/tasks/{id}`)
-- WebSocket: `/ws/{project_id}`
+### Directories
+- **Backend**: snake_case (consistent)
+- **Frontend**: PascalCase components directory (inconsistent with backend)
 
 ## Where to Add New Code
 
-**New Backend Endpoint:**
-- Primary code: Add route handler to `/home/zemul/Programming/research/backend/server.py`
-- Models: Add Pydantic models in `server.py` or `models.py`
-- Tests: Add to `/home/zemul/Programming/research/backend/tests/`
+### New Feature
+- **Backend Services**: `/home/zemul/Programming/research/backend/*_service.py`
+- **API Endpoints**: `/home/zemul/Programming/research/backend/server.py`
+- **Database Models**: `/home/zemul/Programming/research/backend/database/models.py`
+- **Frontend Components**: `/home/zemul/Programming/research/frontend/src/components/`
 
-**New Backend Service:**
-- Implementation: Create `{service_name}_service.py` in `/home/zemul/Programming/research/backend/`
-- Usage: Import and instantiate in worker or API layer
+### New Component/Module
+- **Implementation**: `/home/zemul/Programming/research/frontend/src/components/`
+- **Tests**: `/home/zemul/Programming/research/backend/tests/` (if any)
 
-**New Task Type:**
-- Enum: Add to `TaskType` in `/home/zemul/Programming/research/backend/database/models.py`
-- Execution logic: Add case to worker's task router in `/home/zemul/Programming/research/backend/workers/task_worker.py`
-
-**New Frontend Page:**
-- Implementation: `/home/zemul/Programming/research/frontend/src/components/pages/`
-- Routing: Add to App.js view state routing
-
-**New Frontend Component:**
-- UI primitives: `/home/zemul/Programming/research/frontend/src/components/ui/`
-- Feature components: Appropriate subdirectory (e.g., `artifacts/`, `tasks/`)
-
-**New Frontend API Call:**
-- Add method to `/home/zemul/Programming/research/frontend/src/lib/api.js`
-- Follow pattern: `export const resourceApi = { list, get, create, update, delete }`
-
-**New TUI Screen:**
-- Implementation: `/home/zemul/Programming/research/research_tui/screens/`
-- Registration: Import and add to `TabbedContent` in `/home/zemul/Programming/research/research_tui/main.py`
-
-**Database Migration:**
-- Create script in `/home/zemul/Programming/research/backend/scripts/`
-- Run with Python from backend directory
-- Use `asyncio` and `database.connection.engine`
+### Utilities
+- **Shared helpers**: `/home/zemul/Programming/research/frontend/src/lib/utils.js`
+- **API clients**: `/home/zemul/Programming/research/frontend/src/lib/api.js`
 
 ## Special Directories
 
-**backend/venv/**:
-- Purpose: Python virtual environment for backend
-- Generated: Yes
-- Committed: No (in .gitignore)
+### Backend Services Directory
+- **Purpose**: Contains 15+ service files
+- **Generated**: No
+- **Committed**: Yes
+- **Issue**: Too many services, unclear boundaries
 
-**frontend/node_modules/**:
-- Purpose: npm dependencies
-- Generated: Yes
-- Committed: No (in .gitignore)
+### Frontend Components Directory
+- **Purpose**: UI components organized by feature
+- **Generated**: No
+- **Committed**: Yes
+- **Structure**: Nested by feature type (ui/, pages/, etc.)
 
-**frontend/build/**:
-- Purpose: Production build output
-- Generated: Yes
-- Committed: No (in .gitignore)
+### Database Directory
+- **Purpose**: Data access layer
+- **Generated**: No
+- **Committed**: Yes
+- **Models**: Split across multiple files for different features
 
-**research_tui/venv/**:
-- Purpose: Python virtual environment for TUI
-- Generated: Yes
-- Committed: No (in .gitignore)
+## Structure Issues
 
-**.planning/codebase/**:
-- Purpose: Generated codebase analysis documents
-- Generated: Yes (by GSD commands)
-- Committed: Yes
+### Misplaced Files
+- **Issue**: API endpoints mixed with service logic in server.py
+- **Solution**: Extract routes to separate modules
 
-**memory/**:
-- Purpose: Persistent memory storage for AI agents
-- Generated: Partially
-- Committed: Yes
+### Inconsistent Organization
+- **Issue**: Database models scattered across multiple files
+- **Solution**: Consolidate or establish clear boundaries
 
-**backend/__pycache__/**:
-- Purpose: Python bytecode cache
-- Generated: Yes
-- Committed: No (in .gitignore)
+### Confusing Multiple Frontends
+- **Issue**: Three separate frontend implementations
+- **Solution**: Choose primary and deprecate others
 
-**.github/**:
-- Purpose: GitHub workflows and templates
-- Generated: No
-- Committed: Yes
+### Navigation Challenges
+- **Issue**: Deep nesting in some areas, flat structure in others
+- **Solution**: Establish consistent depth and grouping patterns
 
 ---
 
-*Structure analysis: 2025-01-31*
+*Structure analysis: 2026-02-11*

@@ -1,282 +1,262 @@
 # Testing Patterns
 
-**Analysis Date:** 2026-01-31
+**Analysis Date:** 2026-02-11
 
 ## Test Framework
 
-**Python Backend:**
-- Framework: `pytest` (inferred from test file structure and imports)
-- Config: No explicit `pytest.ini` detected - using defaults
-- Test files location:
-  - `/home/zemul/Programming/research/backend/tests/test_api.py` - Main API test suite
-  - `/home/zemul/Programming/research/backend_test.py` - Standalone integration test runner
+**Runner:**
+- Backend: pytest with async support
+- Frontend: No testing framework detected in frontend3
+- Legacy frontend: ESLint only (no tests)
 
-**JavaScript Frontend:**
-- Framework: Create React App with `react-scripts` (includes Jest)
-- Test script: `npm test` or `yarn test` (configured in `/home/zemul/Programming/research/frontend/package.json`)
-- Note: No test files found in frontend source code during exploration
+**Config:**
+```python
+# Backend test structure
+backend/tests/test_api.py
+backend/tests/test_agent_service.py
 
-**Assertion Library:**
-- Python: Standard `assert` statements
-- JavaScript: Jest built-in assertions (not observed in code)
-
-**Run Commands:**
-```bash
-# Backend - pytest
-cd /home/zemul/Programming/research/backend
-pytest tests/test_api.py -v
-
-# Backend - standalone test runner
-cd /home/zemul/Programming/research
-python3 backend_test.py
-
-# Frontend - Jest (CRA)
-cd /home/zemul/Programming/research/frontend
-npm test              # Run all tests
-npm test -- --watch   # Watch mode
-npm test -- --coverage # Coverage
+# pytest configuration (inferred from async test patterns)
+@pytest.mark.asyncio
+async def test_endpoint():
+    # Async test with proper session handling
+    async with AsyncSessionLocal() as session:
+        # Test code
 ```
 
 ## Test File Organization
 
-**Backend Python:**
-- Location: `backend/tests/` directory
-- Naming: `test_*.py` pattern (e.g., `test_api.py`)
-- Structure:
-```
-backend/
-├── tests/
-│   └── test_api.py          # API endpoint tests
-├── backend_test.py          # Root-level integration tests
-├── server.py                # Main application
-└── *_service.py             # Services to test
-```
+**Location:**
+- Backend: `backend/tests/` directory
+- Frontend: No test files found in frontend3
+- Coverage: Limited - only API and agent service tests
 
-**Frontend JavaScript:**
-- Location: Test files should be co-located with components or in `__tests__` directories (CRA convention)
-- Naming: `*.test.js` or `*.test.jsx` pattern
-- Note: No test files currently exist in the frontend
+**Naming:**
+- Backend: `test_*.py` pattern
+- Frontend: No consistent pattern (no tests found)
 
-**TUI (Python):**
-- Location: No test files found in `/home/zemul/Programming/research/research_tui/`
+**Structure:**
+```
+backend/tests/
+├── test_api.py          # API integration tests
+└── test_agent_service.py  # Agent service tests
+```
 
 ## Test Structure
 
-**Backend API Test Pattern (from `/home/zemul/Programming/research/backend/tests/test_api.py`):**
-
+**Backend Patterns:**
 ```python
-class TestHealthCheck:
-    """Health check endpoint tests"""
+# Mock services for testing
+class MockLLMService:
+    async def generate(self, prompt: str, system_message: str = "You are a helpful assistant."):
+        return f"Mock response to: {prompt[:50]}..."
 
-    def test_health_check_returns_200(self):
-        """Test API health check endpoint"""
-        response = requests.get(f"{BASE_URL}/api/")
-        assert response.status_code == 200
+# Async test with fixture
+@pytest.fixture
+def mock_llm_service():
+    return MockLLMService()
 
-        data = response.json()
-        assert data["status"] == "healthy"
-        assert data["version"] == "3.0.0"
-        assert "postgresql" in data["features"]
-        print("✓ Health check passed - API is healthy with PostgreSQL/Redis/WebSocket")
+@pytest.mark.asyncio
+async def test_agent_router_document_query(self, agent_router):
+    # Test agent routing
+    query = "Analyze this document about machine learning"
+    response = await agent_router.process_query(query)
+    assert response is not None
 ```
-
-**Class-based organization:**
-- Group related tests in classes (e.g., `TestHealthCheck`, `TestProjectsCRUD`, `TestTasksEndpoints`)
-- Use descriptive test method names: `test_<verb>_<noun>_<expected_outcome>`
-- Docstrings explain what each test does
-
-**Setup pattern:**
-- Test class-level setup uses `self.__class__` attributes for sharing data between tests
-```python
-def test_create_project(self):
-    # ... create project ...
-    self.__class__.created_project_id = data["id"]
-
-def test_delete_project(self):
-    project_id = getattr(self.__class__, 'created_project_id', None)
-    if not project_id:
-        pytest.skip("No project to delete")
-```
-
-**Teardown pattern:**
-- Manual cleanup in test methods (delete created resources)
-- No automatic teardown fixtures detected
-
-**Assertion pattern:**
-- Use `assert` for status codes
-- Use `assert` with dictionary access for response validation
-- Print success messages for visibility
-
-**Standalone Test Runner Pattern (from `/home/zemul/Programming/research/backend_test.py`):**
-
-```python
-class ResearchPilotAPITester:
-    def __init__(self, base_url="http://localhost:8000"):
-        self.base_url = base_url
-        self.tests_run = 0
-        self.tests_passed = 0
-
-    def run_test(self, name: str, method: str, endpoint: str, expected_status: int, ...):
-        """Run a single API test"""
-        # ... execute request ...
-        success = response.status_code == expected_status
-        if success:
-            self.tests_passed += 1
-            print(f"✅ Passed - Status: {response.status_code}")
-        else:
-            print(f"❌ Failed - Expected {expected_status}, got {response.status_code}")
-        return success, response_data
-```
-
-- Uses custom test runner class
-- Accumulates test statistics
-- Emojis for visual feedback
-- Returns tuple of (success, data)
 
 ## Mocking
 
-**Framework:** No explicit mocking framework detected
-
+**Framework:** Manual mock classes
 **Patterns:**
-- Tests use real HTTP requests to `localhost:8000`
-- Environment variable for base URL: `REACT_APP_BACKEND_URL` (defaults to `http://localhost:8000`)
-- No mocking of external services detected - tests hit real API
-- Test data uses hardcoded project ID: `TEST_PROJECT_ID = "e3567bdc-794c-468f-90af-c443644bf258"`
+```python
+# Custom mock implementations
+class MockLLMService:
+    async def generate(self, prompt: str, system_message: str = ""):
+        return f"Mock response to: {prompt[:50]}..."
+
+class MockDatabase:
+    def __init__(self):
+        self.users = []
+        self.projects = []
+```
 
 **What to Mock:**
-- Not currently practiced - integration tests hit real backend
-- Should consider mocking: External LLM API calls (OpenAI, Gemini, etc.)
+- LLM service responses
+- Database sessions
+- External API calls
+- File system operations
 
 **What NOT to Mock:**
-- Database operations (integration tests use real PostgreSQL)
-- Redis operations (integration tests use real Redis)
+- Core business logic
+- Error handling paths
+- Integration points between services
 
 ## Fixtures and Factories
 
 **Test Data:**
-- Hardcoded test data inline in test methods
 ```python
-payload = {
-    "research_goal": "TEST_Impact of quantum computing on cryptography",
-    "output_type": "literature_review",
-    "audience": "Academic researchers"
+# Sample test data in test_api.py
+SAMPLE_PROJECT = {
+    "id": "test-project-id",
+    "title": "Test Research Project",
+    "description": "A test project for validation",
+    "status": "draft"
 }
+
+# Mock user creation
+@pytest.fixture
+def mock_user():
+    return User(
+        id="test-user-id",
+        email="test@example.com",
+        name="Test User"
+    )
 ```
-
-**Location:**
-- No fixtures directory detected
-- No factory pattern for test data
-- Each test creates its own data
-
-**Recommendation:** Consider pytest fixtures for common test data
 
 ## Coverage
 
-**Requirements:** None enforced
-
-**View Coverage:**
-```bash
-# Python (requires pytest-cov)
-pytest --cov=. --cov-report=html
-
-# JavaScript (Jest built-in)
-npm test -- --coverage
-```
-
-**Current State:**
-- No coverage configuration detected
-- No coverage reports generated during standard test runs
+**Requirements:** No coverage enforcement detected
+**View Coverage:** No coverage reports found
+**Gaps:** Critical functionality untested
 
 ## Test Types
 
 **Unit Tests:**
-- Not detected in codebase
-- Tests are integration-level (API endpoints with real database)
+- Backend: Limited unit tests for services
+- Frontend: No unit tests found
+- Coverage: ~20% of codebase
 
 **Integration Tests:**
-- Primary test type in `/home/zemul/Programming/research/backend/tests/test_api.py`
-- Scope: Full API stack from HTTP endpoint to database
-- Approach: Make real HTTP requests to running backend server
-- Requires: Backend server running on `localhost:8000`
+- Backend: API endpoint tests
+- Frontend: No integration tests
+- Database: Limited integration tests
 
 **E2E Tests:**
-- Not used for frontend
-- Backend integration tests could be considered E2E for backend services
-
-**API Testing Coverage (from test_api.py):**
-- Health check endpoint
-- Projects CRUD (create, read, list, delete)
-- Tasks endpoints (list, task graph, agent graph)
-- Artifacts endpoints (list)
-- Papers endpoints (list)
-- Execution endpoints (execute-all)
-- Export formats endpoint
+- Framework: Not implemented
+- Coverage: Zero
 
 ## Common Patterns
 
 **Async Testing:**
-- Backend is async (FastAPI, SQLAlchemy async)
-- Tests use synchronous `requests` library (not async)
-- LLM service tests would need async test client if added
+```python
+# Proper async test pattern
+@pytest.mark.asyncio
+async def test_authentication_flow():
+    async with AsyncSessionLocal() as session:
+        # Test async operations
+        result = await auth_service.authenticate_user(code, session)
+        assert result is not None
+```
 
 **Error Testing:**
 ```python
-def test_get_nonexistent_project_returns_404(self):
-    """Test getting a non-existent project returns 404"""
-    response = requests.get(f"{BASE_URL}/api/projects/nonexistent-id-12345")
-    assert response.status_code == 404
-    print("✓ Non-existent project returns 404")
+# Error handling tests
+@pytest.mark.asyncio
+async def test_invalid_api_key():
+    with pytest.raises(Exception):
+        await api_call_with_invalid_key()
 ```
 
-**Skipping Tests:**
-```python
-def test_delete_project(self):
-    project_id = getattr(self.__class__, 'created_project_id', None)
-    if not project_id:
-        pytest.skip("No project to delete - create test may have failed")
-```
+## Critical Gaps
 
-**Timeout Pattern:**
-```python
-response = requests.get(url, headers=headers, timeout=timeout)
-# 30 second default timeout in standalone test runner
-```
+### 1. Frontend Testing
+**Missing:** All frontend tests
+**Impact:** No validation of UI components, user interactions, or state management
+**Files Affected:**
+- `frontend3/` entire codebase (15+ components)
+- Critical components like `DashboardView.tsx`, `EditorView.tsx`
 
-## Test Configuration
+### 2. Backend Service Testing
+**Missing:** Core service layer tests
+**Impact:** Business logic unvalidated, integration points risky
+**Services Untested:**
+- `literature_service.py`
+- `pdf_service.py`
+- `reference_service.py`
+- `planning_service.py`
 
-**Environment Variables:**
-- `REACT_APP_BACKEND_URL`: API base URL (default: `http://localhost:8000`)
+### 3. Error Path Testing
+**Missing:** Negative test cases
+**Impact:** Error handling unverified, production failures likely
+**Untested Scenarios:**
+- Database connection failures
+- API rate limiting
+- Invalid input handling
+- Network timeouts
 
-**Prerequisites for Running Tests:**
-- PostgreSQL database running
-- Redis server running
-- Backend server running on port 8000
+### 4. Integration Testing
+**Missing:** End-to-end workflow tests
+**Impact:** Full system workflow unvalidated
+**Untested Flows:**
+- Project creation → planning → execution
+- File upload → processing → analysis
+- User authentication → authorization
 
-**Test Data Setup:**
-- Tests assume database has existing test data
-- Hardcoded `TEST_PROJECT_ID` used for read operations
+### 5. Performance Testing
+**Missing:** Load and performance tests
+**Impact:** No validation of system under load
+**Critical Gaps:**
+- Concurrent user handling
+- Large file processing
+- Database query optimization
+- Memory leaks
 
-## Testing Gaps
+## Quality Issues
 
-**Untested Areas:**
-- Frontend components: No React component tests
-- Frontend hooks: No custom hook tests
-- Frontend utilities: No unit tests for helper functions
-- TUI (research_tui): No tests detected
-- Service layer unit tests: Tests skip service logic, test only API endpoints
-- Worker logic: No direct tests of `/home/zemul/Programming/research/backend/workers/task_worker.py`
-- Database models: No ORM validation tests
+### 1. Fragile Tests
+- Backend tests use hardcoded values
+- No proper test data isolation
+- Tests may fail due to environment differences
 
-**Risk:**
-- Frontend changes could break without detection
-- Service layer bugs may not surface in API tests
-- Worker queue processing edge cases untested
+### 2. Untyped Tests
+- Backend tests lack type annotations
+- No test result validation types
+- Manual error checking instead of assertions
 
-**Priority:**
-- High: Add React component tests for critical UI flows
-- Medium: Add service layer unit tests (LLM, PDF, reference extraction)
-- Low: Add TUI tests
+### 3. Maintenance Issues
+- Tests coupled to implementation details
+- No test documentation
+- Missing test data setup/teardown
+
+### 4. Test Environment
+- No dedicated test database
+- Tests may affect production data
+- No test isolation between runs
+
+## Recommendations
+
+### Immediate (High Priority)
+1. **Implement frontend tests** with React Testing Library
+2. **Add service layer tests** for all backend services
+3. **Integration tests** for critical user workflows
+4. **Error scenario tests** for all failure modes
+
+### Medium Term
+1. **Implement test coverage** targets (>80%)
+2. **Add performance tests** for critical paths
+3. **Setup CI/CD** test automation
+4. **Test data factories** for better test isolation
+
+### Long Term
+1. **Contract tests** for API integrations
+2. **Visual regression tests** for UI changes
+3. **Load testing** for production scaling
+4. **Chaos engineering** for resilience
+
+## Testing Tools Stack
+
+**Recommended:**
+- Frontend: Jest + React Testing Library
+- Backend: pytest + pytest-asyncio + pytest-mock
+- Coverage: pytest-cov
+- E2E: Playwright or Cypress
+- CI: GitHub Actions
+
+**Current State:**
+- Backend: Basic pytest setup
+- Frontend: No testing infrastructure
+- Coverage: No enforcement
+- CI: No automated testing
 
 ---
 
-*Testing analysis: 2026-01-31*
+*Testing analysis: 2026-02-11*

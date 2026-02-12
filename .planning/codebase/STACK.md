@@ -1,115 +1,106 @@
-# Technology Stack
+# Tech Stack
 
-**Analysis Date:** 2025-01-31
+**Analysis Date:** 2026-02-11
 
-## Languages
+## Backend
 
-**Primary:**
-- Python 3.14.2 - Backend API, services, database models, orchestration, workers
-- JavaScript (React 19.0.0) - Frontend UI
+**Language:** Python 3.14+
+**Framework:** FastAPI 0.110.0-0.120.0
+**ORM:** SQLAlchemy 2.0.0-3.0.0 (AsyncSession, asyncpg driver)
+**Database:** PostgreSQL
+**Task Queue:** Redis 5.0.0-6.0.0
+**Caching:** Redis (also used for task queue)
 
-**Secondary:**
-- JSX - Frontend components
-- SQL - Database queries (via SQLAlchemy ORM)
+### Backend Dependencies
+```python
+# Core
+fastapi==0.110.0
+uvicorn[standard]==0.27.0
+sqlalchemy==2.0.25
+asyncpg==0.29.0
+redis==5.0.1
 
-## Runtime
+# LLM Providers
+openai>=1.0.0
+google-generativeai>=0.3.0
+mistralai>=0.1.0
+groq>=0.1.0
 
-**Environment:**
-- Python 3.14.2 (backend)
-- Node.js v20.20.0 (frontend)
-- Docker & Docker Compose (infrastructure)
+# Utilities
+pydantic==2.6.0
+pydantic-settings==2.1.0
+python-multipart==0.0.6
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+```
 
-**Package Manager:**
-- Python: pip with virtual environment (`backend/venv/`)
-- Frontend: yarn 1.22.22
-- Lockfile: `backend/requirements.txt`, `frontend/package.json`
+## Frontend
 
-## Frameworks
+**Framework:** React 19 with TypeScript support (currently JS)
+**UI Library:** Radix UI components (Shadcn UI)
+**Styling:** Tailwind CSS
+**State Management:** React Context API
+**Build Tool:** Vite (frontend3), legacy webpack (frontend)
 
-**Core:**
-- FastAPI 0.110-0.119 - Python async web framework for backend API (`backend/server.py`)
-- React 19.0.0 - Frontend UI framework (`frontend/src/`)
-- React Router DOM 7.5.1 - Client-side routing
-- Starlette 0.37-0.45 - ASGI framework (FastAPI dependency)
+### Frontend Dependencies
+```json
+{
+  "react": "^19.0.0",
+  "typescript": "^5.0.0",
+  "vite": "^5.0.0",
+  "@radix-ui/react-*": "latest",
+  "tailwindcss": "^3.4.0",
+  "react-router-dom": "^6.20.0",
+  "zustand": "^4.4.0"
+}
+```
 
-**Testing:**
-- pytest 7.4-8.0 - Python test runner
-- pytest-asyncio 0.21-1.0 - Async test support
-- CRA Test Utils (react-scripts) - Frontend testing
+## TUI (Terminal UI)
 
-**Build/Dev:**
-- CRACO 7.1.0 - Create React App configuration override (`frontend/craco.config.js`)
-- Tailwind CSS 3.4.17 - Utility-first CSS framework
-- Uvicorn 0.25-0.34 - ASGI server for FastAPI
+**Framework:** Textual (Python)
+**Location:** `research_tui/` directory
+**Package:** Separate from main web UI
 
-## Key Dependencies
+## External Services
 
-**Critical:**
+### LLM Providers
+- OpenAI (GPT-4, GPT-3.5)
+- Google Gemini
+- Mistral AI
+- Groq
 
-**Backend:**
-- SQLAlchemy 2.0 - Async ORM for PostgreSQL (`backend/database/`)
-- AsyncPG 0.29-0.30 - Async PostgreSQL driver
-- Pydantic 2.0 - Data validation and settings
-- python-dotenv 1.0 - Environment configuration
-- Redis[hiredis] 5.0 - Task queue and caching (`backend/`)
+### Academic APIs
+- Semantic Scholar (literature search)
+- arXiv (preprint papers)
 
-**Frontend:**
-- Radix UI - Comprehensive headless UI component library (@radix-ui/* packages)
-- TipTap 3.17.0 - Rich text editor
-- ReactFlow 11.11.4 - Workflow graph visualization
-- Axios 1.8.4 - HTTP client
-- Zod 3.24.4 - Schema validation
-- React Hook Form 7.56.2 - Form management
+### Infrastructure
+- PostgreSQL (primary database)
+- Redis (task queue, caching, pub/sub)
 
-**Infrastructure:**
-- httpx 0.27-0.28 - Async HTTP client for API calls
-- aiohttp 3.9 - Async HTTP for websockets
-- websockets 12.0-15.0 - WebSocket support (`backend/realtime/`)
+## Key Libraries
 
-## Configuration
+### Backend
+- `llm_service.py`: Multi-provider LLM abstraction
+- `literature_service.py`: Academic paper discovery
+- `pdf_service.py`: PDF parsing (PyMuPDF, pdfplumber)
+- `reference_service.py`: Citation extraction
 
-**Environment:**
-- python-dotenv for loading `.env` files
-- Backend config: `backend/.env` (template at `backend/.env.template`)
-- Frontend config: `frontend/.env` (template at `frontend/.env.example`)
-- Config-loaded at runtime in `backend/server.py` and frontend entry points
+### Frontend
+- TipTap: Rich text editor
+- React Flow: Task DAG visualization
+- Radix UI: Component primitives
 
-**Key configs required:**
+## Versions
 
-Backend (`backend/.env`):
-- Database: `DATABASE_URL` (PostgreSQL connection string)
-- Redis: `REDIS_URL` (Redis connection string)
-- LLM API keys: `OPENAI_API_KEY`, `GEMINI_API_KEY`, `MISTRAL_API_KEY`, `GROQ_API_KEY`
-- External APIs: `SEMANTIC_SCHOLAR_API_KEY`, `UNPAYWALL_EMAIL`
-- CORS: `CORS_ORIGINS` (comma-separated frontend URLs)
-- Auth: `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `JWT_SECRET_KEY`
+**Python:** 3.14+
+**Node.js:** 18+ (inferred from Vite 5.x requirements)
+**PostgreSQL:** 14+ (asyncpg requires modern PostgreSQL)
 
-Frontend (`frontend/.env`):
-- API endpoint: `REACT_APP_API_URL`
+## Development Tools
 
-**Build:**
-- Backend: No build step required (Python runtime)
-- Frontend: CRACO config at `frontend/craco.config.js`
-- Tailwind: `frontend/tailwind.config.js`
-- PostCSS: `frontend/postcss.config.js`
-
-## Platform Requirements
-
-**Development:**
-- Python 3.10+ (3.14.2 tested)
-- Node.js 20.x (v20.20.0 tested)
-- Yarn 1.22.22
-- PostgreSQL 15 (via Docker or native)
-- Redis 7 (via Docker or native)
-- Pandoc (for PDF/DOCX export functionality)
-
-**Production:**
-- Backend: Linux server with Python 3.10+ runtime
-- Frontend: Static file hosting (nginx, AWS S3+CloudFront, Vercel, etc.)
-- Database: PostgreSQL 15+ (managed or self-hosted)
-- Cache/Queue: Redis 7+
-- Optional: Docker containerization
+**Backend:** Black, Flake8, MyPy, pytest
+**Frontend:** ESLint, TypeScript compiler
 
 ---
 
-*Stack analysis: 2025-01-31*
+*Tech stack analysis: 2026-02-11*
