@@ -1,0 +1,350 @@
+// API client for Research UI — adapted from frontend3/lib/api.ts
+// Uses Next.js rewrite proxy: /api/* → http://localhost:8000/api/*
+
+import type {
+    Project,
+    Document,
+    DocumentListItem,
+    DocumentUpdateRequest,
+    FileItem,
+    Paper,
+    ChatResponse,
+    SendMessageResponse,
+    AnalysisResult,
+    StatsResponse,
+    TaskResponse,
+    ArtifactResponse,
+    Claim,
+} from './types';
+import { getToken } from './auth';
+
+const API_BASE = '/api';
+
+export interface ApiResponse<T> {
+    data?: T;
+    error?: string;
+    status: number;
+}
+
+/** Generic fetch wrapper with auth token injection */
+async function apiRequest<T>(
+    endpoint: string,
+    options: RequestInit = {}
+): Promise<ApiResponse<T>> {
+    try {
+        const token = getToken();
+        const headers: Record<string, string> = {
+            'Content-Type': 'application/json',
+            ...(options.headers as Record<string, string>),
+        };
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+
+        const response = await fetch(`${API_BASE}${endpoint}`, {
+            ...options,
+            headers,
+        });
+
+        if (!response.ok) {
+            const body = await response.json().catch(() => ({}));
+            return {
+                error: body.detail || `HTTP ${response.status}: ${response.statusText}`,
+                status: response.status,
+            };
+        }
+
+        const data = await response.json();
+        return { data, status: response.status };
+    } catch (error) {
+        return {
+            error: error instanceof Error ? error.message : 'Unknown error',
+            status: 0,
+        };
+    }
+}
+
+// ============== Project APIs ==============
+
+export const projectApi = {
+    list: () => apiRequest<Project[]>('/projects'),
+
+    get: (id: string) => apiRequest<Project>(`/projects/${id}`),
+
+    create: (data: { research_goal: string; output_type: string; audience?: string }) =>
+        apiRequest<Project>('/projects', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        }),
+
+    delete: (id: string) =>
+        apiRequest<{ message: string }>(`/projects/${id}`, { method: 'DELETE' }),
+
+    execute: (id: string) =>
+        apiRequest<{ message: string; tasks_queued: number }>(`/projects/${id}/execute`, {
+            method: 'POST',
+        }),
+};
+
+// ============== Document APIs ==============
+
+export const documentApi = {
+    list: (projectId: string) =>
+        apiRequest<DocumentListItem[]>(`/projects/${projectId}/documents`),
+
+    create: (projectId: string, title: string = 'Untitled Document') =>
+        apiRequest<Document>(`/projects/${projectId}/documents`, {
+            method: 'POST',
+            body: JSON.stringify({ title, citation_style: 'apa', content: {} }),
+        }),
+
+    get: (documentId: string) =>
+        apiRequest<Document>(`/documents/${documentId}`),
+
+    update: (documentId: string, request: DocumentUpdateRequest) =>
+        apiRequest<Document>(`/documents/${documentId}`, {
+            method: 'PUT',
+            body: JSON.stringify(request),
+        }),
+
+    delete: (documentId: string) =>
+        apiRequest<{ message: string }>(`/documents/${documentId}`, { method: 'DELETE' }),
+};
+
+// ============== File APIs ==============
+
+export const fileApi = {
+    list: (projectId: string) =>
+        apiRequest<FileItem[]>(`/files/projects/${projectId}/files`),
+
+    upload: async (file: File, projectId: string) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('project_id', projectId);
+
+        const token = getToken();
+        const headers: Record<string, string> = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const response = await fetch(`${API_BASE}/files/projects/${projectId}/files/upload`, {
+            method: 'POST',
+            body: formData,
+            headers,
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ detail: 'Upload failed' }));
+            throw new Error(error.detail || 'Upload failed');
+        }
+
+        return response.json();
+    },
+
+    download: async (fileId: string, fileName: string) => {
+        const token = getToken();
+        const headers: Record<string, string> = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const response = await fetch(`${API_BASE}/files/${fileId}/download?disposition=attachment`, { headers });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({ detail: 'Download failed' }));
+            throw new Error(error.detail || 'Download failed');
+        }
+
+        const contentType = response.headers.get('content-type');
+        if (contentType?.includes('application/json')) {
+            const data = await response.json();
+            const a = document.createElement('a');
+            a.href = data.download_url;
+            a.download = data.filename || fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        } else {
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }
+    },
+
+    getContent: (fileId: string, projectId: string) =>
+        apiRequest<{ file_id: string; content?: string; extension: string; format: string }>(
+            `/files/${fileId}/content?project_id=${encodeURIComponent(projectId)}`
+        ),
+
+    getBlobUrl: async (fileId: string) => {
+        const token = getToken();
+        const headers: Record<string, string> = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const response = await fetch(`${API_BASE}/files/${fileId}/download?disposition=inline`, { headers });
+
+        if (!response.ok) {
+            throw new Error('Preview failed');
+        }
+
+        const blob = await response.blob();
+        return window.URL.createObjectURL(blob);
+    },
+};
+
+// ============== Task APIs ==============
+
+export const taskApi = {
+    list: (projectId: string) =>
+        apiRequest<TaskResponse[]>(`/projects/${projectId}/tasks`),
+
+    get: (taskId: string) =>
+        apiRequest<TaskResponse>(`/tasks/${taskId}`),
+
+    retry: (taskId: string) =>
+        apiRequest<{ message: string }>(`/tasks/${taskId}/retry`, { method: 'POST' }),
+};
+
+// ============== Artifact APIs ==============
+
+export const artifactApi = {
+    list: (projectId: string) =>
+        apiRequest<ArtifactResponse[]>(`/projects/${projectId}/artifacts`),
+
+    get: (artifactId: string) =>
+        apiRequest<ArtifactResponse>(`/artifacts/${artifactId}`),
+};
+
+// ============== Chat APIs ==============
+
+export const chatApi = {
+    send: (message: string, agentType: string = 'general', context?: string) =>
+        apiRequest<ChatResponse>('/chat/chat', {
+            method: 'POST',
+            body: JSON.stringify({ message, agent_type: agentType, context }),
+        }),
+
+    sendProject: (projectId: string, message: string, context?: Record<string, unknown>) =>
+        apiRequest<SendMessageResponse>(`/chat/projects/${projectId}/send`, {
+            method: 'POST',
+            body: JSON.stringify({ message, context }),
+        }),
+
+    history: (projectId: string, limit: number = 50) =>
+        apiRequest<{ messages: Array<{ id: string; role: string; content: string; timestamp: string }>; total: number }>(
+            `/chat/${projectId}/messages?limit=${limit}`
+        ),
+};
+
+// ============== Literature APIs ==============
+
+export const literatureApi = {
+    search: (query: string, limit: number = 20) =>
+        apiRequest<Paper[]>(`/literature/search?query=${encodeURIComponent(query)}&limit=${limit}`),
+};
+
+// ============== Papers APIs ==============
+
+export const papersApi = {
+    list: (projectId: string, search?: string, limit: number = 100) => {
+        const params = new URLSearchParams({ limit: String(limit) });
+        if (search) params.append('search', search);
+        return apiRequest<Paper[]>(`/projects/${projectId}/papers?${params}`);
+    },
+
+    get: (paperId: string) =>
+        apiRequest<Paper>(`/papers/${paperId}`),
+
+    add: (projectId: string, paper: Partial<Paper>) =>
+        apiRequest<Paper>(`/projects/${projectId}/papers`, {
+            method: 'POST',
+            body: JSON.stringify(paper),
+        }),
+};
+
+// ============== Analysis APIs ==============
+
+export const analysisApi = {
+    execute: (code: string, language: 'python' | 'r', projectId: string, saveToMemory = true) =>
+        apiRequest<AnalysisResult>(`/analysis/projects/${projectId}/execute`, {
+            method: 'POST',
+            body: JSON.stringify({ code, language, save_to_memory: saveToMemory }),
+        }),
+};
+
+// ============== Stats APIs ==============
+
+export const statsApi = {
+    global: () => apiRequest<StatsResponse>('/stats'),
+};
+
+// ============== Planning APIs ==============
+
+export const planningApi = {
+    generatePlan: (answers: Record<string, unknown>) =>
+        apiRequest<Record<string, unknown>>('/planning/generate-plan', {
+            method: 'POST',
+            body: JSON.stringify({ answers }),
+        }),
+
+    approve: (answers: Record<string, unknown>, plan: Record<string, unknown>) =>
+        apiRequest<{ project_id: string; plan_id: string; message: string }>('/planning/approve', {
+            method: 'POST',
+            body: JSON.stringify({ answers, plan }),
+        }),
+};
+
+// ============== Export APIs ==============
+
+export const exportApi = {
+    pdf: async (documentId: string, projectId: string, author?: string) => {
+        const params = new URLSearchParams({ project_id: projectId });
+        if (author) params.append('author', author);
+
+        const response = await fetch(`${API_BASE}/documents/${documentId}/export/pdf?${params}`);
+        if (!response.ok) throw new Error('Export failed');
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `document-${documentId}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    },
+
+    docx: async (documentId: string, projectId: string, author?: string) => {
+        const params = new URLSearchParams({ project_id: projectId });
+        if (author) params.append('author', author);
+
+        const response = await fetch(`${API_BASE}/documents/${documentId}/export/docx?${params}`);
+        if (!response.ok) throw new Error('Export failed');
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `document-${documentId}.docx`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+    },
+};
+
+// ============== Memory APIs ==============
+
+export const memoryApi = {
+    searchClaims: (projectId: string, query: string, limit: number = 20) =>
+        apiRequest<Claim[]>(
+            `/memory/projects/${projectId}/claims/search?q=${encodeURIComponent(query)}&limit=${limit}`
+        ),
+
+    listClaims: (projectId: string, limit: number = 50) =>
+        apiRequest<Claim[]>(`/memory/projects/${projectId}/claims?limit=${limit}`),
+};

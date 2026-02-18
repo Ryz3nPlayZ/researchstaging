@@ -184,6 +184,19 @@ class ArtifactResponse(BaseModel):
         from_attributes = True
 
 
+class PaperCreate(BaseModel):
+    source: str
+    title: str
+    external_id: Optional[str] = None
+    authors: List[str] = Field(default_factory=list)
+    abstract: Optional[str] = None
+    year: Optional[int] = None
+    url: Optional[str] = None
+    pdf_url: Optional[str] = None
+    citation_count: Optional[int] = None
+    summary: Optional[str] = None
+
+
 class PaperResponse(BaseModel):
     id: str
     project_id: str
@@ -637,6 +650,31 @@ async def execute_project(
         "project_id": project_id,
         "tasks_queued": len(ready_tasks)
     }
+
+
+@api_router.post("/projects/{project_id}/papers", response_model=PaperResponse)
+async def add_paper_to_project(
+    project_id: str,
+    paper_create: PaperCreate,
+    db: AsyncSession = Depends(get_db)
+):
+    """Add a paper to a project."""
+    # Check if project exists
+    result = await db.execute(select(Project).where(Project.id == project_id))
+    if not result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Create paper
+    paper = Paper(
+        project_id=project_id,
+        **paper_create.model_dump()
+    )
+    db.add(paper)
+    await db.commit()
+    await db.refresh(paper)
+    
+    return paper
+
 
 
 # Legacy endpoint for compatibility

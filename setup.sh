@@ -444,7 +444,7 @@ main() {
     echo ""
     echo "Next steps:"
     echo "1. Edit API keys in: $BACKEND_DIR/.env"
-    echo "2. Run the application: ./run.sh"
+    echo "2. Run the application: ./run-all.sh"
     echo ""
     echo "Required API keys to add (at least one):"
     echo "  - OPENAI_API_KEY"

@@ -42,7 +42,7 @@ pip install -r requirements.txt
 cp .env.example .env  # Edit .env with your keys
 
 # Frontend
-cd frontend
+cd research-ui
 npm install
 echo "VITE_API_URL=http://localhost:8000" > .env
 
@@ -75,7 +75,7 @@ docker-compose down         # Stop services
 Start both backend and frontend servers simultaneously.
 
 - Backend on http://localhost:8000
-- Frontend on http://localhost:5173
+- Frontend on http://localhost:3000
 - Press `Ctrl+C` to stop both
 
 ### `./run-backend.sh`
@@ -92,7 +92,7 @@ Start only the frontend development server.
 
 ```bash
 ./run-frontend.sh
-# Frontend: http://localhost:5173
+# Frontend: http://localhost:3000
 ```
 
 ## Environment Variables
@@ -201,7 +201,7 @@ pip install -r requirements.txt
 
 ### View Application
 
-- Frontend: http://localhost:5173
+- Frontend: http://localhost:3000
 - Backend API: http://localhost:8000
 - API Docs: http://localhost:8000/docs
 
