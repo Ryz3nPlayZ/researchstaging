@@ -1,18 +1,264 @@
-# Research Workspace - All-in-One Research Tool
+# Research Platform - Research-Native AI Execution System
 
-**Last updated:** 2026-02-05 after v1.0 milestone completion
+**Last updated:** 2026-02-18 — Core product vision clarified
+
+## Core Product Vision
+
+A **research-native AI execution system** that maintains structured research state, coordinates specialized agents, and enforces provenance and evaluation before integrating outputs.
+
+**In simpler terms:** Turn AI from a chat interface into a controlled research collaborator embedded inside a persistent project environment.
+
+---
+
+## The Core Belief
+
+| Research Reality | Most AI Tools |
+|------------------|---------------|
+| Iterative | One-shot |
+| Stateful | Stateless |
+| Evidence-bound | Hallucination-prone |
+| Structured | Conversational |
+| Process-oriented | Output-oriented |
+
+**There is a mismatch.** This product exists to close it.
+
+---
 
 ## What This Is
 
-A web-based research workspace that consolidates literature review, data analysis, and academic writing into one coherent, state-persistent environment. Users can import existing research projects (PDFs, code, datasets, documents), organize files in a hybrid folder/graph structure, write papers with a rich text editor comparable to Google Docs, and collaborate with an AI agent that has total recall of all project artifacts. The AI agent can propose and execute analyses (writing Python/R code, running it in a cloud sandbox, displaying results), assist with research writing, and manage the entire research workflow through a sidebar chat interface with proposal-based interactions.
+A research workspace built on top of a **coordinated multi-agent system** with persistent project memory and provenance tracking.
 
-**Differentiation:** Unlike Google Docs + ChatGPT, Overleaf, or Manubot, this workspace provides artifact-first memory (everything important stored: literature, analyses, findings, documents), information graph tracking claims/data/relationships, and true all-in-one integration (writer + analysis + literature in coherent workspace) with state-persistent AI that remembers context across the entire project.
+**Users can:**
+- Start a research project via AI onboarding
+- Upload existing drafts or datasets
+- Generate structured writing (literature reviews, methods, results)
+- Run analysis via tool-calling agents
+- Store and retrieve project state
+- Track claims and evidence
+- Iterate with multi-step evaluation
+- Maintain continuity across sessions
 
-**Critical Design Principle:** The workspace must function standalone as a Google Docs replacement - AI is powerful augmentation, not a requirement. Users should be able to write, organize files, and manage research without AI.
+**The system does not just "generate text."**
+It plans, executes, evaluates, and persists.
 
-## Core Value
+---
 
-**Stateful research intelligence:** Single workspace where AI agent remembers everything important (all chats, analyses, documents, file contents) and uses that context to provide genuinely helpful research assistance - writing usable academic content, planning/executing data analyses, and managing the entire research workflow through proposal-based interactions.
+## What It Is NOT
+
+- ❌ Not a chatbot
+- ❌ Not just "ChatGPT with memory"
+- ❌ Not a generic productivity tool
+- ❌ Not Cursor for research
+
+Cursor optimizes developer flow. This optimizes **epistemic flow**.
+
+---
+
+## Core Features
+
+### Persistent Project Memory
+
+Each project maintains structured state:
+- Documents
+- Hypotheses
+- Claims (with confidence scores)
+- Datasets
+- Analysis results
+- Task history
+
+**Nothing resets per conversation.**
+
+### Multi-Agent Orchestration
+
+- **Router** — Directs requests to appropriate agents
+- **Planner** — Decomposes complex tasks into steps
+- **Context Manager** — Maintains scoped project context
+- **Work Agents** — Retrieval, analysis, writing specialists
+- **Evaluator** — Verifies outputs before integration
+- **Integrator** — Merges verified outputs into project state
+
+Tasks are decomposed → executed → verified → integrated.
+
+### Tool Execution
+
+- Write directly into documents
+- Run Python/R code
+- Execute analyses
+- Retrieve structured outputs
+- Attach execution logs
+
+### Multi-Step Evaluation
+
+Outputs are checked **before integration**:
+- Citation presence verification
+- Logical consistency checking
+- Tool validation
+- Confidence scoring
+
+### Provenance Layer
+
+Every output is linked to:
+- Source documents
+- Tool outputs
+- Intermediate reasoning
+- Version history
+- Agent responsible
+
+This reduces hallucination risk and improves auditability.
+
+### Research-Native Structure
+
+The system understands:
+- Sections of a paper (IMRaD structure)
+- Datasets linked to results
+- Claims tied to evidence
+- Iterations over time
+
+It operates at **research structure level**, not just token level.
+
+---
+
+## Target Users
+
+**Primary Wedge:**
+- PhD students
+- Postdocs
+- Lab researchers
+- Early-career academics
+
+People actively writing and running analysis who want AI but need reliability.
+
+**Secondary (Later):**
+- R&D teams
+- Think tanks
+- Policy researchers
+
+---
+
+## Competitive Landscape
+
+| Competitor | Strength | Weakness vs. This Product |
+|------------|----------|---------------------------|
+| **ChatGPT** | Strong generation | Stateless, no project memory, no provenance |
+| **Notion AI** | Inline writing | Weak evaluation, no deep orchestration |
+| **Perplexity** | Good retrieval | Not a workspace, no project state |
+| **Cursor** | Deep integration | Code-native, not research-structured |
+| **Elicit/Scite** | Specialized | Not full project OS, limited orchestration |
+
+---
+
+## Defensible Moat
+
+**If you build "AI workspace for research" → Replaceable.**
+
+**If you build these → Defensible:**
+
+1. **Persistent Research Graph**
+   - Claims linked to evidence
+   - Datasets linked to results
+   - Hypotheses tracked over time
+
+2. **Agent Coordination Infrastructure**
+   - Structured planning
+   - Scoped context management
+   - Evaluation loops
+   - Task decomposition
+
+3. **Provenance & Auditability**
+   - Traceable reasoning
+   - Tool logs
+   - Confidence metadata
+
+4. **Integrated Execution Environment**
+   - Writing + analysis + retrieval unified
+
+**This becomes research execution infrastructure.**
+
+The moat is not UI. It is:
+- Coordinated stateful reasoning
+- Provenance layer
+- Accumulated project graph data
+
+**Over time you gain:**
+- Better context compression
+- Better evaluation heuristics
+- Better hallucination detection
+- Structured research graphs per project
+
+That becomes hard to replicate casually.
+
+---
+
+## Long-Term Vision
+
+### Phase 1: AI-Native Research Workspace (Current)
+Persistent project memory with multi-agent orchestration.
+
+### Phase 2: Epistemic Infrastructure
+Visible claim graph, confidence scoring, provenance visualization.
+
+### Phase 3: Research Integrity Engine
+- Automatic claim-evidence mapping
+- Reproducibility scoring
+- Cross-project reasoning
+
+### Phase 4: Platform Layer
+Expose orchestration + provenance as API for other research tools.
+
+---
+
+## The Real Differentiator
+
+| Most AI Tools | This Product |
+|---------------|--------------|
+| Generate answers | Maintain research state |
+| Optimize output speed | Optimize epistemic reliability |
+| Session-based | Project-based |
+| Trust first output | Enforce evaluation before integration |
+
+**That is the philosophical difference.**
+
+---
+
+## Agentic Workspace Architecture
+
+### Agent Behavior Matrix
+
+| Task Type | Agent Behavior | Examples |
+|-----------|---------------|----------|
+| **Background tasks** | Fully autonomous, notify on completion | Literature monitoring, citation updates, data refreshes |
+| **Impactful actions** | Propose action, wait for user approval | Major edits, file operations, API calls, spending credits |
+| **User requests** | Execute immediately | Summarize, explain, generate, format, search |
+| **Complex workflows** | Break into steps, ask on key decisions | Literature review, data analysis, paper synthesis |
+
+### Workspace Components
+
+- **Projects**: Top-level research container
+- **Artifacts**: Papers, summaries, drafts, analyses - all persist in memory
+- **Memory System**: Claims, findings, relationships tracked across all interactions
+- **File Storage**: PDFs, datasets, code - accessible throughout workspace
+- **LLM Service**: Multi-provider support (OpenAI, Gemini, Mistral, Groq) for all AI operations
+- **Task Orchestration**: Background agents can run autonomous tasks; foreground agents propose actions
+
+### AI Modalities
+
+1. **Always-on sidebar** — AI agent panel (400px expanded, 60px collapsed) for chat-driven interaction
+2. **Contextual suggestions** — AI proposes actions based on current work (e.g., "Want me to format these citations?")
+3. **Background agents** — Autonomous tasks run without blocking user (e.g., "Monitor this topic and notify me of new papers")
+4. **In-editor assistance** — AI capabilities embedded in the editor (autocomplete, rewrite, expand)
+
+### Ship Strategy
+
+**v1.2 (Current):** Complete UX redesign and ship agentic workspace MVP
+- Focus: Polished UI, all core pages working, AI sidebar with hybrid autonomous behavior
+- Design: Hellycopter v2 (bento-grid layout, pistachio/mint palette, modern aesthetic)
+- Goal: Production-ready workspace that replaces Google Docs + ChatGPT
+
+**v1.3+ (Post-MVP):** Deepen agentic capabilities
+- Background agents for autonomous literature monitoring
+- Complex workflow orchestration (multi-step research tasks)
+- Enhanced memory graph with visualization
+- Collaboration features (team workspaces, shared agents)
 
 ## Requirements
 
@@ -141,40 +387,45 @@ A web-based research workspace that consolidates literature review, data analysi
 
 **Shipped Version:** v1.1 Frontend Integration (2026-02-08)
 
+**In Progress:** v1.2 UX Redesign with Hellycopter Design System (2026-02-18)
+
 **Implementation:**
-- 19 phases completed with 29 plans
+- 22 phases completed with 31 plans
+- Phase 22: All P0/P1/P2 bugs fixed, gap closure complete
+- UX redesign in progress in `research-ui/` directory (Next.js + Hellycopter design)
 - 281+ files created/modified
 - 78,892+ lines of code (Python backend, React frontend)
-- 16 days development timeline (Jan 23 → Feb 8, 2026)
+- 16 days development timeline (Jan 23 → Feb 8, 2026) + ongoing UX work
 
 **Tech Stack:**
 - Backend: FastAPI, PostgreSQL, Redis, SQLAlchemy, TipTap, Pandoc, python-docx, Plotly
-- Frontend: React 19, TipTap Editor, Shadcn UI, Tailwind CSS, Monaco Editor, Plotly.js
+- Frontend: Next.js 15, React 19, Shadcn UI, Tailwind CSS, Framer Motion, Lucide Icons
+- Design System: Hellycopter v2 (bento-grid layout, pistachio/mint palette, Inter font)
 - Infrastructure: Docker (PostgreSQL + Redis), cloud storage abstraction (local/S3/R2)
 
 **Quality Status:**
 - All 64 v1 requirements satisfied
-- All P0 bugs resolved
+- All P0/P1/P2 bugs from Phase 22 resolved
 - 8/8 cross-phase integrations verified working
-- Code complete, manual browser testing deferred per user request
+- UX redesign ~80% complete (dashboard, projects, auth, onboarding, literature, editor components built)
 
-**Known Technical Debt (Non-Blocking):**
-- P1: Manual browser testing required before production release
-- P2: ESLint warnings in 4 frontend files (missing useCallback dependencies)
-- P2: Minor citation formatting quirks (extra commas in author names)
-- P2: Duplicate markdown_to_tiptap function in file_service.py (shadowed at line 395)
-- P3: In-memory chat storage (100 message limit - migration path documented)
+**Remaining UX Work:**
+- Visual tweaks and polish across all pages
+- Complete remaining views (analysis, memory, settings)
+- Responsive design verification
+- Final QA before ship
 
 **Documentation:**
 - Roadmap archive: `.planning/milestones/v1.0-ROADMAP.md`
 - Requirements archive: `.planning/milestones/v1.0-REQUIREMENTS.md`
 - Milestone audit: `.planning/milestones/v1.0-FINAL-MILESTONE-AUDIT.md`
+- Hellycopter design specs: `kimi_dashboard_design/design-v2.md` and `tech-spec.md`
 
 ---
 
-## Current Milestone: v1.2 Ship MVP
+## Current Milestone: v1.2 Ship Agentic Workspace MVP
 
-**Goal:** Complete all manual testing, fix any bugs, verify production readiness, and SHIP the MVP.
+**Goal:** Complete UX redesign, finish all pages, verify production readiness, and SHIP the agentic workspace MVP.
 
 **Started:** 2026-02-08
 
@@ -260,11 +511,12 @@ All v1.0 features delivered. See [milestones archive](.planning/milestones/v1.0-
 - Information graph backend (claim/data tracking - prep for post-MVP)
 
 **Product Vision Evolution:**
-- Original Research Pilot: Research execution system (literature → paper)
-- New Research Workspace: All-in-one research tool (writer + chat + analysis + literature)
-- Key insight: Shift from "pipeline execution" to "workspace collaboration" model
+- **Original Research Pilot (v0):** Research execution system (literature → paper) - autonomous pipeline
+- **v1.0-v1.2 Research Workspace:** All-in-one research tool (writer + chat + analysis + literature) - manual workspace with AI augmentation
+- **Dual-Mode Platform (v2.0+):** Unified system combining both paradigms - agentic execution engine + manual workspace
+- **Key insight:** Both modes needed - researchers require autonomous execution for systematic literature work AND manual workspace for writing/analysis with AI assistance. Single platform replaces all research tools.
 
-**User Workflow:**
+**User Workflow (Workspace Mode - Current):**
 1. User creates/imports research project by uploading files (drag-drop PDFs, code, data, docs)
 2. Files organized in project workspace (hybrid folder + graph structure)
 3. User opens rich text editor to write paper (works standalone, no AI required)
@@ -274,6 +526,16 @@ All v1.0 features delivered. See [milestones archive](.planning/milestones/v1.0-
    - "Find papers on topic X" → AI searches literature → summarizes
 5. AI agent remembers everything (artifact-first memory) and provides context-aware assistance
 6. Information graph tracks all claims, data, analyses, relationships (backend ready, UI post-MVP)
+
+**User Workflow (Agentic Mode - Planned v2.0):**
+1. User inputs research goal in natural language (e.g., "regional disparities in adolescent mental health")
+2. System asks 1-2 clarifying questions (output type: paper/review, audience: academic/industry/policy)
+3. System generates research plan (literature search terms, themes, paper structure)
+4. User reviews and approves plan
+5. System autonomously executes: literature discovery → paper processing → claim extraction → synthesis → draft generation
+6. User monitors execution via task DAG, inspects artifacts in Navigator
+7. System produces complete literature review or research paper with full provenance
+8. User can switch to workspace mode to manually refine output
 
 **Technical Approach:**
 - Leverage existing orchestration engine for multi-agent workflows
