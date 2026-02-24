@@ -1,140 +1,181 @@
 'use client';
 
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { documentApi, chatApi, exportApi } from '@/lib/api';
-import type { Document, TipTapContent } from '@/lib/types';
-import { relativeTime, truncate } from '@/lib/types';
-import { RichTextEditor } from '@/components/editor/rich-text-editor';
-import { Bot, FileText, Download, MoreHorizontal, ArrowLeft, Save } from 'lucide-react';
+import { useParams, useRouter } from 'next/navigation';
+import { ArrowLeft, Download, Loader2, Sparkles } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import remarkGfm from 'remark-gfm';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 
-interface ChatMsg {
-    role: 'user' | 'assistant';
-    content: string;
+import { chatApi, documentApi, exportApi } from '@/lib/api';
+import type { Document, TipTapContent } from '@/lib/types';
+
+function extractTextFromTipTap(node: TipTapContent | null | undefined): string {
+    if (!node) return '';
+    if (node.text) return node.text;
+    if (!node.content || !Array.isArray(node.content)) return '';
+    return node.content.map((child) => extractTextFromTipTap(child)).join(node.type === 'paragraph' ? '\n' : '');
+}
+
+function sourceToTipTap(source: string): TipTapContent {
+    return {
+        type: 'doc',
+        content: [
+            {
+                type: 'paragraph',
+                content: source ? [{ type: 'text', text: source }] : [],
+            },
+        ],
+    };
 }
 
 export default function DocumentEditorPage() {
     const params = useParams();
     const router = useRouter();
+
     const projectId = params.id as string;
     const docId = params.docId as string;
 
     const [doc, setDoc] = useState<Document | null>(null);
     const [title, setTitle] = useState('');
-    const [content, setContent] = useState<TipTapContent | null>(null);
+    const [source, setSource] = useState('');
+
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [lastSaved, setLastSaved] = useState<string | null>(null);
+    const [lastSavedAt, setLastSavedAt] = useState<string>('');
+    const [aiBusy, setAiBusy] = useState(false);
 
-    // AI Chat
-    const [chatOpen, setChatOpen] = useState(false);
-    const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
-    const [chatInput, setChatInput] = useState('');
-    const [chatLoading, setChatLoading] = useState(false);
-    const chatEndRef = useRef<HTMLDivElement>(null);
+    const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    // Save timer
-    const saveTimer = useRef<NodeJS.Timeout | null>(null);
+    const saveLabel = useMemo(() => {
+        if (saving) return 'Saving...';
+        if (!lastSavedAt) return 'Ready';
+        return 'Saved';
+    }, [saving, lastSavedAt]);
+
+    const loadDocument = useCallback(async () => {
+        setLoading(true);
+        const res = await documentApi.get(docId);
+        if (!res.data) {
+            setDoc(null);
+            setLoading(false);
+            return;
+        }
+
+        const loaded = res.data;
+        const loadedSource = loaded.content_latex && loaded.content_latex.trim().length > 0
+            ? loaded.content_latex
+            : extractTextFromTipTap(loaded.content);
+
+        setDoc(loaded);
+        setTitle(loaded.title || 'Untitled Document');
+        setSource(loadedSource);
+        setLoading(false);
+    }, [docId]);
 
     useEffect(() => {
-        async function load() {
-            setLoading(true);
-            const res = await documentApi.get(docId);
+        void loadDocument();
+
+        const onReload = () => {
+            void loadDocument();
+        };
+        window.addEventListener('reloadDocument', onReload);
+
+        return () => {
+            window.removeEventListener('reloadDocument', onReload);
+            if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        };
+    }, [loadDocument]);
+
+    const persist = useCallback(
+        async (next: { title?: string; source?: string }) => {
+            const update: Record<string, unknown> = {};
+
+            if (next.title !== undefined) update.title = next.title;
+            if (next.source !== undefined) {
+                update.content_latex = next.source;
+                update.content = sourceToTipTap(next.source);
+            }
+
+            if (Object.keys(update).length === 0) return;
+
+            setSaving(true);
+            const res = await documentApi.update(docId, update);
             if (res.data) {
                 setDoc(res.data);
-                setTitle(res.data.title);
-                // Use the JSON content directly, or default to empty doc if null
-                setContent(res.data.content || { type: 'doc', content: [] });
+                if (res.data.title !== undefined) setTitle(res.data.title);
+                if (res.data.content_latex != null) setSource(res.data.content_latex);
+                setLastSavedAt(new Date().toISOString());
             }
-            setLoading(false);
-        }
-        load();
-    }, [docId]);
+            setSaving(false);
+        },
+        [docId]
+    );
 
-    // Extract plaintext from TipTap JSON content for AI context
-    function extractText(node: TipTapContent): string {
-        if (!node) return '';
-        if (node.text) return node.text;
-        if (node.content) {
-            return node.content.map(extractText).join(node.type === 'paragraph' ? '\n' : '');
-        }
-        return '';
-    }
+    const schedulePersist = useCallback(
+        (next: { title?: string; source?: string }) => {
+            if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+            saveTimerRef.current = setTimeout(() => {
+                void persist(next);
+            }, 1200);
+        },
+        [persist]
+    );
 
-    const saveDocument = useCallback(async (newTitle?: string, newContent?: TipTapContent) => {
-        setSaving(true);
-        const updateData: Record<string, unknown> = {};
-        if (newTitle !== undefined) updateData.title = newTitle;
-        if (newContent !== undefined) updateData.content = newContent;
-
-        const res = await documentApi.update(docId, updateData);
-        if (res.data) {
-            setLastSaved(new Date().toISOString());
-        }
-        setSaving(false);
-    }, [docId]);
-
-    const handleContentChange = (newContent: TipTapContent) => {
-        setContent(newContent);
-        // Debounced auto-save
-        if (saveTimer.current) clearTimeout(saveTimer.current);
-        saveTimer.current = setTimeout(() => saveDocument(undefined, newContent), 2000);
+    const onTitleChange = (value: string) => {
+        setTitle(value);
+        schedulePersist({ title: value });
     };
 
-    const handleTitleChange = (newTitle: string) => {
-        setTitle(newTitle);
-        if (saveTimer.current) clearTimeout(saveTimer.current);
-        saveTimer.current = setTimeout(() => saveDocument(newTitle, undefined), 2000);
+    const onSourceChange = (value: string) => {
+        setSource(value);
+        schedulePersist({ source: value });
     };
 
-    const handleChatSend = async () => {
-        if (!chatInput.trim() || !content) return;
-        const userMsg = chatInput.trim();
-        setChatInput('');
-        setChatMessages((prev) => [...prev, { role: 'user', content: userMsg }]);
-        setChatLoading(true);
+    const runAiAction = async (kind: 'continue' | 'improve' | 'cite') => {
+        if (!source.trim()) return;
+        setAiBusy(true);
+        await persist({ source, title });
+
+        const promptByKind: Record<typeof kind, string> = {
+            continue: `Continue this academic Markdown/LaTeX draft. Return ONLY the continuation text.\n\n${source}`,
+            improve: `Improve clarity, flow, and academic tone of this draft. Return the FULL revised text only.\n\n${source}`,
+            cite: `Add citation placeholders in LaTeX style (e.g., \\cite{key}) where needed. Return the FULL updated text only.\n\n${source}`,
+        };
 
         try {
-            // Ensure backend has latest content
-            await saveDocument(undefined, content);
+            const res = await chatApi.sendProject(projectId, promptByKind[kind], { document_id: docId });
+            const aiText = (res.data?.ai_response?.content || '').trim();
+            if (!aiText) return;
 
-            const res = await chatApi.sendProject(projectId, userMsg, { document_id: docId });
-
-            if (res.data) {
-                setChatMessages((prev) => [...prev, {
-                    role: 'assistant',
-                    content: res.data!.ai_response.content
-                }]);
+            if (kind === 'continue') {
+                const insertion = `\n\n${aiText}`;
+                const textarea = textareaRef.current;
+                if (!textarea) {
+                    onSourceChange(source + insertion);
+                } else {
+                    const pos = textarea.selectionStart ?? source.length;
+                    const next = source.slice(0, pos) + insertion + source.slice(pos);
+                    onSourceChange(next);
+                }
             } else {
-                setChatMessages((prev) => [...prev, { role: 'assistant', content: 'Sorry, I couldn\'t process that request.' }]);
+                onSourceChange(aiText);
             }
-        } catch (err) {
-            console.error('Chat failed:', err);
-            setChatMessages((prev) => [...prev, { role: 'assistant', content: 'Error connecting to AI service.' }]);
         } finally {
-            setChatLoading(false);
+            setAiBusy(false);
         }
     };
-
-    useEffect(() => {
-        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [chatMessages]);
 
     const handleExportPdf = async () => {
         try {
+            await persist({ source, title });
             await exportApi.pdf(docId, projectId);
-        } catch (e) {
-            console.error('PDF export failed:', e);
-            alert('PDF export failed. Make sure LaTeX is installed on the backend.');
-        }
-    };
-
-    const handleExportDocx = async () => {
-        try {
-            await exportApi.docx(docId, projectId);
-        } catch (e) {
-            console.error('DOCX export failed:', e);
+        } catch {
+            alert('PDF export failed. Verify backend export dependencies.');
         }
     };
 
@@ -146,22 +187,18 @@ export default function DocumentEditorPage() {
 
     if (loading) {
         return (
-            <div className="max-w-[1000px] mx-auto px-8 py-8">
-                <div className="h-8 bg-gray-200 rounded-lg w-1/3 mb-8 animate-pulse" />
-                <div className="space-y-4">
-                    <div className="h-4 bg-gray-100 rounded w-full animate-pulse" />
-                    <div className="h-4 bg-gray-100 rounded w-5/6 animate-pulse" />
-                    <div className="h-4 bg-gray-100 rounded w-4/6 animate-pulse" />
-                </div>
+            <div className="max-w-6xl mx-auto px-6 py-8">
+                <div className="h-7 w-52 bg-gray-200 rounded animate-pulse mb-4" />
+                <div className="h-80 bg-gray-100 rounded-xl animate-pulse" />
             </div>
         );
     }
 
     if (!doc) {
         return (
-            <div className="max-w-[1200px] mx-auto text-center py-20">
-                <p className="text-gray-500 font-medium">Document not found.</p>
-                <Link href={`/projects/${projectId}`} className="text-[#1C7C54] text-sm mt-2 inline-block hover:underline">
+            <div className="max-w-6xl mx-auto px-6 py-12 text-center">
+                <p className="text-gray-500">Document not found.</p>
+                <Link href={`/projects/${projectId}`} className="text-sm text-gray-700 hover:underline mt-2 inline-block">
                     ← Back to project
                 </Link>
             </div>
@@ -169,159 +206,103 @@ export default function DocumentEditorPage() {
     }
 
     return (
-        <div className="max-w-[1200px] mx-auto flex gap-6 h-[calc(100vh-80px)]">
-            {/* Main Editor */}
-            <div className={`flex-1 flex flex-col transition-all duration-300 ${chatOpen ? 'mr-[360px]' : ''}`}>
-                {/* Header / Breadcrumb */}
-                <div className="flex items-center gap-2 mb-6">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+            <div className="flex items-center justify-between gap-3 mb-5">
+                <div className="flex items-center gap-3 min-w-0">
                     <Link
                         href={`/projects/${projectId}`}
-                        className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-400 hover:text-gray-700 transition-colors"
+                        className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center text-gray-500"
                     >
-                        <ArrowLeft size={18} />
+                        <ArrowLeft size={16} />
                     </Link>
-                    <div className="flex flex-col">
-                        <div className="flex items-center gap-2 text-xs text-gray-400">
-                            <span>Projects</span>
-                            <span>/</span>
-                            <span>{truncate(projectId, 8)}</span>
-                        </div>
+                    <div className="min-w-0">
                         <input
-                            type="text"
                             value={title}
-                            onChange={(e) => handleTitleChange(e.target.value)}
+                            onChange={(e) => onTitleChange(e.target.value)}
                             placeholder="Untitled Document"
-                            className="text-xl font-bold text-gray-900 bg-transparent border-none outline-none placeholder:text-gray-300 font-ui p-0 focus:ring-0"
+                            className="w-full text-lg font-semibold bg-transparent outline-none text-gray-900"
                         />
-                    </div>
-                    <div className="ml-auto flex items-center gap-2">
-                        <span className="text-xs text-gray-400 font-medium mr-2 flex items-center gap-1.5">
-                            {saving ? <div className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" /> : <div className="w-2 h-2 rounded-full bg-emerald-400" />}
-                            {saving ? 'Saving...' : lastSaved ? 'Saved' : 'Ready'}
-                        </span>
-
-                        <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-lg border border-gray-100">
-                            <button
-                                onClick={handleExportPdf}
-                                title="Export PDF"
-                                className="p-1.5 text-gray-500 hover:text-gray-900 hover:bg-white rounded-md transition-all shadow-sm"
-                            >
-                                <Download size={16} />
-                            </button>
-                            <button
-                                onClick={() => setChatOpen(!chatOpen)}
-                                title="AI Assistant"
-                                className={`p-1.5 transition-all rounded-md shadow-sm ${chatOpen
-                                    ? 'bg-[#DEF4C6] text-[#1C7C54]'
-                                    : 'text-gray-500 hover:text-gray-900 hover:bg-white'
-                                    }`}
-                            >
-                                <Bot size={16} />
-                            </button>
-                            <button
-                                onClick={handleDelete}
-                                title="Delete Document"
-                                className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-white rounded-md transition-all shadow-sm"
-                            >
-                                <MoreHorizontal size={16} />
-                            </button>
-                        </div>
+                        <p className="text-xs text-gray-400">{saveLabel}</p>
                     </div>
                 </div>
 
-                {/* Editor Surface */}
-                <div className="flex-1 bg-white rounded-2xl border border-black/[0.04] shadow-sm overflow-hidden flex flex-col">
-                    <div className="flex-1 overflow-y-auto px-12 py-10">
-                        {content && (
-                            <RichTextEditor
-                                content={content}
-                                onChange={handleContentChange}
-                                className="min-h-[600px]"
-                            />
-                        )}
-                    </div>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => void runAiAction('continue')}
+                        disabled={aiBusy}
+                        className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50"
+                    >
+                        Continue
+                    </button>
+                    <button
+                        onClick={() => void runAiAction('improve')}
+                        disabled={aiBusy}
+                        className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50"
+                    >
+                        Improve
+                    </button>
+                    <button
+                        onClick={() => void runAiAction('cite')}
+                        disabled={aiBusy}
+                        className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 bg-white hover:bg-gray-50 disabled:opacity-50"
+                    >
+                        Add Citations
+                    </button>
+                    <button
+                        onClick={handleExportPdf}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                        <Download size={14} />
+                        Export PDF
+                    </button>
+                    <button
+                        onClick={handleDelete}
+                        className="px-3 py-1.5 text-xs rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
+                    >
+                        Delete
+                    </button>
                 </div>
             </div>
 
-            {/* AI Chat Sidebar */}
-            {chatOpen && (
-                <div className="fixed right-6 top-24 bottom-6 w-[360px] bg-white rounded-2xl border border-black/[0.06] shadow-xl flex flex-col z-40 overflow-hidden animate-in slide-in-from-right-10 duration-300">
-                    {/* Chat Header */}
-                    <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
-                        <div className="flex items-center gap-2">
-                            <Bot size={18} className="text-[#1C7C54]" />
-                            <h3 className="text-sm font-bold text-gray-800">Research Assistant</h3>
-                        </div>
-                        <button
-                            onClick={() => setChatOpen(false)}
-                            className="w-6 h-6 rounded-full hover:bg-gray-200 flex items-center justify-center text-gray-400 transition-colors"
-                        >
-                            ✕
-                        </button>
-                    </div>
+            <div className="flex items-center gap-2 text-xs text-gray-500 mb-3">
+                <Sparkles size={12} />
+                Markdown + LaTeX math editor ($...$ and $$...$$)
+                {aiBusy && (
+                    <span className="inline-flex items-center gap-1 ml-2">
+                        <Loader2 size={11} className="animate-spin" />
+                        AI writing...
+                    </span>
+                )}
+            </div>
 
-                    {/* Messages */}
-                    <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-gray-50/30">
-                        {chatMessages.length === 0 && (
-                            <div className="text-center py-10">
-                                <div className="w-12 h-12 rounded-2xl bg-[#DEF4C6] flex items-center justify-center mx-auto mb-3">
-                                    <Bot size={24} className="text-[#1C7C54]" />
-                                </div>
-                                <p className="text-sm font-medium text-gray-800">How can I help?</p>
-                                <p className="text-xs text-gray-500 mt-1 max-w-[200px] mx-auto">
-                                    I can help you write, edit, summarize, or critique your document.
-                                </p>
-                            </div>
-                        )}
-                        {chatMessages.map((msg, i) => (
-                            <div
-                                key={i}
-                                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                            >
-                                <div
-                                    className={`max-w-[85%] px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === 'user'
-                                        ? 'bg-[#1C7C54] text-white rounded-br-sm'
-                                        : 'bg-white text-gray-800 border border-gray-100 rounded-bl-sm'
-                                        }`}
-                                >
-                                    {msg.content}
-                                </div>
-                            </div>
-                        ))}
-                        {chatLoading && (
-                            <div className="flex justify-start">
-                                <div className="bg-white border border-gray-100 px-4 py-3 rounded-2xl rounded-bl-sm shadow-sm flex gap-2 items-center">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-[#1C7C54] animate-bounce" />
-                                    <div className="w-1.5 h-1.5 rounded-full bg-[#1C7C54] animate-bounce [animation-delay:0.2s]" />
-                                    <div className="w-1.5 h-1.5 rounded-full bg-[#1C7C54] animate-bounce [animation-delay:0.4s]" />
-                                </div>
-                            </div>
-                        )}
-                        <div ref={chatEndRef} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 h-[calc(100vh-220px)] min-h-[520px]">
+                <div className="border border-gray-200 rounded-xl overflow-hidden bg-slate-50/60 flex flex-col min-h-0">
+                    <div className="px-3 py-2 border-b border-gray-100 text-[11px] font-medium text-gray-500 uppercase tracking-wider">
+                        Source
                     </div>
+                    <textarea
+                        ref={textareaRef}
+                        value={source}
+                        onChange={(e) => onSourceChange(e.target.value)}
+                        className="flex-1 p-4 resize-none bg-transparent outline-none font-mono text-sm leading-relaxed text-gray-800"
+                        spellCheck={false}
+                        placeholder="Write your draft in Markdown + LaTeX math..."
+                    />
+                </div>
 
-                    {/* Chat Input */}
-                    <div className="p-4 bg-white border-t border-gray-100">
-                        <div className="relative">
-                            <input
-                                type="text"
-                                value={chatInput}
-                                onChange={(e) => setChatInput(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleChatSend()}
-                                placeholder="Ask about your document..."
-                                className="w-full h-11 pl-4 pr-12 rounded-xl border border-gray-200 bg-gray-50 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:border-[#1C7C54] focus:ring-2 focus:ring-[#1C7C54]/10 transition-all"
-                            />
-                            <button
-                                onClick={handleChatSend}
-                                disabled={chatLoading || !chatInput.trim()}
-                                className="absolute right-1 top-1 bottom-1 aspect-square rounded-lg bg-[#1C7C54] hover:bg-[#156343] text-white flex items-center justify-center transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                <ArrowLeft size={16} className="rotate-90" />
-                            </button>
+                <div className="border border-gray-200 rounded-xl overflow-hidden bg-white flex flex-col min-h-0">
+                    <div className="px-3 py-2 border-b border-gray-100 text-[11px] font-medium text-gray-500 uppercase tracking-wider">
+                        Preview
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-6">
+                        <div className="prose prose-sm prose-slate max-w-none">
+                            <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
+                                {source || '*Preview will appear here...*'}
+                            </ReactMarkdown>
                         </div>
                     </div>
                 </div>
-            )}
+            </div>
         </div>
     );
 }

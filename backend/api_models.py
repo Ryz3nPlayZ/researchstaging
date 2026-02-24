@@ -125,3 +125,59 @@ class DocumentCitationResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class ProvenanceClaimResponse(BaseModel):
+    """Claim row enriched with resolved source metadata."""
+    id: str
+    claim_text: str
+    claim_type: Optional[str]
+    source_type: str
+    source_id: str
+    confidence: float
+    relevance_score: Optional[float]
+    extracted_at: datetime
+    source_label: str
+    source_url: Optional[str]
+    source_exists: bool
+    relationship_count: int
+    cited_in_documents: int
+
+
+class ProvenanceArtifactResponse(BaseModel):
+    """Artifact lineage row for provenance timeline."""
+    artifact_id: str
+    artifact_type: str
+    title: str
+    created_at: datetime
+    task_id: Optional[str]
+    task_name: Optional[str]
+    run_id: Optional[str]
+    parent_artifact_id: Optional[str]
+    parent_artifact_title: Optional[str]
+    input_artifact_ids: List[str]
+
+
+class ProjectProvenanceSummaryResponse(BaseModel):
+    """High-level provenance coverage metrics for a project."""
+    total_claims: int
+    avg_claim_confidence: float
+    total_relationships: int
+    total_claim_citations: int
+    total_artifacts: int
+    source_type_breakdown: Dict[str, int]
+
+
+class ProjectProvenanceResponse(BaseModel):
+    """Project provenance snapshot combining claims and artifact lineage."""
+    summary: ProjectProvenanceSummaryResponse
+    claims: List[ProvenanceClaimResponse]
+    artifacts: List[ProvenanceArtifactResponse]
+
+
+class ClaimCitationUsageResponse(BaseModel):
+    """Document usage for a given claim citation."""
+    citation_id: str
+    document_id: str
+    document_title: str
+    created_at: datetime

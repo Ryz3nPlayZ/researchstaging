@@ -3,9 +3,10 @@ Memory API: REST endpoints for claims, findings, and preferences.
 """
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
+from auth_dependencies import require_auth
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional, Dict
-from sqlalchemy import text, select
+from sqlalchemy import text, select, func, or_
 
 from database import get_db
 from database.models import ClaimSourceType, Project
@@ -17,11 +18,16 @@ from api_models import (
     ClaimRelationshipResponse,
     DocumentCitationRequest, DocumentCitationResponse,
     ExtractClaimsRequest,
+    ProjectProvenanceResponse,
+    ProjectProvenanceSummaryResponse,
+    ProvenanceClaimResponse,
+    ProvenanceArtifactResponse,
+    ClaimCitationUsageResponse,
 )
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/memory", tags=["memory"])
+router = APIRouter(prefix="/memory", tags=["memory"], dependencies=[Depends(require_auth)])
 
 
 # ============== Claims ==============
@@ -370,6 +376,288 @@ async def get_claim_relationships(
         )
         for r in relationships
     ]
+
+
+@router.get("/projects/{project_id}/claims/{claim_id}/citations", response_model=List[ClaimCitationUsageResponse])
+async def get_claim_citations(
+    project_id: str,
+    claim_id: str,
+    session: AsyncSession = Depends(get_db),
+):
+    """List document citations that reference a specific claim."""
+    from database.models import Claim, DocumentCitation, Document, CitationSource
+
+    claim_result = await session.execute(
+        select(Claim).where(Claim.id == claim_id, Claim.project_id == project_id)
+    )
+    claim = claim_result.scalar_one_or_none()
+    if not claim:
+        raise HTTPException(status_code=404, detail="Claim not found")
+
+    result = await session.execute(
+        select(DocumentCitation, Document)
+        .join(Document, Document.id == DocumentCitation.document_id)
+        .where(
+            Document.project_id == project_id,
+            DocumentCitation.source_type == CitationSource.CLAIM,
+            DocumentCitation.source_id == claim_id,
+        )
+        .order_by(DocumentCitation.created_at.desc())
+    )
+
+    rows = result.all()
+    return [
+        ClaimCitationUsageResponse(
+            citation_id=citation.id,
+            document_id=document.id,
+            document_title=document.title,
+            created_at=citation.created_at,
+        )
+        for citation, document in rows
+    ]
+
+
+@router.get("/projects/{project_id}/provenance", response_model=ProjectProvenanceResponse)
+async def get_project_provenance(
+    project_id: str,
+    claim_limit: int = Query(50, ge=1, le=200),
+    artifact_limit: int = Query(50, ge=1, le=200),
+    session: AsyncSession = Depends(get_db),
+):
+    """
+    Return a provenance snapshot for a project.
+
+    Includes:
+    - claims enriched with resolved source metadata and citation/relationship counts
+    - artifact lineage rows (parent + task/run context)
+    - summary metrics for provenance coverage
+    """
+    from database.models import (
+        Claim,
+        ClaimRelationship,
+        Paper,
+        Artifact,
+        Task,
+        TaskRun,
+        DocumentCitation,
+        CitationSource,
+    )
+    from database.file_models import File
+
+    project_result = await session.execute(
+        select(Project).where(Project.id == project_id)
+    )
+    if not project_result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    # Summary metrics
+    claim_count_result = await session.execute(
+        select(func.count(Claim.id), func.avg(Claim.confidence)).where(Claim.project_id == project_id)
+    )
+    total_claims, avg_claim_confidence = claim_count_result.one()
+
+    rel_count_result = await session.execute(
+        select(func.count(ClaimRelationship.id)).where(ClaimRelationship.project_id == project_id)
+    )
+    total_relationships = rel_count_result.scalar_one() or 0
+
+    artifact_count_result = await session.execute(
+        select(func.count(Artifact.id)).where(Artifact.project_id == project_id)
+    )
+    total_artifacts = artifact_count_result.scalar_one() or 0
+
+    breakdown_result = await session.execute(
+        select(Claim.source_type, func.count(Claim.id))
+        .where(Claim.project_id == project_id)
+        .group_by(Claim.source_type)
+    )
+    source_type_breakdown = {
+        (source_type.value if hasattr(source_type, "value") else str(source_type)): count
+        for source_type, count in breakdown_result.all()
+    }
+
+    # Claims with enrichment
+    claims_result = await session.execute(
+        select(Claim)
+        .where(Claim.project_id == project_id)
+        .order_by(Claim.extracted_at.desc())
+        .limit(claim_limit)
+    )
+    claims = list(claims_result.scalars().all())
+    claim_ids = [claim.id for claim in claims]
+
+    relationship_count_map: Dict[str, int] = {}
+    citation_count_map: Dict[str, int] = {}
+
+    if claim_ids:
+        relationship_rows = await session.execute(
+            select(ClaimRelationship.from_claim_id, ClaimRelationship.to_claim_id)
+            .where(
+                ClaimRelationship.project_id == project_id,
+                or_(
+                    ClaimRelationship.from_claim_id.in_(claim_ids),
+                    ClaimRelationship.to_claim_id.in_(claim_ids),
+                ),
+            )
+        )
+        for from_id, to_id in relationship_rows.all():
+            if from_id in claim_ids:
+                relationship_count_map[from_id] = relationship_count_map.get(from_id, 0) + 1
+            if to_id in claim_ids:
+                relationship_count_map[to_id] = relationship_count_map.get(to_id, 0) + 1
+
+        citation_rows = await session.execute(
+            select(DocumentCitation.source_id, func.count(DocumentCitation.id))
+            .where(
+                DocumentCitation.source_type == CitationSource.CLAIM,
+                DocumentCitation.source_id.in_(claim_ids),
+            )
+            .group_by(DocumentCitation.source_id)
+        )
+        citation_count_map = {source_id: count for source_id, count in citation_rows.all()}
+
+    total_claim_citations = sum(citation_count_map.values())
+
+    paper_ids = [claim.source_id for claim in claims if claim.source_type.value == "paper"]
+    file_ids = [claim.source_id for claim in claims if claim.source_type.value == "file"]
+    artifact_ids_for_sources = [claim.source_id for claim in claims if claim.source_type.value == "analysis"]
+
+    paper_map: Dict[str, Paper] = {}
+    file_map: Dict[str, File] = {}
+    source_artifact_map: Dict[str, Artifact] = {}
+
+    if paper_ids:
+        paper_result = await session.execute(
+            select(Paper).where(Paper.project_id == project_id, Paper.id.in_(paper_ids))
+        )
+        paper_map = {paper.id: paper for paper in paper_result.scalars().all()}
+
+    if file_ids:
+        file_result = await session.execute(
+            select(File).where(File.project_id == project_id, File.id.in_(file_ids))
+        )
+        file_map = {file.id: file for file in file_result.scalars().all()}
+
+    if artifact_ids_for_sources:
+        source_artifact_result = await session.execute(
+            select(Artifact).where(Artifact.project_id == project_id, Artifact.id.in_(artifact_ids_for_sources))
+        )
+        source_artifact_map = {artifact.id: artifact for artifact in source_artifact_result.scalars().all()}
+
+    claim_rows: List[ProvenanceClaimResponse] = []
+    for claim in claims:
+        source_label = claim.source_id
+        source_url = None
+        source_exists = False
+
+        if claim.source_type.value == "paper":
+            paper = paper_map.get(claim.source_id)
+            if paper:
+                source_label = paper.title
+                source_url = paper.url or paper.pdf_url
+                source_exists = True
+        elif claim.source_type.value == "file":
+            file = file_map.get(claim.source_id)
+            if file:
+                source_label = file.name
+                source_exists = True
+        elif claim.source_type.value == "analysis":
+            artifact = source_artifact_map.get(claim.source_id)
+            if artifact:
+                source_label = artifact.title
+                source_exists = True
+        elif claim.source_type.value == "user":
+            source_label = "User input"
+            source_exists = True
+
+        claim_rows.append(
+            ProvenanceClaimResponse(
+                id=claim.id,
+                claim_text=claim.claim_text,
+                claim_type=claim.claim_type,
+                source_type=claim.source_type.value,
+                source_id=claim.source_id,
+                confidence=claim.confidence,
+                relevance_score=claim.relevance_score,
+                extracted_at=claim.extracted_at,
+                source_label=source_label,
+                source_url=source_url,
+                source_exists=source_exists,
+                relationship_count=relationship_count_map.get(claim.id, 0),
+                cited_in_documents=citation_count_map.get(claim.id, 0),
+            )
+        )
+
+    # Artifact lineage
+    artifact_result = await session.execute(
+        select(Artifact)
+        .where(Artifact.project_id == project_id)
+        .order_by(Artifact.created_at.desc())
+        .limit(artifact_limit)
+    )
+    artifacts = list(artifact_result.scalars().all())
+
+    parent_ids = [artifact.parent_artifact_id for artifact in artifacts if artifact.parent_artifact_id]
+    task_ids = [artifact.task_id for artifact in artifacts if artifact.task_id]
+    run_ids = [artifact.run_id for artifact in artifacts if artifact.run_id]
+
+    parent_map: Dict[str, Artifact] = {}
+    task_map: Dict[str, Task] = {}
+    run_map: Dict[str, TaskRun] = {}
+
+    if parent_ids:
+        parent_result = await session.execute(
+            select(Artifact).where(Artifact.id.in_(parent_ids))
+        )
+        parent_map = {artifact.id: artifact for artifact in parent_result.scalars().all()}
+
+    if task_ids:
+        task_result = await session.execute(
+            select(Task).where(Task.id.in_(task_ids))
+        )
+        task_map = {task.id: task for task in task_result.scalars().all()}
+
+    if run_ids:
+        run_result = await session.execute(
+            select(TaskRun).where(TaskRun.id.in_(run_ids))
+        )
+        run_map = {run.id: run for run in run_result.scalars().all()}
+
+    artifact_rows: List[ProvenanceArtifactResponse] = []
+    for artifact in artifacts:
+        parent = parent_map.get(artifact.parent_artifact_id) if artifact.parent_artifact_id else None
+        task = task_map.get(artifact.task_id) if artifact.task_id else None
+        run = run_map.get(artifact.run_id) if artifact.run_id else None
+
+        artifact_rows.append(
+            ProvenanceArtifactResponse(
+                artifact_id=artifact.id,
+                artifact_type=artifact.artifact_type.value,
+                title=artifact.title,
+                created_at=artifact.created_at,
+                task_id=artifact.task_id,
+                task_name=task.name if task else None,
+                run_id=artifact.run_id,
+                parent_artifact_id=artifact.parent_artifact_id,
+                parent_artifact_title=parent.title if parent else None,
+                input_artifact_ids=run.input_artifact_ids if run and run.input_artifact_ids else [],
+            )
+        )
+
+    summary = ProjectProvenanceSummaryResponse(
+        total_claims=total_claims or 0,
+        avg_claim_confidence=float(avg_claim_confidence or 0.0),
+        total_relationships=total_relationships,
+        total_claim_citations=total_claim_citations,
+        total_artifacts=total_artifacts,
+        source_type_breakdown=source_type_breakdown,
+    )
+
+    return ProjectProvenanceResponse(
+        summary=summary,
+        claims=claim_rows,
+        artifacts=artifact_rows,
+    )
 
 
 # ============== Findings ==============

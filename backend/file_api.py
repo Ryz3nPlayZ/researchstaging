@@ -8,6 +8,7 @@ import logging
 from typing import Optional
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, Query
+from auth_dependencies import require_auth
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel, Field
 
@@ -32,7 +33,7 @@ from file_service import (
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/files", tags=["files"])
+router = APIRouter(prefix="/files", tags=["files"], dependencies=[Depends(require_auth)])
 
 
 # ============== Request/Response Models ==============

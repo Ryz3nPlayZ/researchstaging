@@ -47,6 +47,13 @@ class User(Base):
     stripe_customer_id = Column(String(255), nullable=True)
     stripe_subscription_id = Column(String(255), nullable=True)
 
+    # Role / onboarding
+    role = Column(String(50), nullable=True)  # academic, industry, policy, general
+    bio = Column(String(500), nullable=True)
+
+    # Admin flag
+    is_admin = Column(Boolean, default=False, nullable=False)
+
     # Timestamps
     created_at = Column(DateTime(timezone=True), default=utc_now, nullable=False)
     updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now, nullable=False)

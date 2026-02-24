@@ -3,16 +3,17 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { projectApi, documentApi, fileApi, taskApi, literatureApi, papersApi, analysisApi, artifactApi } from '@/lib/api';
-import type { Project, DocumentListItem, FileItem, TaskResponse, Paper, ArtifactResponse } from '@/lib/types';
+import { projectApi, documentApi, fileApi, taskApi, literatureApi, papersApi, analysisApi, artifactApi, executionLogApi, memoryApi } from '@/lib/api';
+import type { LiteratureV2Response } from '@/lib/api';
+import type { Project, DocumentListItem, FileItem, TaskResponse, Paper, ArtifactResponse, ExecutionLogEntry, ProjectProvenance } from '@/lib/types';
 import { mapProjectStatus, relativeTime, truncate } from '@/lib/types';
-import { Play, Trash2, AlertCircle, Loader2, ChevronRight } from 'lucide-react';
-import { WorkspaceTabs, Tab } from './_components/workspace-tabs';
+import { Play, Trash2, AlertCircle, Loader2, ArrowLeft, Plus, Upload, FileText, BarChart3, Settings, ChevronDown, GripVertical } from 'lucide-react';
 import { OverviewTab } from './_components/overview-tab';
 import { DocumentsTab } from './_components/documents-tab';
 import { FilesTab } from './_components/files-tab';
 import { LiteratureTab } from './_components/literature-tab';
 import { AnalysisTab } from './_components/analysis-tab';
+import { ProvenanceTab } from './_components/provenance-tab';
 import { FilePreviewModal } from '@/components/file-preview-modal';
 
 export default function ProjectWorkspacePage() {
@@ -25,42 +26,58 @@ export default function ProjectWorkspacePage() {
     const [files, setFiles] = useState<FileItem[]>([]);
     const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
     const [tasks, setTasks] = useState<TaskResponse[]>([]);
-    const [activeTab, setActiveTab] = useState<Tab>('overview');
+    const [executionLogs, setExecutionLogs] = useState<ExecutionLogEntry[]>([]);
+    const [activeTab, setActiveTab] = useState('overview');
     const [loading, setLoading] = useState(true);
     const [creatingDoc, setCreatingDoc] = useState(false);
-
-    // Execute / Delete state
     const [executing, setExecuting] = useState(false);
     const [deleting, setDeleting] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
-    // Literature state
     const [litQuery, setLitQuery] = useState('');
     const [litSearching, setLitSearching] = useState(false);
     const [litResults, setLitResults] = useState<Paper[]>([]);
+    const [litV2Response, setLitV2Response] = useState<LiteratureV2Response | null>(null);
     const [projectPapers, setProjectPapers] = useState<Paper[]>([]);
     const [synthesisOpen, setSynthesisOpen] = useState(false);
-
-    // Analysis state
     const [code, setCode] = useState('');
     const [language, setLanguage] = useState<'python' | 'r'>('python');
     const [analysisRunning, setAnalysisRunning] = useState(false);
     const [analysisOutput, setAnalysisOutput] = useState<string | null>(null);
     const [analysisError, setAnalysisError] = useState<string | null>(null);
     const [artifacts, setArtifacts] = useState<ArtifactResponse[]>([]);
+    const [provenance, setProvenance] = useState<ProjectProvenance | null>(null);
+    const [provenanceLoading, setProvenanceLoading] = useState(false);
+
+    const tabs = [
+        { id: 'overview', label: 'Overview', count: null },
+        { id: 'documents', label: 'Documents', count: documents.length },
+        { id: 'literature', label: 'Literature', count: projectPapers.length },
+        { id: 'files', label: 'Files', count: files.length },
+        { id: 'analysis', label: 'Analysis', count: null },
+        { id: 'provenance', label: 'Provenance', count: provenance?.summary.total_claims ?? null },
+    ];
+
+    const loadProvenance = useCallback(async () => {
+        setProvenanceLoading(true);
+        const res = await memoryApi.getProvenance(projectId, 80, 60);
+        if (res.data) setProvenance(res.data);
+        setProvenanceLoading(false);
+    }, [projectId]);
 
     const loadData = useCallback(async () => {
         setLoading(true);
-        const [projRes, docsRes, filesRes, tasksRes] = await Promise.all([
+        const [projRes, docsRes, filesRes, tasksRes, logsRes] = await Promise.all([
             projectApi.get(projectId),
             documentApi.list(projectId),
             fileApi.list(projectId),
             taskApi.list(projectId),
+            executionLogApi.list(projectId, 20),
         ]);
         if (projRes.data) setProject(projRes.data);
         if (docsRes.data) setDocuments(docsRes.data);
         if (filesRes.data) setFiles(filesRes.data);
         if (tasksRes.data) setTasks(tasksRes.data);
+        if (logsRes.data) setExecutionLogs(logsRes.data);
         setLoading(false);
     }, [projectId]);
 
@@ -68,7 +85,6 @@ export default function ProjectWorkspacePage() {
         loadData();
     }, [loadData]);
 
-    // Load literature/analysis data when tabs are activated
     useEffect(() => {
         if (activeTab === 'literature') {
             papersApi.list(projectId).then((res) => {
@@ -80,9 +96,11 @@ export default function ProjectWorkspacePage() {
                 if (res.data) setArtifacts(res.data);
             });
         }
-    }, [activeTab, projectId]);
+        if (activeTab === 'provenance' && !provenance) {
+            void loadProvenance();
+        }
+    }, [activeTab, projectId, provenance, loadProvenance]);
 
-    // Auto-refresh tasks while executing
     useEffect(() => {
         if (project?.status !== 'executing') return;
         const id = setInterval(async () => {
@@ -97,12 +115,16 @@ export default function ProjectWorkspacePage() {
     }, [project?.status, projectId]);
 
     const handleCreateDocument = async () => {
-        setCreatingDoc(true);
-        const res = await documentApi.create(projectId);
-        if (res.data) {
-            setDocuments((prev) => [{ ...res.data!, content: undefined } as unknown as DocumentListItem, ...prev]);
+        try {
+            setCreatingDoc(true);
+            const res = await documentApi.create(projectId);
+            if (res.data) {
+                setDocuments((prev) => [{ ...res.data!, content: undefined } as unknown as DocumentListItem, ...prev]);
+                router.push(`/projects/${projectId}/doc/${res.data.id}`);
+            }
+        } finally {
+            setCreatingDoc(false);
         }
-        setCreatingDoc(false);
     };
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,7 +143,6 @@ export default function ProjectWorkspacePage() {
         setExecuting(true);
         const res = await projectApi.execute(projectId);
         if (res.data) {
-            // Refresh project to see updated status
             const projRes = await projectApi.get(projectId);
             if (projRes.data) setProject(projRes.data);
             const tasksRes = await taskApi.list(projectId);
@@ -140,8 +161,12 @@ export default function ProjectWorkspacePage() {
         if (!litQuery.trim()) return;
         setLitSearching(true);
         setLitResults([]);
-        const res = await literatureApi.search(litQuery);
-        if (res.data) setLitResults(res.data);
+        setLitV2Response(null);
+        const res = await literatureApi.searchV2(litQuery);
+        if (res.data) {
+            setLitV2Response(res.data);
+            setLitResults(res.data.papers);
+        }
         setLitSearching(false);
     };
 
@@ -169,19 +194,18 @@ export default function ProjectWorkspacePage() {
             setAnalysisError(res.error);
         }
         setAnalysisRunning(false);
-        // Refresh artifacts
         const artRes = await artifactApi.list(projectId);
         if (artRes.data) setArtifacts(artRes.data);
     };
 
     if (loading) {
         return (
-            <div className="max-w-[1200px] mx-auto">
-                <div className="h-8 bg-gray-200 rounded w-64 mb-4 animate-pulse" />
-                <div className="h-4 bg-gray-100 rounded w-96 mb-8 animate-pulse" />
+            <div className="max-w-6xl mx-auto px-6 py-8">
+                <div className="h-8 bg-gray-200 rounded w-64 mb-6 animate-pulse" />
+                <div className="h-4 bg-gray-100 rounded w-96 mb-10 animate-pulse" />
                 <div className="grid grid-cols-3 gap-6">
                     {[1, 2, 3].map((i) => (
-                        <div key={i} className="glass rounded-2xl p-6 h-40 animate-pulse border border-white/20" />
+                        <div key={i} className="bg-white rounded-xl p-6 h-40 animate-pulse border border-gray-200" />
                     ))}
                 </div>
             </div>
@@ -190,9 +214,9 @@ export default function ProjectWorkspacePage() {
 
     if (!project) {
         return (
-            <div className="max-w-[1200px] mx-auto text-center py-20">
+            <div className="max-w-6xl mx-auto text-center py-20">
                 <p className="text-gray-500 font-medium">Project not found.</p>
-                <Link href="/projects" className="text-[#1C7C54] text-sm mt-2 inline-block hover:underline">
+                <Link href="/projects" className="text-gray-700 text-sm mt-2 inline-block hover:underline">
                     ← Back to projects
                 </Link>
             </div>
@@ -200,119 +224,95 @@ export default function ProjectWorkspacePage() {
     }
 
     const uiStatus = mapProjectStatus(project.status);
-    const statusColors: Record<string, string> = {
-        active: 'bg-[#1C7C54]',
-        planning: 'bg-amber-400',
-        archived: 'bg-gray-400',
-    };
 
     return (
-        <div className="max-w-[1200px] mx-auto">
-            {/* Breadcrumb */}
-            <div className="flex items-center gap-2 text-xs text-gray-400 font-medium mb-4">
-                <Link href="/projects" className="hover:text-gray-600 transition-colors">Projects</Link>
-                <ChevronRight size={12} />
-                <span className="text-gray-900">{truncate(project.research_goal, 50)}</span>
-            </div>
+        <div className="max-w-6xl mx-auto px-6 py-6">
+            {/* Header */}
+            <div className="mb-8">
+                <div className="flex items-center gap-2 text-sm text-gray-500 mb-3">
+                    <Link href="/projects" className="hover:text-gray-900 transition-colors flex items-center gap-1">
+                        <ArrowLeft size={14} /> Projects
+                    </Link>
+                    <span>/</span>
+                    <span className="text-gray-400 truncate max-w-[300px]">{truncate(project.research_goal, 60)}</span>
+                </div>
 
-            {/* Project Header */}
-            <div className="flex items-start justify-between mb-8">
-                <div>
-                    <div className="flex items-center gap-3 mb-2">
-                        <span className={`h-2.5 w-2.5 rounded-full ${statusColors[uiStatus]} ${uiStatus === 'active' ? 'animate-pulse' : ''}`} />
-                        <h1 className="text-2xl font-bold text-[#1B512D] tracking-tight font-ui">
-                            {truncate(project.research_goal, 80)}
+                <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                        <h1 className="text-xl font-semibold text-gray-900 leading-tight mb-2">
+                            {project.research_goal}
                         </h1>
+                        <div className="flex items-center gap-4 text-sm text-gray-500">
+                            <span className="flex items-center gap-1.5">
+                                <span className={`h-2 w-2 rounded-full ${uiStatus === 'active' ? 'bg-gray-900' : uiStatus === 'planning' ? 'bg-gray-400' : 'bg-gray-300'}`} />
+                                {uiStatus}
+                            </span>
+                            <span>{project.output_type.replace(/_/g, ' ')}</span>
+                            <span>Updated {relativeTime(project.updated_at)}</span>
+                        </div>
                     </div>
-                    <p className="text-sm text-gray-500 font-medium">
-                        {project.output_type.replace(/_/g, ' ')}
-                        {project.audience ? ` · ${project.audience}` : ''}
-                        {' · '}
-                        Updated {relativeTime(project.updated_at)}
-                    </p>
-                </div>
 
-                {/* Action Buttons */}
-                <div className="flex items-center gap-2">
-                    {(uiStatus === 'planning' || uiStatus === 'active') && (
+                    <div className="flex items-center gap-2">
+                        {(uiStatus === 'planning' || uiStatus === 'active') && (
+                            <button
+                                onClick={handleExecute}
+                                disabled={executing || project.status === 'executing'}
+                                className="inline-flex items-center gap-1.5 bg-gray-900 hover:bg-gray-800 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all"
+                            >
+                                {executing ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
+                                {project.status === 'executing' ? 'Running...' : 'Run'}
+                            </button>
+                        )}
                         <button
-                            onClick={handleExecute}
-                            disabled={executing || project.status === 'executing'}
-                            className="inline-flex items-center gap-2 bg-[#1C7C54] hover:bg-[#1B512D] disabled:opacity-50 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm"
+                            onClick={() => setShowDeleteConfirm(true)}
+                            className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                            title="Delete Project"
                         >
-                            {executing ? (
-                                <Loader2 size={16} className="animate-spin" />
-                            ) : (
-                                <Play size={16} />
-                            )}
-                            {project.status === 'executing' ? 'Running...' : 'Run Research'}
+                            <Trash2 size={16} />
                         </button>
-                    )}
-
-                    <button
-                        onClick={() => setShowDeleteConfirm(true)}
-                        className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-xl text-sm font-medium text-red-500 hover:bg-red-50 transition-colors"
-                    >
-                        <Trash2 size={18} />
-                    </button>
+                    </div>
                 </div>
             </div>
 
-            {/* Delete Confirmation Modal */}
-            {showDeleteConfirm && (
-                <div className="fixed inset-0 bg-black/30 backdrop-blur-sm z-50 flex items-center justify-center">
-                    <div className="bg-white rounded-2xl p-6 max-w-sm w-full mx-4 shadow-lg border border-gray-100">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="h-10 w-10 rounded-full bg-red-50 flex items-center justify-center">
-                                <AlertCircle size={20} className="text-red-500" />
-                            </div>
-                            <h3 className="text-base font-bold text-gray-900">Delete Project?</h3>
-                        </div>
-                        <p className="text-sm text-gray-500 mb-5 leading-relaxed">
-                            This will permanently delete the project, all documents, files, tasks, and artifacts. This cannot be undone.
-                        </p>
-                        <div className="flex gap-2 justify-end">
-                            <button
-                                onClick={() => setShowDeleteConfirm(false)}
-                                className="px-4 py-2 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleDelete}
-                                disabled={deleting}
-                                className="px-4 py-2 rounded-xl text-sm font-semibold text-white bg-red-500 hover:bg-red-600 disabled:opacity-50 transition-colors"
-                            >
-                                {deleting ? 'Deleting...' : 'Delete'}
-                            </button>
-                        </div>
-                    </div>
+            {/* Horizontal Tabs */}
+            <div className="border-b border-gray-200 mb-6">
+                <div className="flex items-center gap-1">
+                    {tabs.map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${activeTab === tab.id
+                                    ? 'text-gray-900'
+                                    : 'text-gray-500 hover:text-gray-700'
+                                }`}
+                        >
+                            {tab.label}
+                            {tab.count !== null && tab.count > 0 && (
+                                <span className={`ml-1.5 text-xs py-0.5 px-1.5 rounded-full ${activeTab === tab.id ? 'bg-gray-200 text-gray-700' : 'bg-gray-100 text-gray-500'
+                                    }`}>
+                                    {tab.count}
+                                </span>
+                            )}
+                            {activeTab === tab.id && (
+                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gray-900" />
+                            )}
+                        </button>
+                    ))}
                 </div>
-            )}
+            </div>
 
-            {/* Tabs */}
-            <WorkspaceTabs
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
-                counts={{
-                    documents: documents.length,
-                    files: files.length,
-                    literature: projectPapers.length
-                }}
-            />
-
-            {/* Tab Content */}
+            {/* Content */}
             <div className="min-h-[400px]">
                 {activeTab === 'overview' && (
                     <OverviewTab
                         project={project}
                         tasks={tasks}
+                        executionLogs={executionLogs}
                         onCreateDocument={handleCreateDocument}
                         onUploadFile={handleFileUpload}
                         creatingDoc={creatingDoc}
                     />
                 )}
-
                 {activeTab === 'documents' && (
                     <DocumentsTab
                         documents={documents}
@@ -321,7 +321,6 @@ export default function ProjectWorkspacePage() {
                         onCreateDocument={handleCreateDocument}
                     />
                 )}
-
                 {activeTab === 'files' && (
                     <FilesTab
                         files={files}
@@ -329,7 +328,6 @@ export default function ProjectWorkspacePage() {
                         onPreviewFile={setPreviewFile}
                     />
                 )}
-
                 {activeTab === 'literature' && (
                     <LiteratureTab
                         litQuery={litQuery}
@@ -337,6 +335,7 @@ export default function ProjectWorkspacePage() {
                         litSearching={litSearching}
                         handleLitSearch={handleLitSearch}
                         litResults={litResults}
+                        litV2Response={litV2Response}
                         projectPapers={projectPapers}
                         onAddPaper={handleAddPaper}
                         synthesisOpen={synthesisOpen}
@@ -344,7 +343,6 @@ export default function ProjectWorkspacePage() {
                         projectId={projectId}
                     />
                 )}
-
                 {activeTab === 'analysis' && (
                     <AnalysisTab
                         language={language}
@@ -358,19 +356,57 @@ export default function ProjectWorkspacePage() {
                         artifacts={artifacts}
                     />
                 )}
-
-                {/* File Preview Modal */}
-                {previewFile && (
-                    <FilePreviewModal
-                        isOpen={!!previewFile}
-                        onClose={() => setPreviewFile(null)}
-                        fileId={previewFile.id}
+                {activeTab === 'provenance' && (
+                    <ProvenanceTab
                         projectId={projectId}
-                        fileName={previewFile.name}
-                        fileType={previewFile.mime_type || previewFile.file_type}
+                        provenance={provenance}
+                        loading={provenanceLoading}
+                        onRefresh={loadProvenance}
                     />
                 )}
             </div>
+
+            {/* Modals */}
+            {previewFile && (
+                <FilePreviewModal
+                    isOpen={!!previewFile}
+                    onClose={() => setPreviewFile(null)}
+                    fileId={previewFile.id}
+                    projectId={projectId}
+                    fileName={previewFile.name}
+                    fileType={previewFile.mime_type || previewFile.file_type}
+                />
+            )}
+            {showDeleteConfirm && (
+                <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-xl p-6 max-w-sm w-full shadow-xl border border-gray-200">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+                                <AlertCircle size={20} className="text-gray-600" />
+                            </div>
+                            <h3 className="text-base font-semibold text-gray-900">Delete Project?</h3>
+                        </div>
+                        <p className="text-sm text-gray-500 mb-6 leading-relaxed">
+                            This will permanently delete the project and all associated data. This cannot be undone.
+                        </p>
+                        <div className="flex gap-2 justify-end">
+                            <button
+                                onClick={() => setShowDeleteConfirm(false)}
+                                className="px-4 py-2 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDelete}
+                                disabled={deleting}
+                                className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-gray-900 hover:bg-gray-800 disabled:opacity-50 transition-colors"
+                            >
+                                {deleting ? 'Deleting...' : 'Delete'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
+import { PostHogProvider } from "@/components/posthog-provider";
 
 export const metadata: Metadata = {
   title: "Research Workspace",
@@ -23,9 +24,11 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased">
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+        <PostHogProvider>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </PostHogProvider>
       </body>
     </html>
   );

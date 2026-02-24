@@ -5,6 +5,7 @@ Provides AI-powered code generation for Python and R data analysis.
 import logging
 from typing import Dict, Any, Optional, Literal
 from fastapi import APIRouter, HTTPException, Depends
+from auth_dependencies import require_auth
 from pydantic import BaseModel, Field
 
 from agent_service import AnalysisAgent
@@ -15,7 +16,7 @@ from database import get_db
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/analysis", tags=["analysis"])
+router = APIRouter(prefix="/analysis", tags=["analysis"], dependencies=[Depends(require_auth)])
 
 # ============== Request/Response Models ==============
 

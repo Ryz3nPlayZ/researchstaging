@@ -25,6 +25,18 @@ import json
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
+# ── Sentry (initialise before anything else so all errors are captured) ───────
+import sentry_sdk  # noqa: E402  — must come after dotenv
+_SENTRY_DSN = os.environ.get("SENTRY_DSN", "")
+if _SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=_SENTRY_DSN,
+        traces_sample_rate=float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0.1")),
+        environment=os.environ.get("ENVIRONMENT", "development"),
+        send_default_pii=False,
+    )
+# ──────────────────────────────────────────────────────────────────────────────
+
 # Database imports
 from database import (
     get_db, init_db, close_db,
@@ -45,6 +57,9 @@ from realtime import connection_manager, websocket_endpoint
 from llm_service import llm_service
 from export_service import export_service
 from auth_service import auth_service
+from auth_dependencies import require_auth, require_admin
+from database import User as DBUser
+from credit_service import credit_service
 
 # Configure logging
 logging.basicConfig(
@@ -163,6 +178,21 @@ class TaskResponse(BaseModel):
     started_at: Optional[datetime]
     completed_at: Optional[datetime]
     output_artifact_id: Optional[str]
+
+    class Config:
+        from_attributes = True
+
+
+class ExecutionLogResponse(BaseModel):
+    id: str
+    project_id: str
+    task_id: Optional[str]
+    run_id: Optional[str]
+    event_type: str
+    level: str
+    message: str
+    data: Optional[Dict[str, Any]]
+    timestamp: datetime
 
     class Config:
         from_attributes = True
@@ -306,24 +336,24 @@ async def health_check():
 
 @api_router.post("/auth/login", response_model=LoginResponse)
 async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
-    """Authenticate user with Google OAuth code or mock credentials."""
+    """Authenticate user with Google OAuth code or dev mock credentials."""
     try:
-        # Mock authentication for local development
-        if data.email:
+        if data.code:
+            # Real Google OAuth (production path)
+            result = await auth_service.authenticate_user(data.code, db)
+            return LoginResponse(
+                user=UserResponse(**result["user"]),
+                token=result["token"]
+            )
+        elif data.email and os.environ.get("ENVIRONMENT", "development") != "production":
+            # Mock auth — only allowed in development
             result = await auth_service.mock_authenticate_user(data.email, data.name, db)
             return LoginResponse(
                 user=UserResponse(**result["user"]),
                 token=result["token"]
             )
-        # Google OAuth (commented out until domain is available)
-        # elif data.code:
-        #     result = await auth_service.authenticate_user(data.code, db)
-        #     return LoginResponse(
-        #         user=UserResponse(**result["user"]),
-        #         token=result["token"]
-        #     )
         else:
-            raise HTTPException(status_code=400, detail="Email required for mock authentication")
+            raise HTTPException(status_code=400, detail="Google OAuth code required")
     except Exception as e:
         logger.error(f"Login failed: {e}", exc_info=True)
         raise HTTPException(status_code=401, detail=str(e))
@@ -365,22 +395,53 @@ async def logout():
 
 @api_router.get("/auth/google-url")
 async def get_google_auth_url():
-    """Get Google OAuth authorization URL (disabled for mock auth)."""
-    # Google OAuth disabled - using mock authentication for local development
-    # Uncomment when domain is available for production OAuth
-    # try:
-    #     auth_url = auth_service.get_google_auth_url()
-    #     return {"auth_url": auth_url}
-    # except Exception as e:
-    #     logger.error(f"Failed to generate Google auth URL: {e}")
-    #     raise HTTPException(status_code=500, detail=str(e))
-    return {"auth_url": None, "message": "Google OAuth disabled - using mock authentication"}
+    """Get Google OAuth authorization URL."""
+    try:
+        auth_url = auth_service.get_google_auth_url()
+        return {"auth_url": auth_url}
+    except ValueError as e:
+        # GOOGLE_CLIENT_ID not configured — fall back gracefully in dev
+        logger.warning(f"Google OAuth not configured: {e}")
+        return {"auth_url": None, "message": str(e)}
+    except Exception as e:
+        logger.error(f"Failed to generate Google auth URL: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class UpdateUserRequest(BaseModel):
+    name: Optional[str] = None
+    role: Optional[str] = None
+    bio: Optional[str] = None
+
+
+@api_router.patch("/users/me", response_model=UserResponse)
+async def update_user(
+    data: UpdateUserRequest,
+    db: AsyncSession = Depends(get_db),
+    user: DBUser = Depends(require_auth),
+):
+    """Update the current user’s profile (name, role, bio)."""
+    if data.name is not None:
+        user.name = data.name
+    if data.role is not None:
+        user.role = data.role
+    if data.bio is not None:
+        user.bio = data.bio
+    await db.commit()
+    await db.refresh(user)
+    return UserResponse(
+        id=user.id,
+        email=user.email,
+        name=user.name,
+        picture_url=user.picture_url,
+        credits_remaining=round(user.credits_remaining, 2),
+    )
 
 
 # ============== Planning Endpoints ==============
 
 @api_router.post("/planning/generate-plan")
-async def generate_research_plan(data: PlanningAnswers, db: AsyncSession = Depends(get_db)):
+async def generate_research_plan(data: PlanningAnswers, db: AsyncSession = Depends(get_db), _user: DBUser = Depends(require_auth)):
     """Generate a research plan using LLM."""
     plan = await llm_service.generate_research_plan(
         data.answers.get("research_goal", ""),
@@ -394,7 +455,8 @@ async def generate_research_plan(data: PlanningAnswers, db: AsyncSession = Depen
 async def approve_plan_and_create_project(
     data: PlanApproval,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: DBUser = Depends(require_auth),
 ):
     """Approve plan and create project with tasks."""
     try:
@@ -405,6 +467,7 @@ async def approve_plan_and_create_project(
 
         # Create project
         project = Project(
+            user_id=current_user.id,
             research_goal=answers.get("research_goal", ""),
             output_type=OutputType(answers.get("output_type", "literature_review")),
             audience=answers.get("audience"),
@@ -458,13 +521,15 @@ async def approve_plan_and_create_project(
 async def create_project(
     project_input: ProjectCreate,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    current_user: DBUser = Depends(require_auth),
 ):
     """Create a new project (simple flow without guided planning)."""
     try:
         logger.info(f"Creating project: {project_input.research_goal}")
 
         project = Project(
+            user_id=current_user.id,
             research_goal=project_input.research_goal,
             output_type=OutputType(project_input.output_type),
             audience=project_input.audience,
@@ -546,10 +611,12 @@ async def create_project(
 
 
 @api_router.get("/projects", response_model=List[ProjectResponse])
-async def list_projects(db: AsyncSession = Depends(get_db)):
-    """List all projects."""
+async def list_projects(db: AsyncSession = Depends(get_db), current_user: DBUser = Depends(require_auth)):
+    """List projects belonging to the authenticated user."""
     result = await db.execute(
-        select(Project).order_by(Project.created_at.desc())
+        select(Project)
+        .where(Project.user_id == current_user.id)
+        .order_by(Project.created_at.desc())
     )
     projects = result.scalars().all()
     
@@ -571,10 +638,10 @@ async def list_projects(db: AsyncSession = Depends(get_db)):
 
 
 @api_router.get("/projects/{project_id}", response_model=ProjectResponse)
-async def get_project(project_id: str, db: AsyncSession = Depends(get_db)):
-    """Get a specific project."""
+async def get_project(project_id: str, db: AsyncSession = Depends(get_db), current_user: DBUser = Depends(require_auth)):
+    """Get a specific project (must be owned by the authenticated user)."""
     result = await db.execute(
-        select(Project).where(Project.id == project_id)
+        select(Project).where(Project.id == project_id, Project.user_id == current_user.id)
     )
     project = result.scalar_one_or_none()
     
@@ -596,10 +663,10 @@ async def get_project(project_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @api_router.delete("/projects/{project_id}")
-async def delete_project(project_id: str, db: AsyncSession = Depends(get_db)):
-    """Delete a project and all related data."""
+async def delete_project(project_id: str, db: AsyncSession = Depends(get_db), current_user: DBUser = Depends(require_auth)):
+    """Delete a project and all related data (must be owned by the authenticated user)."""
     result = await db.execute(
-        select(Project).where(Project.id == project_id)
+        select(Project).where(Project.id == project_id, Project.user_id == current_user.id)
     )
     project = result.scalar_one_or_none()
     
@@ -616,7 +683,8 @@ async def delete_project(project_id: str, db: AsyncSession = Depends(get_db)):
 async def execute_project(
     project_id: str,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    _user: DBUser = Depends(require_auth),
 ):
     """Start executing all tasks in a project."""
     result = await db.execute(
@@ -656,7 +724,8 @@ async def execute_project(
 async def add_paper_to_project(
     project_id: str,
     paper_create: PaperCreate,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    _user: DBUser = Depends(require_auth),
 ):
     """Add a paper to a project."""
     # Check if project exists
@@ -682,7 +751,8 @@ async def add_paper_to_project(
 async def execute_all_tasks(
     project_id: str,
     background_tasks: BackgroundTasks,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    _user: DBUser = Depends(require_auth),
 ):
     """Execute all tasks (alias for execute)."""
     return await execute_project(project_id, background_tasks, db)
@@ -691,7 +761,7 @@ async def execute_all_tasks(
 # ============== Task Endpoints ==============
 
 @api_router.get("/projects/{project_id}/tasks", response_model=List[TaskResponse])
-async def list_project_tasks(project_id: str, db: AsyncSession = Depends(get_db)):
+async def list_project_tasks(project_id: str, db: AsyncSession = Depends(get_db), _user: DBUser = Depends(require_auth)):
     """List all tasks for a project."""
     result = await db.execute(
         select(Task)
@@ -723,14 +793,48 @@ async def list_project_tasks(project_id: str, db: AsyncSession = Depends(get_db)
     ]
 
 
+@api_router.get("/projects/{project_id}/execution-logs", response_model=List[ExecutionLogResponse])
+async def list_project_execution_logs(
+    project_id: str,
+    limit: int = 50,
+    db: AsyncSession = Depends(get_db),
+    _user: DBUser = Depends(require_auth),
+):
+    """List immutable execution logs for project auditability and provenance tracing."""
+    safe_limit = max(1, min(limit, 200))
+
+    result = await db.execute(
+        select(ExecutionLog)
+        .where(ExecutionLog.project_id == project_id)
+        .order_by(ExecutionLog.timestamp.desc())
+        .limit(safe_limit)
+    )
+    logs = result.scalars().all()
+
+    return [
+        ExecutionLogResponse(
+            id=log.id,
+            project_id=log.project_id,
+            task_id=log.task_id,
+            run_id=log.run_id,
+            event_type=log.event_type,
+            level=log.level,
+            message=log.message,
+            data=log.data,
+            timestamp=log.timestamp,
+        )
+        for log in logs
+    ]
+
+
 @api_router.get("/projects/{project_id}/task-graph")
-async def get_task_graph(project_id: str, db: AsyncSession = Depends(get_db)):
+async def get_task_graph(project_id: str, db: AsyncSession = Depends(get_db), _user: DBUser = Depends(require_auth)):
     """Get task DAG for visualization."""
     return await orchestration_engine.get_task_dag(db, project_id)
 
 
 @api_router.get("/projects/{project_id}/agent-graph")
-async def get_agent_graph(project_id: str, db: AsyncSession = Depends(get_db)):
+async def get_agent_graph(project_id: str, db: AsyncSession = Depends(get_db), _user: DBUser = Depends(require_auth)):
     """Get agent orchestration graph showing multi-agent architecture."""
 
     # Get task states for agent status
@@ -827,7 +931,7 @@ async def get_agent_graph(project_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @api_router.get("/tasks/{task_id}", response_model=TaskResponse)
-async def get_task(task_id: str, db: AsyncSession = Depends(get_db)):
+async def get_task(task_id: str, db: AsyncSession = Depends(get_db), _user: DBUser = Depends(require_auth)):
     """Get a specific task."""
     result = await db.execute(
         select(Task).where(Task.id == task_id)
@@ -858,7 +962,7 @@ async def get_task(task_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @api_router.post("/tasks/{task_id}/retry")
-async def retry_task(task_id: str, db: AsyncSession = Depends(get_db)):
+async def retry_task(task_id: str, db: AsyncSession = Depends(get_db), _user: DBUser = Depends(require_auth)):
     """Retry a failed task."""
     result = await db.execute(
         select(Task).where(Task.id == task_id)
@@ -884,7 +988,7 @@ async def retry_task(task_id: str, db: AsyncSession = Depends(get_db)):
 # ============== Artifact Endpoints ==============
 
 @api_router.get("/projects/{project_id}/artifacts", response_model=List[ArtifactResponse])
-async def list_project_artifacts(project_id: str, db: AsyncSession = Depends(get_db)):
+async def list_project_artifacts(project_id: str, db: AsyncSession = Depends(get_db), _user: DBUser = Depends(require_auth)):
     """List all artifacts for a project."""
     result = await db.execute(
         select(Artifact)
@@ -911,7 +1015,7 @@ async def list_project_artifacts(project_id: str, db: AsyncSession = Depends(get
 
 
 @api_router.get("/artifacts/{artifact_id}", response_model=ArtifactResponse)
-async def get_artifact(artifact_id: str, db: AsyncSession = Depends(get_db)):
+async def get_artifact(artifact_id: str, db: AsyncSession = Depends(get_db), _user: DBUser = Depends(require_auth)):
     """Get a specific artifact."""
     result = await db.execute(
         select(Artifact).where(Artifact.id == artifact_id)
@@ -936,7 +1040,7 @@ async def get_artifact(artifact_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @api_router.put("/artifacts/{artifact_id}/content")
-async def update_artifact_content(artifact_id: str, data: dict, db: AsyncSession = Depends(get_db)):
+async def update_artifact_content(artifact_id: str, data: dict, db: AsyncSession = Depends(get_db), _user: DBUser = Depends(require_auth)):
     """Update artifact content (creates new version)."""
     result = await db.execute(
         select(Artifact).where(Artifact.id == artifact_id)
@@ -965,7 +1069,7 @@ async def update_artifact_content(artifact_id: str, data: dict, db: AsyncSession
 
 
 @api_router.post("/artifacts/{artifact_id}/export")
-async def export_artifact(artifact_id: str, request: ExportRequest, db: AsyncSession = Depends(get_db)):
+async def export_artifact(artifact_id: str, request: ExportRequest, db: AsyncSession = Depends(get_db), _user: DBUser = Depends(require_auth)):
     """Export an artifact to specified format."""
     result = await db.execute(
         select(Artifact).where(Artifact.id == artifact_id)
@@ -1010,7 +1114,8 @@ async def list_project_papers(
     project_id: str,
     search: Optional[str] = None,
     limit: int = 100,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    _user: DBUser = Depends(require_auth),
 ):
     """
     List all papers for a project with optional search.
@@ -1057,7 +1162,7 @@ async def list_project_papers(
 
 
 @api_router.get("/papers/{paper_id}")
-async def get_paper(paper_id: str, db: AsyncSession = Depends(get_db)):
+async def get_paper(paper_id: str, db: AsyncSession = Depends(get_db), _user: DBUser = Depends(require_auth)):
     """Get a specific paper with full text."""
     result = await db.execute(
         select(Paper).where(Paper.id == paper_id)
@@ -1087,7 +1192,7 @@ async def get_paper(paper_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @api_router.get("/projects/{project_id}/citation-network")
-async def get_citation_network(project_id: str, db: AsyncSession = Depends(get_db)):
+async def get_citation_network(project_id: str, db: AsyncSession = Depends(get_db), _user: DBUser = Depends(require_auth)):
     """Get citation network graph for visualization."""
     # Get all papers for the project
     result = await db.execute(
@@ -1198,7 +1303,7 @@ async def get_citation_network(project_id: str, db: AsyncSession = Depends(get_d
 # ============== AI Action Endpoints ==============
 
 @api_router.post("/ai/action")
-async def perform_ai_action(request: AIActionRequest):
+async def perform_ai_action(request: AIActionRequest, _user: DBUser = Depends(require_auth)):
     """Perform an AI action on content."""
     prompts = {
         "rewrite": "Rewrite the following text to improve clarity:\n\n",
@@ -1222,7 +1327,7 @@ async def perform_ai_action(request: AIActionRequest):
 # ============== Stats Endpoints ==============
 
 @api_router.get("/stats")
-async def get_global_stats(db: AsyncSession = Depends(get_db)):
+async def get_global_stats(db: AsyncSession = Depends(get_db), _user: DBUser = Depends(require_auth)):
     """Get global statistics."""
     project_count = await db.scalar(select(func.count(Project.id)))
     task_count = await db.scalar(select(func.count(Task.id)))
@@ -1252,6 +1357,262 @@ async def get_export_formats():
     return {"formats": export_service.get_supported_formats()}
 
 
+# ============== Admin Endpoints ==============
+
+@api_router.get("/admin/stats")
+async def admin_get_stats(
+    db: AsyncSession = Depends(get_db),
+    _admin: DBUser = Depends(require_admin),
+):
+    """Admin: Get platform-wide aggregate statistics."""
+    from datetime import timedelta
+    from database import CreditTransaction
+
+    now = datetime.now(timezone.utc)
+    last_7d = now - timedelta(days=7)
+    last_30d = now - timedelta(days=30)
+
+    from database.credit_models import User as UserModel
+    total_users = await db.scalar(select(func.count(UserModel.id))) or 0
+    signups_7d = await db.scalar(
+        select(func.count(UserModel.id)).where(UserModel.created_at >= last_7d)
+    ) or 0
+    signups_30d = await db.scalar(
+        select(func.count(UserModel.id)).where(UserModel.created_at >= last_30d)
+    ) or 0
+    total_projects = await db.scalar(select(func.count(Project.id))) or 0
+    active_projects = await db.scalar(
+        select(func.count(Project.id)).where(
+            Project.status.in_([ProjectStatus.EXECUTING, ProjectStatus.PLANNED])
+        )
+    ) or 0
+    credits_issued = await db.scalar(
+        select(func.coalesce(func.sum(CreditTransaction.amount), 0)).where(
+            CreditTransaction.amount > 0
+        )
+    ) or 0
+    credits_consumed = await db.scalar(
+        select(func.coalesce(func.sum(func.abs(CreditTransaction.amount)), 0)).where(
+            CreditTransaction.amount < 0
+        )
+    ) or 0
+
+    return {
+        "total_users": total_users,
+        "signups_last_7d": signups_7d,
+        "signups_last_30d": signups_30d,
+        "total_projects": total_projects,
+        "active_projects": active_projects,
+        "credits_issued": round(credits_issued, 2),
+        "credits_consumed": round(credits_consumed, 2),
+    }
+
+
+@api_router.get("/admin/users")
+async def admin_list_users(
+    page: int = 1,
+    per_page: int = 50,
+    search: Optional[str] = None,
+    db: AsyncSession = Depends(get_db),
+    _admin: DBUser = Depends(require_admin),
+):
+    """Admin: List all users with paginated results."""
+    from database.credit_models import User as UserModel
+    query = select(UserModel).order_by(UserModel.created_at.desc())
+    if search:
+        query = query.where(
+            (UserModel.email.ilike(f"%{search}%")) |
+            (UserModel.name.ilike(f"%{search}%"))
+        )
+    offset = (page - 1) * per_page
+    result = await db.execute(query.offset(offset).limit(per_page))
+    users = result.scalars().all()
+
+    # Project counts per user
+    project_counts_result = await db.execute(
+        select(Project.user_id, func.count(Project.id))
+        .where(Project.user_id.in_([u.id for u in users]))
+        .group_by(Project.user_id)
+    )
+    project_count_map = {row[0]: row[1] for row in project_counts_result.all()}
+
+    total = await db.scalar(
+        select(func.count(UserModel.id)).where(
+            (UserModel.email.ilike(f"%{search}%")) | (UserModel.name.ilike(f"%{search}%"))
+            if search else True
+        )
+    ) or 0
+
+    return {
+        "users": [
+            {
+                "id": u.id,
+                "email": u.email,
+                "name": u.name,
+                "role": u.role,
+                "picture_url": u.picture_url,
+                "credits_remaining": round(u.credits_remaining, 2),
+                "credits_used": round(u.credits_used, 2),
+                "subscription_tier": u.subscription_tier,
+                "is_admin": u.is_admin,
+                "created_at": u.created_at.isoformat(),
+                "last_login_at": u.last_login_at.isoformat() if u.last_login_at else None,
+                "project_count": project_count_map.get(u.id, 0),
+            }
+            for u in users
+        ],
+        "total": total,
+        "page": page,
+        "per_page": per_page,
+    }
+
+
+@api_router.get("/admin/users/{user_id}")
+async def admin_get_user(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+    _admin: DBUser = Depends(require_admin),
+):
+    """Admin: Get single user detail with transaction history."""
+    from database.credit_models import User as UserModel, CreditTransaction
+    result = await db.execute(select(UserModel).where(UserModel.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    tx_result = await db.execute(
+        select(CreditTransaction)
+        .where(CreditTransaction.user_id == user_id)
+        .order_by(CreditTransaction.created_at.desc())
+        .limit(50)
+    )
+    transactions = tx_result.scalars().all()
+
+    proj_count = await db.scalar(
+        select(func.count(Project.id)).where(Project.user_id == user_id)
+    ) or 0
+
+    return {
+        "id": user.id,
+        "email": user.email,
+        "name": user.name,
+        "role": user.role,
+        "bio": user.bio,
+        "picture_url": user.picture_url,
+        "credits_remaining": round(user.credits_remaining, 2),
+        "credits_purchased": round(user.credits_purchased, 2),
+        "credits_used": round(user.credits_used, 2),
+        "subscription_tier": user.subscription_tier,
+        "is_admin": user.is_admin,
+        "created_at": user.created_at.isoformat(),
+        "last_login_at": user.last_login_at.isoformat() if user.last_login_at else None,
+        "project_count": proj_count,
+        "transactions": [
+            {
+                "id": t.id,
+                "type": t.transaction_type,
+                "amount": round(t.amount, 2),
+                "description": t.description,
+                "created_at": t.created_at.isoformat(),
+            }
+            for t in transactions
+        ],
+    }
+
+
+class AdminGrantCreditsRequest(BaseModel):
+    amount: float
+    note: str = "Admin credit grant"
+
+
+@api_router.post("/admin/users/{user_id}/credits")
+async def admin_grant_credits(
+    user_id: str,
+    data: AdminGrantCreditsRequest,
+    db: AsyncSession = Depends(get_db),
+    admin: DBUser = Depends(require_admin),
+):
+    """Admin: Add or remove credits for a user."""
+    from database.credit_models import User as UserModel
+    result = await db.execute(select(UserModel).where(UserModel.id == user_id))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    await credit_service.grant_credits(
+        db=db,
+        user_id=user_id,
+        amount=data.amount,
+        transaction_type="admin_grant",
+        description=f"{data.note} (by admin {admin.email})",
+    )
+    await db.refresh(user)
+    return {
+        "message": f"Granted {data.amount} credits to {user.email}",
+        "credits_remaining": round(user.credits_remaining, 2),
+    }
+
+
+@api_router.get("/admin/usage")
+async def admin_get_usage(
+    days: int = 30,
+    db: AsyncSession = Depends(get_db),
+    _admin: DBUser = Depends(require_admin),
+):
+    """Admin: Daily credit consumption for the last N days."""
+    from database.credit_models import CreditTransaction
+    from datetime import timedelta
+    from sqlalchemy import cast, Date
+
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+    result = await db.execute(
+        select(
+            cast(CreditTransaction.created_at, Date).label("date"),
+            func.sum(func.abs(CreditTransaction.amount)).label("consumed"),
+            func.count(CreditTransaction.id).label("transactions"),
+        )
+        .where(CreditTransaction.created_at >= since, CreditTransaction.amount < 0)
+        .group_by(cast(CreditTransaction.created_at, Date))
+        .order_by(cast(CreditTransaction.created_at, Date))
+    )
+    rows = result.all()
+
+    # Top users by usage
+    top_result = await db.execute(
+        select(
+            CreditTransaction.user_id,
+            func.sum(func.abs(CreditTransaction.amount)).label("total_consumed"),
+        )
+        .where(CreditTransaction.created_at >= since, CreditTransaction.amount < 0)
+        .group_by(CreditTransaction.user_id)
+        .order_by(func.sum(func.abs(CreditTransaction.amount)).desc())
+        .limit(10)
+    )
+    top_user_rows = top_result.all()
+
+    from database.credit_models import User as UserModel
+    user_ids = [row[0] for row in top_user_rows]
+    users_result = await db.execute(select(UserModel).where(UserModel.id.in_(user_ids)))
+    user_map = {u.id: u for u in users_result.scalars().all()}
+
+    return {
+        "daily": [
+            {"date": str(row.date), "consumed": round(row.consumed, 2), "transactions": row.transactions}
+            for row in rows
+        ],
+        "top_users": [
+            {
+                "user_id": row[0],
+                "email": user_map[row[0]].email if row[0] in user_map else "unknown",
+                "name": user_map[row[0]].name if row[0] in user_map else None,
+                "total_consumed": round(row[1], 2),
+            }
+            for row in top_user_rows
+        ],
+    }
+
+
+
 # Include routers in app
 api_router.include_router(file_router)
 logger.info("Included file router in api_router")
@@ -1272,11 +1633,15 @@ logger.info("Included export router in api_router")
 app.include_router(api_router)
 logger.info("Included api_router in app")
 
-# CORS middleware
+# CORS middleware — require explicit origins, no wildcard default
+_cors_origins = os.environ.get('CORS_ORIGINS', '')
+if not _cors_origins:
+    logger.warning("CORS_ORIGINS not set — defaulting to localhost:3000. Set explicitly for production.")
+    _cors_origins = 'http://localhost:3000'
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
+    allow_origins=[o.strip() for o in _cors_origins.split(',') if o.strip()],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -1286,10 +1651,11 @@ app.add_middleware(
 
 if __name__ == "__main__":
     import uvicorn
+    _is_prod = os.environ.get('ENVIRONMENT', 'development') == 'production'
     uvicorn.run(
         "server:app",
-        host="0.0.0.0",
+        host="127.0.0.1" if _is_prod else "0.0.0.0",
         port=8000,
-        reload=True,
+        reload=not _is_prod,
         log_level="info"
     )

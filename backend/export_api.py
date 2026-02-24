@@ -3,6 +3,7 @@ Export API: REST endpoints for exporting documents to PDF/DOCX via Pandoc.
 """
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
+from auth_dependencies import require_auth
 from fastapi.responses import FileResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -14,7 +15,7 @@ from export_service import export_service, PandocNotFoundError, ConversionError,
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["export"])
+router = APIRouter(tags=["export"], dependencies=[Depends(require_auth)])
 
 
 # ============== Pydantic Models ==============
@@ -83,13 +84,21 @@ async def export_document_to_pdf(
         }
 
     try:
-        # Export to PDF
-        pdf_bytes = export_service.export_to_pdf(
-            tiptap_json=document.content,
-            title=document.title,
-            author=author,
-            metadata=export_metadata
-        )
+        # Export from LaTeX/Markdown source when set, else from TipTap
+        if document.content_latex:
+            pdf_bytes = export_service.export_to_pdf_from_source(
+                source_markdown=document.content_latex,
+                title=document.title,
+                author=author,
+                metadata=export_metadata
+            )
+        else:
+            pdf_bytes = export_service.export_to_pdf(
+                tiptap_json=document.content,
+                title=document.title,
+                author=author,
+                metadata=export_metadata
+            )
 
         if not pdf_bytes:
             raise HTTPException(

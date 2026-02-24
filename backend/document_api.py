@@ -5,6 +5,7 @@ import hashlib
 import json
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query
+from auth_dependencies import require_auth
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from sqlalchemy import select
@@ -17,7 +18,27 @@ from llm_service import llm_service
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(tags=["documents"])
+router = APIRouter(tags=["documents"], dependencies=[Depends(require_auth)])
+
+
+def _normalize_citation_style(style_value: Optional[object]) -> str:
+    """Normalize citation_style from enum/string legacy values to api form."""
+    if style_value is None:
+        return CitationStyle.APA.value
+
+    if isinstance(style_value, CitationStyle):
+        return style_value.value
+
+    raw = str(style_value).strip()
+    if raw in {"apa", "mla", "chicago"}:
+        return raw
+    if raw in {"APA", "MLA", "CHICAGO"}:
+        return raw.lower()
+    if raw.startswith("CitationStyle."):
+        enum_name = raw.split(".")[-1]
+        if enum_name in {"APA", "MLA", "CHICAGO"}:
+            return enum_name.lower()
+    return CitationStyle.APA.value
 
 
 # ============== Pydantic Models ==============
@@ -27,11 +48,13 @@ class DocumentRequest(BaseModel):
     title: str
     citation_style: Optional[str] = "apa"
     content: Optional[dict] = Field(None, description="Initial TipTap JSON content")
+    content_latex: Optional[str] = Field(None, description="Initial LaTeX/Markdown+math source (overrides content when set)")
 
 
 class DocumentUpdateRequest(BaseModel):
     """Request model for updating a document."""
     content: Optional[dict] = None
+    content_latex: Optional[str] = None
     title: Optional[str] = None
     citation_style: Optional[str] = None
 
@@ -42,6 +65,7 @@ class DocumentResponse(BaseModel):
     project_id: str
     title: str
     content: dict
+    content_latex: Optional[str] = None
     citation_style: str
     created_at: datetime
     updated_at: datetime
@@ -87,7 +111,7 @@ async def list_documents(
             id=d.id,
             project_id=d.project_id,
             title=d.title,
-            citation_style=d.citation_style.value,
+            citation_style=_normalize_citation_style(d.citation_style),
             created_at=d.created_at,
             updated_at=d.updated_at,
         )
@@ -130,6 +154,7 @@ async def create_document(
         project_id=project_id,
         title=document_request.title,
         content=document_request.content if document_request.content else empty_content,
+        content_latex=document_request.content_latex,
         citation_style=citation_style,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
@@ -145,7 +170,8 @@ async def create_document(
         project_id=document.project_id,
         title=document.title,
         content=document.content,
-        citation_style=document.citation_style.value,
+        content_latex=document.content_latex,
+        citation_style=_normalize_citation_style(document.citation_style),
         created_at=document.created_at,
         updated_at=document.updated_at,
     )
@@ -174,7 +200,8 @@ async def get_document(
         project_id=document.project_id,
         title=document.title,
         content=document.content,
-        citation_style=document.citation_style.value,
+        content_latex=document.content_latex,
+        citation_style=_normalize_citation_style(document.citation_style),
         created_at=document.created_at,
         updated_at=document.updated_at,
     )
@@ -230,13 +257,18 @@ async def update_document(
         if old_content_hash != new_hash:
             content_changed = True
 
+    # Update content_latex (LaTeX/Markdown+math source) if provided
+    if update_request.content_latex is not None:
+        document.content_latex = update_request.content_latex
+        content_changed = True
+
     document.updated_at = datetime.now(timezone.utc)
 
     # Create version if content changed
     if content_changed:
         version = DocumentVersion(
             document_id=document.id,
-            content=update_request.content,
+            content=document.content,
             created_at=datetime.now(timezone.utc),
             created_by=document.created_by,
         )
@@ -250,7 +282,8 @@ async def update_document(
         project_id=document.project_id,
         title=document.title,
         content=document.content,
-        citation_style=document.citation_style.value,
+        content_latex=document.content_latex,
+        citation_style=_normalize_citation_style(document.citation_style),
         created_at=document.created_at,
         updated_at=document.updated_at,
     )

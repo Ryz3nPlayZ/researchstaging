@@ -25,6 +25,16 @@ export interface FileItem {
     metadata?: Record<string, unknown>;
 }
 
+export interface RelevanceBreakdown {
+    semantic_alignment?: number;
+    attribute_alignment?: number;
+    methodological_match?: number;
+    dataset_match?: number;
+    citation_signal?: number;
+    recency_score?: number;
+    final_score?: number;
+}
+
 export interface Paper {
     id?: string;
     external_id?: string;
@@ -36,7 +46,11 @@ export interface Paper {
     citation_count?: number;
     url?: string;
     pdf_url?: string;
+    open_access_pdf_url?: string;
+    doi?: string;
     summary?: string;
+    relevance_breakdown?: RelevanceBreakdown;
+    final_score?: number;
 }
 
 // TipTap JSON content type
@@ -53,6 +67,8 @@ export interface Document {
     project_id: string;
     title: string;
     content: TipTapContent;
+    /** LaTeX or Markdown+math source; when set, editor shows source + live preview */
+    content_latex?: string | null;
     citation_style: string;
     created_at: string;
     updated_at: string;
@@ -69,6 +85,7 @@ export interface DocumentListItem {
 
 export interface DocumentUpdateRequest {
     content?: TipTapContent;
+    content_latex?: string | null;
     title?: string;
     citation_style?: string;
 }
@@ -124,6 +141,68 @@ export interface Claim {
     extracted_at: string;
 }
 
+export interface ClaimRelationship {
+    id: string;
+    project_id: string;
+    from_claim_id: string;
+    to_claim_id: string;
+    relationship_type: string;
+    strength: number;
+    metadata: Record<string, unknown>;
+    created_at: string;
+}
+
+export interface ProvenanceClaim {
+    id: string;
+    claim_text: string;
+    claim_type?: string;
+    source_type: string;
+    source_id: string;
+    confidence: number;
+    relevance_score?: number;
+    extracted_at: string;
+    source_label: string;
+    source_url?: string;
+    source_exists: boolean;
+    relationship_count: number;
+    cited_in_documents: number;
+}
+
+export interface ProvenanceArtifact {
+    artifact_id: string;
+    artifact_type: string;
+    title: string;
+    created_at: string;
+    task_id?: string;
+    task_name?: string;
+    run_id?: string;
+    parent_artifact_id?: string;
+    parent_artifact_title?: string;
+    input_artifact_ids: string[];
+}
+
+export interface ProjectProvenanceSummary {
+    total_claims: number;
+    avg_claim_confidence: number;
+    total_relationships: number;
+    total_claim_citations: number;
+    total_artifacts: number;
+    source_type_breakdown: Record<string, number>;
+}
+
+export interface ProjectProvenance {
+    summary: ProjectProvenanceSummary;
+    claims: ProvenanceClaim[];
+    artifacts: ProvenanceArtifact[];
+}
+
+export interface ClaimCitationUsage {
+    citation_id: string;
+    document_id: string;
+    document_title: string;
+    created_at: string;
+}
+
 export interface StatsResponse {
     projects: number;
     tasks: number;
@@ -157,6 +236,18 @@ export interface TaskResponse {
     started_at?: string;
     completed_at?: string;
     output_artifact_id?: string;
+}
+
+export interface ExecutionLogEntry {
+    id: string;
+    project_id: string;
+    task_id?: string;
+    run_id?: string;
+    event_type: string;
+    level: string;
+    message: string;
+    data?: Record<string, unknown>;
+    timestamp: string;
 }
 
 export interface ArtifactResponse {

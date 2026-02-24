@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Project } from '@/lib/types';
-import { mapProjectStatus, calcProjectProgress, relativeTime, truncate } from '@/lib/types';
+import { mapProjectStatus, calcProjectProgress, relativeTime } from '@/lib/types';
 
 interface ProjectCardProps {
     project: Project;
@@ -17,7 +17,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
     return (
         <Link href={`/projects/${project.id}`} className="block h-full">
             <div
-                className="glass rounded-2xl p-6 h-full flex flex-col transition-all duration-300 hover:shadow-xl hover:scale-[1.01] group border border-white/20"
+                className="bg-white rounded-2xl p-6 h-full flex flex-col transition-colors duration-200 hover:border-gray-300 group border border-gray-200"
             >
                 {/* Header: Status dot + Updated */}
                 <div className="flex items-center justify-between mb-4">
@@ -34,7 +34,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
                 </div>
 
                 {/* Research goal */}
-                <h3 className="text-lg font-semibold text-gray-900 mb-2 leading-tight line-clamp-2 group-hover:text-[#1C7C54] transition-colors">
+                <h3 className="text-lg font-semibold text-gray-900 mb-2 leading-tight line-clamp-2 group-hover:text-[#1B512D] transition-colors">
                     {project.research_goal}
                 </h3>
 
@@ -45,7 +45,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
                 </p>
 
                 {/* Footer */}
-                <div className="mt-auto pt-4 border-t border-gray-100/50">
+                <div className="mt-auto pt-4 border-t border-gray-100">
                     {/* Progress bar for active projects */}
                     {isActive && (
                         <div className="space-y-2 mb-3">

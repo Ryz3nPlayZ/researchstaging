@@ -130,19 +130,41 @@ class ExportService:
 
         # Convert TipTap to Markdown
         markdown = self.tiptap_to_markdown(tiptap_json)
+        return self._markdown_to_pdf(markdown, title, author, metadata)
 
-        # Add YAML frontmatter
+    def export_to_pdf_from_source(
+        self,
+        source_markdown: str,
+        title: str = "Document",
+        author: Optional[str] = None,
+        metadata: Optional[dict] = None
+    ) -> bytes:
+        """
+        Export LaTeX/Markdown+math source string to PDF.
+
+        Use when document has content_latex (editor source). Pandoc accepts
+        Markdown with LaTeX math ($...$ and $$...$$).
+        """
+        if not self.pdf_engine:
+            raise ConversionError(
+                "PDF export requires LaTeX. Install xelatex/pdflatex. Or use DOCX export instead."
+            )
+        return self._markdown_to_pdf(source_markdown or "", title, author, metadata)
+
+    def _markdown_to_pdf(
+        self,
+        markdown: str,
+        title: str,
+        author: Optional[str],
+        metadata: Optional[dict]
+    ) -> bytes:
+        """Add frontmatter, write temp file, run Pandoc to PDF. Shared by TipTap and content_latex paths."""
         markdown_with_meta = self._add_frontmatter(markdown, title, author, metadata)
-
-        # Create temp files
         input_path = self.temp_dir / f"input_{datetime.now().strftime('%Y%m%d%H%M%S%f')}.md"
         output_path = input_path.with_suffix(".pdf")
 
         try:
-            # Write markdown input
             input_path.write_text(markdown_with_meta, encoding="utf-8")
-
-            # Run Pandoc with detected PDF engine
             cmd = [
                 "pandoc",
                 str(input_path),
@@ -166,9 +188,7 @@ class ExportService:
                 logger.error(f"Pandoc PDF conversion failed: {result.stderr}")
                 raise ConversionError(f"PDF conversion failed: {result.stderr}")
 
-            # Read output file
             pdf_bytes = output_path.read_bytes()
-
             logger.info(f"Successfully exported '{title}' to PDF ({len(pdf_bytes)} bytes)")
             return pdf_bytes
 
@@ -178,7 +198,6 @@ class ExportService:
             logger.error(f"PDF export error: {e}")
             raise ConversionError(f"PDF export failed: {str(e)}")
         finally:
-            # Cleanup temp files
             for path in [input_path, output_path]:
                 try:
                     if path.exists():

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { projectApi } from '@/lib/api';
 import type { Project } from '@/lib/types';
-import { mapProjectStatus, type ProjectUIStatus } from '@/lib/types';
+import { mapProjectStatus } from '@/lib/types';
 import { ProjectCard } from './_components/project-card';
 import { ProjectFilters } from './_components/project-filters';
 import { OnboardingChat } from '@/components/research-manager/onboarding-chat';
@@ -24,7 +24,9 @@ export default function ProjectsPage() {
     };
 
     useEffect(() => {
-        loadProjects();
+        // Initial data fetch on mount - valid pattern for page loading
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        void loadProjects();
     }, []);
 
     const filtered = projects.filter((p) => {
@@ -47,19 +49,19 @@ export default function ProjectsPage() {
             <div className="flex items-center justify-between mb-6">
                 <h1 className="text-2xl font-bold text-base-800 font-ui tracking-tight">Projects</h1>
                 <div className="flex items-center gap-3">
-                    <input
-                        type="text"
-                        placeholder="Search projects..."
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                        className="h-9 w-60 rounded-lg border border-base-200 bg-base-0 px-3 text-sm text-base-800 placeholder:text-base-400 focus:outline-none focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20 transition-colors font-ui"
-                    />
-                    <button
-                        onClick={() => setShowNewProject(true)}
-                        className="bg-accent-500 hover:bg-accent-600 text-base-0 px-4 py-2 rounded-lg text-sm font-medium shadow-sm transition-colors duration-200 font-ui"
-                    >
-                        New Project
-                    </button>
+                    <div className="relative">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="absolute left-3 top-1/2 -translate-y-1/2 text-[#8A9A8A]">
+                            <circle cx="11" cy="11" r="8" />
+                            <path d="m21 21-4.3-4.3" />
+                        </svg>
+                        <input
+                            type="text"
+                            placeholder="Search projects..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            className="h-9 w-60 rounded-full border border-black/[0.04] bg-[#F5F5F7] pl-9 pr-3 text-sm text-[#4A5D4A] placeholder:text-[#8A9A8A] focus:outline-none focus:border-[#73E2A7] focus:ring-1 focus:ring-[#73E2A7] transition-all font-ui"
+                        />
+                    </div>
                 </div>
             </div>
 
@@ -72,7 +74,7 @@ export default function ProjectsPage() {
             {loading ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {[1, 2, 3, 4, 5, 6].map((i) => (
-                        <div key={i} className="glass rounded-2xl p-6 h-48 animate-pulse border border-white/20">
+                        <div key={i} className="bg-white rounded-2xl p-6 h-48 animate-pulse border border-gray-200">
                             <div className="h-2 bg-gray-200 rounded w-16 mb-4" />
                             <div className="h-6 bg-gray-200 rounded w-3/4 mb-3" />
                             <div className="h-3 bg-gray-100 rounded w-1/2" />
@@ -86,10 +88,8 @@ export default function ProjectsPage() {
                     ))}
                 </div>
             ) : (
-                <div className="glass rounded-2xl p-16 text-center border border-white/20">
-                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <span className="text-2xl">🔍</span>
-                    </div>
+                <div className="bg-white rounded-2xl p-16 text-center border border-gray-200">
+                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4" />
                     <h3 className="text-lg font-semibold text-gray-900 mb-1">No projects found</h3>
                     <p className="text-sm text-gray-500 font-medium">
                         {search || activeFilter !== 'All'
@@ -103,12 +103,7 @@ export default function ProjectsPage() {
             <Dialog open={showNewProject} onOpenChange={setShowNewProject}>
                 <DialogContent className="sm:max-w-2xl p-0 bg-transparent border-none shadow-none text-base-900">
                     <DialogTitle className="sr-only">New Project</DialogTitle>
-                    <OnboardingChat
-                        onComplete={() => {
-                            loadProjects();
-                            setShowNewProject(false);
-                        }}
-                    />
+                    <OnboardingChat />
                 </DialogContent>
             </Dialog>
         </div>

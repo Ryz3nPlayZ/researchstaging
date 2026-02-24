@@ -4,13 +4,11 @@ import { useState } from "react";
 import { chatApi } from "@/lib/api";
 import { Paper } from "@/lib/types";
 import {
-    Loader2,
     X,
     Sparkles,
     CheckCircle2,
     ArrowRight,
     ArrowLeft,
-    FileText,
     Bot,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -228,7 +226,7 @@ Format: ${format === "bullet"
                                         ].map((opt) => (
                                             <div
                                                 key={opt.id}
-                                                onClick={() => setSynthesisType(opt.id as any)}
+                                                onClick={() => setSynthesisType(opt.id as typeof synthesisType)}
                                                 className={`p-3 rounded-xl border cursor-pointer transition-all ${synthesisType === opt.id
                                                     ? "border-[#1C7C54] bg-[#DEF4C6]/20 shadow-sm"
                                                     : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
@@ -255,7 +253,7 @@ Format: ${format === "bullet"
                                         ].map((opt) => (
                                             <button
                                                 key={opt.id}
-                                                onClick={() => setFormat(opt.id as any)}
+                                                onClick={() => setFormat(opt.id as typeof format)}
                                                 className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${format === opt.id
                                                     ? "border-[#1C7C54] bg-[#1C7C54] text-white"
                                                     : "border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
@@ -307,7 +305,7 @@ Format: ${format === "bullet"
                 <div className="px-6 py-4 border-t border-gray-100 bg-gray-50 flex justify-between items-center">
                     {step > 1 && !generating && (
                         <button
-                            onClick={() => setStep((s) => (s - 1) as any)}
+                            onClick={() => setStep((s) => (s - 1) as 1 | 2)}
                             className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 px-4 py-2 hover:bg-gray-200 rounded-lg transition-colors"
                         >
                             <ArrowLeft size={16} /> Back

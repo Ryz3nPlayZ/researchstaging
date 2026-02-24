@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { getToken } from "@/lib/auth";
+import { trackEvent } from "@/components/posthog-provider";
 import {
     CheckCircle2,
     ArrowRight,
@@ -20,8 +22,20 @@ export default function OnboardingPage() {
 
     const handleComplete = async () => {
         setLoading(true);
-        // Simulate API call or setting user preferences
-        await new Promise(resolve => setTimeout(resolve, 800));
+        try {
+            const token = getToken();
+            await fetch('/api/users/me', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({ name: name.trim(), role }),
+            });
+        } catch {
+            // Non-blocking — proceed to dashboard regardless
+        }
+        trackEvent('onboarding_completed', { role: role ?? undefined });
         router.push("/dashboard");
     };
 
@@ -88,15 +102,15 @@ export default function OnboardingPage() {
                     <div className="flex-1 flex flex-col justify-center animate-in slide-in-from-right-4 fade-in duration-300">
                         <div className="mb-6">
                             <h2 className="text-2xl font-bold text-gray-900 mb-2">What best describes your role?</h2>
-                            <p className="text-gray-500">We'll customize your workspace based on your needs.</p>
+                            <p className="text-gray-500">We&apos;ll customize your workspace based on your needs.</p>
                         </div>
 
                         <div className="grid grid-cols-1 gap-3">
                             <button
                                 onClick={() => setRole("researcher")}
                                 className={`group p-4 rounded-xl border-2 text-left transition-all hover:shadow-md ${role === "researcher"
-                                        ? "border-[#1C7C54] bg-[#DEF4C6]/20"
-                                        : "border-gray-100 hover:border-gray-200 bg-white"
+                                    ? "border-[#1C7C54] bg-[#DEF4C6]/20"
+                                    : "border-gray-100 hover:border-gray-200 bg-white"
                                     }`}
                             >
                                 <div className="flex items-start gap-4">
@@ -114,8 +128,8 @@ export default function OnboardingPage() {
                             <button
                                 onClick={() => setRole("student")}
                                 className={`group p-4 rounded-xl border-2 text-left transition-all hover:shadow-md ${role === "student"
-                                        ? "border-[#1C7C54] bg-[#DEF4C6]/20"
-                                        : "border-gray-100 hover:border-gray-200 bg-white"
+                                    ? "border-[#1C7C54] bg-[#DEF4C6]/20"
+                                    : "border-gray-100 hover:border-gray-200 bg-white"
                                     }`}
                             >
                                 <div className="flex items-start gap-4">
@@ -133,8 +147,8 @@ export default function OnboardingPage() {
                             <button
                                 onClick={() => setRole("team_lead")}
                                 className={`group p-4 rounded-xl border-2 text-left transition-all hover:shadow-md ${role === "team_lead"
-                                        ? "border-[#1C7C54] bg-[#DEF4C6]/20"
-                                        : "border-gray-100 hover:border-gray-200 bg-white"
+                                    ? "border-[#1C7C54] bg-[#DEF4C6]/20"
+                                    : "border-gray-100 hover:border-gray-200 bg-white"
                                     }`}
                             >
                                 <div className="flex items-start gap-4">
@@ -174,9 +188,9 @@ export default function OnboardingPage() {
                             <CheckCircle2 size={40} className="text-[#1C7C54]" />
                         </div>
 
-                        <h2 className="text-2xl font-bold text-gray-900 mb-2">You're all set, {name}!</h2>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-2">You&apos;re all set, {name}!</h2>
                         <p className="text-gray-500 max-w-xs mx-auto mb-8">
-                            Your workspace is ready. Let's start your first research project.
+                            Your workspace is ready. Let&apos;s start your first research project.
                         </p>
 
                         <button

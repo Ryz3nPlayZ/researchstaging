@@ -3,6 +3,7 @@ Chat API for AI Assistant sidebar.
 Provides endpoints for chat message persistence and AI responses.
 """
 from fastapi import APIRouter, Depends, HTTPException
+from auth_dependencies import require_auth
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -18,7 +19,7 @@ import uuid
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/chat", tags=["chat"])
+router = APIRouter(prefix="/chat", tags=["chat"], dependencies=[Depends(require_auth)])
 
 
 # ============== Pydantic Models ==============
@@ -56,6 +57,10 @@ class ProposePlanRequest(BaseModel):
     context: Optional[Dict[str, Any]] = None
 
 
+class ExecutePlanRequest(BaseModel):
+    plan: ProposedPlan
+    context: Optional[Dict[str, Any]] = None
+
 # ============== Chat Message Table (in-memory for MVP) ==============
 # For MVP, we'll use in-memory storage. For production, add ChatMessage model to database.
 
@@ -89,6 +94,35 @@ def _add_message(project_id: str, role: str, content: str, context: Optional[Dic
 
 # ============== Context Injection ==============
 
+
+def _tiptap_to_plain_text(node: Any) -> str:
+    """Extract plain text from TipTap JSON for context when content_latex is not set."""
+    if not node:
+        return ""
+    if isinstance(node, dict):
+        if node.get("text"):
+            return node["text"]
+        content = node.get("content") or []
+        sep = "\n" if node.get("type") == "paragraph" else ""
+        return sep.join(_tiptap_to_plain_text(c) for c in content)
+    return ""
+
+
+def _normalize_citation_style(style_value: Optional[object]) -> Optional[str]:
+    if style_value is None:
+        return None
+    if hasattr(style_value, "value"):
+        return str(style_value.value).lower()
+    raw = str(style_value).strip()
+    if raw in {"apa", "mla", "chicago"}:
+        return raw
+    if raw in {"APA", "MLA", "CHICAGO"}:
+        return raw.lower()
+    if raw.startswith("CitationStyle."):
+        return raw.split(".")[-1].lower()
+    return raw.lower() if raw else None
+
+
 async def inject_context(
     project_id: str,
     document_id: Optional[str],
@@ -115,19 +149,22 @@ async def inject_context(
     """
     context = {}
 
-    # Document content
+    # Document content: include source string (content_latex or plain text from TipTap) so AI writes in same format
     if document_id:
-        from database import Document
+        from database.models import Document
         doc_result = await db.execute(
             select(Document).where(Document.id == document_id)
         )
         document = doc_result.scalar_one_or_none()
         if document:
+            content_source = document.content_latex if document.content_latex else _tiptap_to_plain_text(document.content)
             context['document'] = {
                 'title': document.title,
-                'content': document.content,  # TipTap JSON
-                'citation_style': document.citation_style.value if document.citation_style else None
+                'content': document.content,  # TipTap JSON (legacy)
+                'content_source': content_source,  # LaTeX/Markdown+math or plain text for AI to read/write
+                'citation_style': _normalize_citation_style(document.citation_style)
             }
+            context['document_id'] = document_id
             logger.info(f"Loaded document context: {document.title}")
 
     # Recent claims (last 20, high confidence)
@@ -199,12 +236,24 @@ async def inject_context(
     except Exception as e:
         logger.warning(f"Failed to load preferences for context: {e}")
 
+    # Conversation History
+    try:
+        messages = _get_project_messages(project_id)
+        if messages:
+            # Exclude the very last one which is the current query
+            recent = messages[-11:-1] if len(messages) > 1 else []
+            if recent:
+                context['history'] = [{"role": m["role"], "content": m["content"]} for m in recent]
+                logger.info(f"Loaded {len(recent)} messages for history context")
+    except Exception as e:
+        logger.warning(f"Failed to load history for context: {e}")
+
     return context
 
 
 def build_system_prompt(context: dict) -> str:
     """
-    Build system prompt with context.
+    Build comprehensive system prompt with context.
 
     Args:
         context: Context dictionary from inject_context()
@@ -212,20 +261,57 @@ def build_system_prompt(context: dict) -> str:
     Returns:
         System prompt string
     """
-    base = "You are a helpful research assistant."
+    base = """You are a Research Intelligence Agent — an expert assistant embedded in a research workspace. You help researchers write documents, analyze data, find literature, and make sense of their work.
+
+## CAPABILITIES
+- Write and edit LaTeX/Markdown documents with academic rigor
+- Search and synthesize scientific literature
+- Generate and debug Python/R analysis code
+- Create documents, manage files, and organize research artifacts
+- Track claims and their provenance across sources
+
+## STYLE
+- Be concise and direct — researchers are busy
+- Use academic language when writing content, plain language when chatting
+- Always cite sources when making factual claims
+- Use LaTeX notation for math: $inline$ and $$block$$
+- When generating code, include comments explaining the approach
+
+## CONSTRAINTS
+- Stay within the project's research scope
+- Never fabricate citations or data
+- When unsure, say so and suggest how to verify
+- Keep responses under 500 words unless writing full sections
+
+## ACTIONS
+When the user asks you to create a document, include this tag in your response:
+[ACTION:CREATE_DOC|Document Title Here]
+
+When asked to modify a document, reference it by name and provide the content to insert."""
 
     if 'document' in context:
-        base += f"\n\n# Current Document\nTitle: {context['document']['title']}"
+        base += f"\n\n## CURRENT DOCUMENT\nTitle: {context['document']['title']}"
         if context['document'].get('citation_style'):
             base += f"\nCitation Style: {context['document']['citation_style']}"
+        content_source = context['document'].get('content_source')
+        if content_source:
+            base += f"\n\nDocument source (write in this format — Markdown/LaTeX; use $...$ and $$...$$ for math):\n{content_source[:8000]}"
+        elif context['document'].get('content'):
+            content_preview = str(context['document']['content'])[:2000]
+            base += f"\nContent Preview: {content_preview}"
 
     if context.get('claims'):
-        base += f"\n\n# Research Context\nThe project has {len(context['claims'])} extracted claims from literature."
+        claims_text = "\n".join([f"- {c['text']} (confidence: {c['confidence']:.0%})" for c in context['claims'][:10]])
+        base += f"\n\n## RESEARCH CLAIMS ({len(context['claims'])} total)\n{claims_text}"
+
+    if context.get('findings'):
+        findings_text = "\n".join([f"- [{f['type']}] {f['summary']}" for f in context['findings'][:5]])
+        base += f"\n\n## ANALYSIS FINDINGS\n{findings_text}"
 
     if context.get('preferences'):
         topics = context['preferences'].get('topics', [])
         if topics:
-            base += f"\n\nUser interests: {', '.join(topics[:5])}"
+            base += f"\n\nUser research interests: {', '.join(topics[:5])}"
 
     return base
 
@@ -348,7 +434,7 @@ async def propose_plan(
 @router.post("/projects/{project_id}/execute-plan")
 async def execute_plan(
     project_id: str,
-    plan: ProposedPlan,
+    request: ExecutePlanRequest,
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -356,7 +442,8 @@ async def execute_plan(
 
     Args:
         project_id: Project ID
-        plan: Approved ProposedPlan
+        request: Request with plan and context
+
 
     Returns:
         List of step execution results
@@ -369,17 +456,18 @@ async def execute_plan(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    plan = request.plan
     # Inject context
     context = await inject_context(
         project_id=project_id,
-        document_id=None,
+        document_id=request.context.get("document_id") if request.context else None,
         query=plan.goal,
         db=db
     )
 
     try:
-        # Create agent router
-        agent_router = AgentRouter(llm_service)
+        # Create agent router with db context for autonomous execution
+        agent_router = AgentRouter(llm_service, db=db, project_id=project_id)
 
         # Execute plan
         results = await agent_router.execute_plan(
@@ -436,16 +524,20 @@ async def send_message(
 
     # Inject context
     document_id = request.context.get("document_id") if request.context else None
+    client_context = request.context or {}
     context = await inject_context(
         project_id=project_id,
         document_id=document_id,
         query=request.message,
         db=db
     )
+    
+    # Include client-provided context (tool instructions, etc.)
+    context['client_context'] = client_context
 
     try:
-        # Create agent router
-        agent_router = AgentRouter(llm_service)
+        # Create agent router with db context for autonomous execution
+        agent_router = AgentRouter(llm_service, db=db, project_id=project_id)
 
         # Route to appropriate agent
         agent_response = await agent_router.route(

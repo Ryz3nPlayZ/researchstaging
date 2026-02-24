@@ -31,6 +31,14 @@ dist/
 dist
 
 # Environment files (comprehensive coverage)
+.env
+.env.*
+!.env.example
+!.env.*.example
+backend/.env
+backend/.env.*
+frontend/.env.local
+frontend/.env.*.local
 
 *token.json*
 *credentials.json*
@@ -65,6 +73,15 @@ chainlit.md
 
 # Data and databases
 agenthub/agents/youtube/db
+
+# Uploads and generated files
+backend/uploads/
+backend/storage/
+storage/
+uploads/
+
+# Alembic
+backend/alembic/versions/*.pyc
 
 # Archive files and large assets
 **/*.zip

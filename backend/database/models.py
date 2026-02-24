@@ -82,6 +82,9 @@ class OutputType(str, enum.Enum):
     LITERATURE_REVIEW = "literature_review"
     RESEARCH_PAPER = "research_paper"
     RESEARCH_BRIEF = "research_brief"
+    ANALYSIS_REPORT = "analysis_report"
+    THESIS_CHAPTER = "thesis_chapter"
+    META_ANALYSIS = "meta_analysis"
 
 
 # ============== Core Models ==============
@@ -94,6 +97,9 @@ class Project(Base):
     __tablename__ = "projects"
 
     id = Column(String(36), primary_key=True, default=generate_uuid)
+
+    # Owner — nullable so existing rows without a user_id remain valid
+    user_id = Column(String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     
     # User input
     research_goal = Column(Text, nullable=False)
@@ -634,9 +640,12 @@ class Document(Base):
     # Document metadata
     title = Column(String(500), nullable=False, default="Untitled Document")
 
-    # Content (TipTap JSON format)
+    # Content (TipTap JSON format); used when content_latex is null
     content = Column(JSONB, nullable=False, default=dict)
     content_hash = Column(String(64), nullable=True)  # SHA-256 hash for change detection
+
+    # LaTeX / Markdown+math source; when set, editor uses this as source of truth and renders live
+    content_latex = Column(Text, nullable=True)
 
     # Citation style
     citation_style = Column(SQLEnum(CitationStyle), default=CitationStyle.APA, nullable=False)

@@ -8,8 +8,12 @@ from abc import ABC, abstractmethod
 from pydantic import BaseModel
 import json
 
+from sqlalchemy.ext.asyncio import AsyncSession
+from database.models import Document, Project, Task, Paper
+
 from llm_service import llm_service
 from memory_service import MemoryService
+from literature_service import literature_service
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +32,7 @@ class PlanStep(BaseModel):
     """A single step in a proposed plan."""
     step_number: int
     description: str
-    action_type: str  # "search", "analyze", "refine_text", "extract_claims"
+    action_type: str  # "search", "analyze", "refine_text", "extract_claims", "create_document", "update_document"
     estimated_duration: str  # "2 minutes", "5 minutes"
     requires_confirmation: bool = False
 
@@ -46,8 +50,10 @@ class ProposedPlan(BaseModel):
 class Agent(ABC):
     """Base class for all specialized agents."""
 
-    def __init__(self, llm_service):
+    def __init__(self, llm_service, db: Optional[AsyncSession] = None, project_id: Optional[str] = None):
         self.llm = llm_service
+        self.db = db
+        self.project_id = project_id
 
     @abstractmethod
     async def handle(self, query: str, context: Dict[str, Any]) -> str:
@@ -73,7 +79,9 @@ class DocumentAgent(Agent):
         "this paragraph", "current paragraph",
         "document content", "what's in", "in the document",
         "cite this", "format this", "rewrite this",
-        "summarize this", "explain this"
+        "summarize this", "explain this",
+        "add to", "write to", "insert into", "put in",
+        "add this", "write this", "add it", "put this"
     ]
 
     def can_handle(self, query: str) -> float:
@@ -94,25 +102,44 @@ class DocumentAgent(Agent):
     async def handle(self, query: str, context: Dict[str, Any]) -> str:
         """Handle document-related query."""
         doc_context = context.get("document", {})
+        client_context = context.get("client_context", {})
 
         # Build system prompt with document context
-        system_prompt = "You are a helpful research assistant working with a document."
+        system_prompt = """You are a helpful research assistant embedded in a document editor.
+
+## YOUR ROLE
+You help researchers write, edit, and manage documents. You can provide information, suggestions, and when appropriate, you can use tools to directly modify the document."""
 
         if doc_context.get("title"):
-            system_prompt += f"\n\n# Current Document\nTitle: {doc_context['title']}"
+            system_prompt += f"\n\n# CURRENT DOCUMENT\nTitle: {doc_context['title']}"
 
         if doc_context.get("citation_style"):
             system_prompt += f"\nCitation Style: {doc_context['citation_style']}"
 
         if context.get("selection"):
-            system_prompt += f"\n\n# Selected Text\n{context['selection']}"
+            system_prompt += f"\n\n# SELECTED TEXT\n{context['selection']}"
 
-        # For TipTap content, we'll just note it exists
-        # (Full content would be too large for prompt)
-        if doc_context.get("content"):
-            system_prompt += "\n\nThe user is working with a document in the editor."
+        if doc_context.get("content_source"):
+            system_prompt += "\n\nThe document source is provided above (content_source). When using write_to_document, output Markdown/LaTeX using $...$ and $$...$$ for math so the editor can render it."
+        elif doc_context.get("content"):
+            system_prompt += "\n\nThe user is currently editing a document."
 
-        system_prompt += "\n\nProvide helpful assistance with the document, including editing, formatting, citations, and content suggestions."
+        # Include client-provided tool instructions
+        if client_context.get("context"):
+            system_prompt += f"\n\n{client_context['context']}"
+
+        system_prompt += """
+
+## HOW TO RESPOND
+- Provide helpful assistance with the document
+- When the user asks you to add content, ALWAYS use the write_to_document tool
+- Never say you added something without actually using the tool
+
+## TOOL FORMAT (IMPORTANT)
+When using a tool, output EXACTLY this format with no extra characters:
+<tool_call>{"name": "tool_name", "arguments": {"key": "value"}}</tool_call>
+
+The JSON must be valid and compact (no newlines inside the JSON). Do not add > or any other characters before </tool_call>."""
 
         try:
             response = await self.llm.generate(
@@ -393,6 +420,8 @@ class GeneralAgent(Agent):
 
     async def handle(self, query: str, context: Dict[str, Any]) -> str:
         """Handle general queries."""
+        client_context = context.get("client_context", {})
+        
         # Build system prompt with basic project context
         system_prompt = "You are a helpful research assistant."
 
@@ -401,7 +430,19 @@ class GeneralAgent(Agent):
             if prefs.get("topics"):
                 system_prompt += f"\n\nUser interests: {', '.join(prefs['topics'][:5])}"
 
-        system_prompt += "\n\nProvide helpful research assistance, guidance on academic writing, methodology advice, and general research support."
+        # Include client-provided tool instructions
+        if client_context.get("context"):
+            system_prompt += f"\n\n{client_context['context']}"
+
+        system_prompt += """
+
+## TOOL FORMAT (IMPORTANT)
+When using a tool, output EXACTLY this format with no extra characters:
+<tool_call>{"name": "tool_name", "arguments": {"key": "value"}}</tool_call>
+
+The JSON must be valid and compact (no newlines inside the JSON). Do not add > or any other characters before </tool_call>.
+
+Provide helpful research assistance, guidance on academic writing, methodology advice, and general research support."""
 
         try:
             response = await self.llm.generate(
@@ -419,20 +460,23 @@ class GeneralAgent(Agent):
 class AgentRouter:
     """Routes queries to appropriate specialized agents."""
 
-    # Action verbs that indicate complex multi-step actions
     COMPLEX_ACTION_VERBS = [
         "analyze", "compare", "extract", "generate", "search",
-        "synthesize", "summarize all", "review all", "evaluate"
+        "synthesize", "summarize", "review", "evaluate",
+        "write", "create", "draft", "update", "edit",
+        "add", "insert", "append", "put", "include"
     ]
 
-    def __init__(self, llm_service):
+    def __init__(self, llm_service, db: Optional[AsyncSession] = None, project_id: Optional[str] = None):
         self.llm = llm_service
+        self.db = db
+        self.project_id = project_id
         self.agents = [
-            DocumentAgent(llm_service),
-            LiteratureAgent(llm_service),
-            MemoryAgent(llm_service),
-            AnalysisAgent(llm_service),
-            GeneralAgent(llm_service),  # Always last (fallback)
+            DocumentAgent(llm_service, db, project_id),
+            LiteratureAgent(llm_service, db, project_id),
+            MemoryAgent(llm_service, db, project_id),
+            AnalysisAgent(llm_service, db, project_id),
+            GeneralAgent(llm_service, db, project_id),  # Always last (fallback)
         ]
 
     def _is_simple_query(self, query: str) -> bool:
@@ -482,8 +526,14 @@ class AgentRouter:
         if self._is_simple_query(query):
             return None  # No plan needed for simple queries
 
+        # Format query with history
+        formatted_query = query
+        if context.get('history'):
+            history_text = "\n".join([f"{msg['role'].title()}: {msg['content']}" for msg in context['history']])
+            formatted_query = f"Previous Conversation:\n{history_text}\n\nCurrent Request: {query}"
+
         # Use LLM to generate plan
-        prompt = f"""User request: {query}
+        prompt = f"""User request: {formatted_query}
 
 Available contexts:
 - Document: {bool(context.get('document'))}
@@ -500,7 +550,7 @@ Return JSON with this exact structure:
     {{
       "step_number": 1,
       "description": "What this step does",
-      "action_type": "search|analyze|refine_text|extract_claims",
+      "action_type": "search|analyze|refine_text|extract_claims|create_document|update_document",
       "estimated_duration": "X minutes",
       "requires_confirmation": false
     }}
@@ -510,10 +560,12 @@ Return JSON with this exact structure:
 }}
 
 Action types:
-- search: Search literature/papers
+- search: Search literature/papers. The 'description' MUST be ONLY the exact search query keywords.
 - analyze: Analyze documents/content
 - refine_text: Improve or rewrite text
 - extract_claims: Extract claims from papers
+- create_document: Create a new document in the project
+- update_document: Append or update content in the currently open document
 
 Only return the JSON, no other text."""
 
@@ -565,15 +617,56 @@ Only return the JSON, no other text."""
         """
         try:
             if step.action_type == "search":
-                # Literature search - return info about available search
+                # Literature search
+                if not self.db or not self.project_id:
+                    return {
+                        "status": "completed",
+                        "step": step.step_number,
+                        "description": step.description,
+                        "message": "Simulated literature search (missing DB context).",
+                        "results_count": 0
+                    }
+
+                import re
+                query = step.description
+                # Extract text between quotes if present, otherwise use the whole description
+                quote_match = re.search(r'[\'"]([^\'"]+)[\'"]', query)
+                if quote_match:
+                    query = quote_match.group(1)
+                elif ":" in query:
+                    query = query.split(":")[-1].strip()
+
+                # Clean up common conversational prefixes
+                query = re.sub(r'^(search for|find papers on|literature search for)\s+', '', query, flags=re.IGNORECASE).strip()
+
+                results = await literature_service.search_all(query, limit_per_source=3)
+                
+                added_count = 0
+                for res in results[:5]:  # Take top 5
+                    new_paper = Paper(
+                        project_id=self.project_id,
+                        title=res.get("title", "Unknown Title"),
+                        authors=res.get("authors", []),
+                        abstract=res.get("abstract"),
+                        year=res.get("year"),
+                        citation_count=res.get("citation_count", 0),
+                        source="semantic_scholar",
+                        external_id=res.get("external_id"),
+                        url=res.get("url"),
+                        pdf_url=res.get("open_access_pdf_url", res.get("pdf_url"))
+                    )
+                    self.db.add(new_paper)
+                    added_count += 1
+                
+                await self.db.commit()
+
                 return {
                     "status": "completed",
                     "step": step.step_number,
                     "description": step.description,
-                    "message": f"Literature search would be performed here. {len(context.get('claims', []))} claims already in memory.",
-                    "results_count": len(context.get('claims', []))
+                    "message": f"Literature search completed. Found and added {added_count} highly relevant papers to the project.",
+                    "results_count": added_count
                 }
-
             elif step.action_type == "analyze":
                 # Analysis step
                 return {
@@ -599,11 +692,160 @@ Only return the JSON, no other text."""
 
             elif step.action_type == "extract_claims":
                 # Claim extraction
+                if not self.db or not self.project_id:
+                    return {
+                        "status": "completed",
+                        "step": step.step_number,
+                        "description": step.description,
+                        "message": "Simulated claims extraction (missing DB context)."
+                    }
+
+                from sqlalchemy import select
+                result = await self.db.execute(select(Paper).where(Paper.project_id == self.project_id).limit(5))
+                papers = list(result.scalars().all())
+                
+                if not papers:
+                    return {
+                        "status": "completed",
+                        "step": step.step_number,
+                        "description": step.description,
+                        "message": "No papers available for claim extraction."
+                    }
+
+                memory_svc = MemoryService(self.db)
+                papers_data = [{"id": p.id, "title": p.title, "abstract": p.abstract} for p in papers]
+                
+                try:
+                    # extract_claims_from_papers automatically creates Claim objects
+                    await memory_svc.extract_claims_from_papers(self.project_id, papers_data)
+                    await self.db.commit()
+                except Exception as e:
+                    logger.error(f"Error extracting claims autonomously: {e}")
+
                 return {
                     "status": "completed",
                     "step": step.step_number,
                     "description": step.description,
-                    "message": f"Claims extraction available. Currently {len(context.get('claims', []))} claims in memory."
+                    "message": f"Extracted core claims from {len(papers)} project papers and added them to research memory."
+                }
+                
+            elif step.action_type == "update_document":
+                # Document update
+                if not self.db or not self.project_id:
+                    return {
+                        "status": "completed",
+                        "step": step.step_number,
+                        "description": step.description,
+                        "message": "Simulated document update (missing DB context)."
+                    }
+
+                doc_id = context.get('document_id')
+                if not doc_id:
+                    return {
+                        "status": "completed",
+                        "step": step.step_number,
+                        "description": step.description,
+                        "message": "Failed to update document: No document is currently open in the workspace."
+                    }
+
+                from sqlalchemy import select
+                doc_query = await self.db.execute(select(Document).where(Document.id == doc_id))
+                doc_to_update = doc_query.scalar_one_or_none()
+                
+                if doc_to_update:
+                    import copy
+                    import json
+                    
+                    # Generate the actual content to append using the LLM
+                    prompt = f"You are an AI research assistant. Your task is to generate content to append to the document '{doc_to_update.title}'.\n\nTask description: {step.description}\n\nContext available from research:\n"
+                    if context.get('findings'):
+                        prompt += "\nFindings:\n" + json.dumps(context['findings'], indent=2, default=str)
+                    if context.get('claims'):
+                        prompt += "\nClaims:\n" + json.dumps(context['claims'], indent=2, default=str)
+                        
+                    prompt += "\n\nWrite the requested content exactly as it should appear in the document. Do not include any conversational filler, meta-commentary, or markdown code blocks around the text. Just return the raw text."
+                    
+                    try:
+                        text_to_append = await self.llm.generate(
+                            prompt=prompt,
+                            system_message="You are an expert AI writer and researcher."
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to generate content: {e}")
+                        text_to_append = f"[Error generating content based on step: {step.description}]"
+
+                    if not doc_to_update.content or 'content' not in doc_to_update.content:
+                        doc_to_update.content = {"type": "doc", "content": []}
+                        
+                    # Use deepcopy to trigger SQLAlchemy JSONB mutation detection
+                    new_content = copy.deepcopy(doc_to_update.content)
+                    
+                    # Ensure content is a list
+                    if not isinstance(new_content.get("content"), list):
+                        new_content["content"] = []
+                        
+                    new_content["content"].append({
+                        "type": "paragraph",
+                        "content": [{"type": "text", "text": text_to_append}]
+                    })
+                    
+                    # Also append a blank line for readability
+                    new_content["content"].append({
+                        "type": "paragraph",
+                        "content": []
+                    })
+                    
+                    # Reassign to trigger update
+                    doc_to_update.content = new_content
+                    
+                    self.db.add(doc_to_update)
+                    await self.db.commit()
+                    return {
+                        "status": "completed",
+                        "step": step.step_number,
+                        "description": step.description,
+                        "message": f"Appended AI-generated content to document '{doc_to_update.title}'."
+                    }
+                else:
+                    return {
+                        "status": "completed",
+                        "step": step.step_number,
+                        "description": step.description,
+                        "message": "Failed to update document: The system could not locate the active document."
+                    }
+                    
+            elif step.action_type == "create_document":
+                if not self.db or not self.project_id:
+                    logger.warning("AgentRouter missing db or project_id, simulating create_document")
+                    return {
+                        "status": "completed",
+                        "step": step.step_number,
+                        "description": step.description,
+                        "message": "Simulated document creation (missing DB context)."
+                    }
+
+                title = step.description
+                if ":" in title:
+                    title = title.split(":")[-1].strip()
+                if not title or len(title) > 255:
+                    title = "New Autonomous Document"
+                    
+                new_doc = Document(
+                    project_id=self.project_id,
+                    title=title,
+                    content={"type": "doc", "content": [{"type": "paragraph"}]},
+                    citation_style="apa"
+                )
+                self.db.add(new_doc)
+                await self.db.commit()
+                await self.db.refresh(new_doc)
+                
+                return {
+                    "status": "completed",
+                    "step": step.step_number,
+                    "description": step.description,
+                    "message": f"Created new document: '{title}'",
+                    "document_id": new_doc.id
                 }
 
             else:
@@ -714,7 +956,12 @@ Only return the JSON, no other text."""
 
         # Handle query
         try:
-            response_text = await best_agent.handle(query, context)
+            formatted_query = query
+            if context.get('history'):
+                history_text = "\n".join([f"{msg['role'].title()}: {msg['content']}" for msg in context['history']])
+                formatted_query = f"Previous Conversation:\n{history_text}\n\nCurrent Request:\n{query}"
+
+            response_text = await best_agent.handle(formatted_query, context)
 
             # Determine which contexts were used
             context_used = {}

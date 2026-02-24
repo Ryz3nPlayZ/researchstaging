@@ -1,7 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { TopBar } from '@/components/layout/top-bar';
+import { AIChatbar } from '@/components/ai-chatbar';
 import { useAuth } from '@/lib/auth-context';
 
 export default function AppLayout({
@@ -9,37 +11,35 @@ export default function AppLayout({
 }: {
     children: React.ReactNode;
 }) {
-    const { user, loading, login } = useAuth();
-    const [autoLoginDone, setAutoLoginDone] = useState(false);
+    const { user, loading } = useAuth();
+    const router = useRouter();
 
     useEffect(() => {
-        // Auto-login with mock credentials if no session
-        if (!loading && !user && !autoLoginDone) {
-            setAutoLoginDone(true);
-            login().catch(console.error);
+        if (!loading && !user) {
+            router.replace('/login');
         }
-    }, [loading, user, autoLoginDone, login]);
+    }, [loading, user, router]);
 
-    // Show loading skeleton while auth resolves
-    if (loading || (!user && !autoLoginDone)) {
+    if (loading || !user) {
         return (
-            <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: '#F5F5F7' }}>
+            <div className="min-h-screen flex items-center justify-center bg-background">
                 <div className="flex flex-col items-center gap-3">
-                    <div className="h-8 w-8 rounded-lg bg-[#1C7C54] flex items-center justify-center animate-pulse">
-                        <span className="text-white font-bold text-xs">R</span>
+                    <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center animate-pulse">
+                        <span className="text-primary-foreground font-bold text-xs">R</span>
                     </div>
-                    <p className="text-sm text-[#8A9A8A]">Loading workspace...</p>
+                    <p className="text-sm text-muted-foreground">Loading...</p>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen" style={{ backgroundColor: '#F5F5F7' }}>
+        <div className="min-h-screen bg-background">
             <TopBar />
-            <main className="max-w-[1200px] mx-auto px-6 py-6">
+            <main className="pt-20 pb-24">
                 {children}
             </main>
+            <AIChatbar />
         </div>
     );
 }

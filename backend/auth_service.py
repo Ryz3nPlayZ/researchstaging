@@ -15,6 +15,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 import httpx
+from jose import jwt, JWTError
 
 from database import User
 from credit_service import credit_service, INITIAL_FREE_CREDITS
@@ -27,8 +28,19 @@ GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
 GOOGLE_REDIRECT_URI = os.environ.get("GOOGLE_REDIRECT_URI", "http://localhost:5173/auth/callback")
 
-# JWT configuration (use python-jose if available, otherwise simple implementation)
-JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "your-secret-key-change-in-production")
+# JWT configuration — requires python-jose (in requirements.txt)
+_jwt_secret = os.environ.get("JWT_SECRET_KEY", "")
+if not _jwt_secret or _jwt_secret.startswith("your-secret"):
+    if os.environ.get("ENVIRONMENT", "development") == "production":
+        raise RuntimeError(
+            "JWT_SECRET_KEY must be set to a strong random value in production. "
+            "Generate one with: python -c 'import secrets; print(secrets.token_urlsafe(64))'"
+        )
+    else:
+        _jwt_secret = "dev-only-insecure-key-DO-NOT-USE-IN-PROD"
+        logger.warning("Using insecure default JWT secret — set JWT_SECRET_KEY for production")
+
+JWT_SECRET_KEY = _jwt_secret
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24 * 7  # 7 days
 
@@ -227,23 +239,12 @@ class AuthService:
         Returns:
             JWT token string
         """
-        try:
-            import jwt
-            payload = {
-                "user_id": user_id,
-                "exp": datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRATION_HOURS),
-                "iat": datetime.now(timezone.utc),
-            }
-            return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
-        except ImportError:
-            # If jwt library not available, use simple base64 encoding
-            # WARNING: This is not secure for production
-            import base64
-            payload = {
-                "user_id": user_id,
-                "exp": (datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRATION_HOURS)).isoformat(),
-            }
-            return base64.b64encode(json.dumps(payload).encode()).decode()
+        payload = {
+            "user_id": user_id,
+            "exp": datetime.now(timezone.utc) + timedelta(hours=JWT_EXPIRATION_HOURS),
+            "iat": datetime.now(timezone.utc),
+        }
+        return jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
 
     def verify_jwt_token(self, token: str) -> Optional[str]:
         """
@@ -256,22 +257,14 @@ class AuthService:
             User ID if valid, None otherwise
         """
         try:
-            import jwt
             payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
             return payload.get("user_id")
-        except ImportError:
-            # Simple base64 decoding (not secure, for development only)
-            import base64
-            try:
-                payload = json.loads(base64.b64decode(token).decode())
-                exp = datetime.fromisoformat(payload.get("exp", ""))
-                if exp > datetime.now(timezone.utc):
-                    return payload.get("user_id")
-            except Exception:
-                pass
+        except JWTError as e:
+            logger.warning(f"JWT verification failed: {e}")
+            return None
         except Exception as e:
-            logger.warning(f"Failed to verify JWT token: {e}")
-        return None
+            logger.warning(f"Unexpected error verifying JWT: {e}")
+            return None
 
     async def mock_authenticate_user(
         self,

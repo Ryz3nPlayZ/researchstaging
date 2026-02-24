@@ -15,6 +15,10 @@ import type {
     TaskResponse,
     ArtifactResponse,
     Claim,
+    ExecutionLogEntry,
+    ProjectProvenance,
+    ClaimCitationUsage,
+    ClaimRelationship,
 } from './types';
 import { getToken } from './auth';
 
@@ -24,6 +28,13 @@ export interface ApiResponse<T> {
     data?: T;
     error?: string;
     status: number;
+}
+
+export interface ExecutePlanResponse {
+    goal: string;
+    results: Array<Record<string, unknown>>;
+    total_steps: number;
+    completed_steps: number;
 }
 
 /** Generic fetch wrapper with auth token injection */
@@ -95,7 +106,7 @@ export const documentApi = {
     create: (projectId: string, title: string = 'Untitled Document') =>
         apiRequest<Document>(`/projects/${projectId}/documents`, {
             method: 'POST',
-            body: JSON.stringify({ title, citation_style: 'apa', content: {} }),
+            body: JSON.stringify({ title, citation_style: 'apa' }),
         }),
 
     get: (documentId: string) =>
@@ -208,6 +219,11 @@ export const taskApi = {
         apiRequest<{ message: string }>(`/tasks/${taskId}/retry`, { method: 'POST' }),
 };
 
+export const executionLogApi = {
+    list: (projectId: string, limit: number = 50) =>
+        apiRequest<ExecutionLogEntry[]>(`/projects/${projectId}/execution-logs?limit=${limit}`),
+};
+
 // ============== Artifact APIs ==============
 
 export const artifactApi = {
@@ -237,13 +253,52 @@ export const chatApi = {
         apiRequest<{ messages: Array<{ id: string; role: string; content: string; timestamp: string }>; total: number }>(
             `/chat/${projectId}/messages?limit=${limit}`
         ),
+
+    proposePlan: (projectId: string, query: string, context?: Record<string, unknown>) =>
+        apiRequest<Record<string, unknown>>(`/chat/projects/${projectId}/propose-plan`, {
+            method: 'POST',
+            body: JSON.stringify({ query, context }),
+        }),
+
+    executePlan: (projectId: string, plan: Record<string, unknown>, context?: Record<string, unknown>) =>
+        apiRequest<ExecutePlanResponse>(`/chat/projects/${projectId}/execute-plan`, {
+            method: 'POST',
+            body: JSON.stringify({ plan, context: context || {} }),
+        }),
 };
 
 // ============== Literature APIs ==============
 
+export interface LiteratureV2Response {
+    query: string;
+    phase: number;
+    candidate_pool_size: number;
+    returned_count: number;
+    intent: Record<string, unknown>;
+    timing: {
+        intent_ms: number;
+        retrieval_ms: number;
+        scoring_ms: number;
+        total_ms: number;
+    };
+    degrade: {
+        skipped_citation_expansion: boolean;
+        reduced_candidate_pool: boolean;
+        cross_encoder_top_k_only: boolean;
+    };
+    filter_drops: Record<string, number>;
+    papers: Paper[];
+}
+
 export const literatureApi = {
     search: (query: string, limit: number = 20) =>
         apiRequest<Paper[]>(`/literature/search?query=${encodeURIComponent(query)}&limit=${limit}`),
+
+    searchV2: (query: string) =>
+        apiRequest<LiteratureV2Response>(`/literature/search/v2?query=${encodeURIComponent(query)}`),
+
+    refineV2: (query: string) =>
+        apiRequest<LiteratureV2Response>(`/literature/search/v2/refine?query=${encodeURIComponent(query)}`),
 };
 
 // ============== Papers APIs ==============
@@ -304,7 +359,11 @@ export const exportApi = {
         const params = new URLSearchParams({ project_id: projectId });
         if (author) params.append('author', author);
 
-        const response = await fetch(`${API_BASE}/documents/${documentId}/export/pdf?${params}`);
+        const token = getToken();
+        const headers: Record<string, string> = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const response = await fetch(`${API_BASE}/documents/${documentId}/export/pdf?${params}`, { headers });
         if (!response.ok) throw new Error('Export failed');
 
         const blob = await response.blob();
@@ -322,7 +381,11 @@ export const exportApi = {
         const params = new URLSearchParams({ project_id: projectId });
         if (author) params.append('author', author);
 
-        const response = await fetch(`${API_BASE}/documents/${documentId}/export/docx?${params}`);
+        const token = getToken();
+        const headers: Record<string, string> = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const response = await fetch(`${API_BASE}/documents/${documentId}/export/docx?${params}`, { headers });
         if (!response.ok) throw new Error('Export failed');
 
         const blob = await response.blob();
@@ -347,4 +410,24 @@ export const memoryApi = {
 
     listClaims: (projectId: string, limit: number = 50) =>
         apiRequest<Claim[]>(`/memory/projects/${projectId}/claims?limit=${limit}`),
+
+    getProvenance: (projectId: string, claimLimit: number = 50, artifactLimit: number = 50) =>
+        apiRequest<ProjectProvenance>(
+            `/memory/projects/${projectId}/provenance?claim_limit=${claimLimit}&artifact_limit=${artifactLimit}`
+        ),
+
+    getRelatedClaims: (projectId: string, claimId: string, maxDepth: number = 3) =>
+        apiRequest<Claim[]>(
+            `/memory/projects/${projectId}/claims/${claimId}/related?max_depth=${maxDepth}`
+        ),
+
+    getClaimRelationships: (projectId: string, claimId: string) =>
+        apiRequest<ClaimRelationship[]>(
+            `/memory/projects/${projectId}/claims/${claimId}/relationships`
+        ),
+
+    getClaimCitations: (projectId: string, claimId: string) =>
+        apiRequest<ClaimCitationUsage[]>(
+            `/memory/projects/${projectId}/claims/${claimId}/citations`
+        ),
 };

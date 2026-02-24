@@ -2,6 +2,7 @@
 Database connection and session management.
 """
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 from contextlib import asynccontextmanager
 import os
@@ -50,10 +51,21 @@ async def get_db():
 
 
 async def init_db():
-    """Initialize database tables."""
-    from database.models import Base
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    """Initialize database tables.
+
+    In development: create all tables via SQLAlchemy metadata (fast iteration).
+    In production:  rely on `alembic upgrade head` (run before server start).
+    """
+    environment = os.environ.get("ENVIRONMENT", "development")
+    if environment == "development":
+        from database.models import Base
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+            # Backward-compatible schema patching for existing dev deployments.
+            await conn.execute(
+                text("ALTER TABLE IF EXISTS documents ADD COLUMN IF NOT EXISTS content_latex TEXT")
+            )
+    # production: Alembic migrations handle schema (railway.toml: alembic upgrade head)
 
 
 async def close_db():

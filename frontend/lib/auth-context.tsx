@@ -1,45 +1,87 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { type Session, type User, getSession, login as authLogin, logout as authLogout } from './auth';
+import {
+    type User,
+    type Session,
+    loginWithGoogle,
+    loginWithMock,
+    loginWithCode,
+    logout as authLogout,
+    fetchCurrentUser,
+    getStoredToken,
+} from './auth';
 
 interface AuthContextValue {
     user: User | null;
     session: Session | null;
     loading: boolean;
-    login: (email?: string, name?: string) => Promise<void>;
-    logout: () => void;
+    loginWithGoogle: () => Promise<void>;
+    loginWithMock: (email: string, name: string) => Promise<void>;
+    loginWithCode: (code: string) => Promise<Session>;
+    logout: () => Promise<void>;
+    refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue>({
     user: null,
     session: null,
     loading: true,
-    login: async () => { },
-    logout: () => { },
+    loginWithGoogle: async () => { },
+    loginWithMock: async () => { },
+    loginWithCode: async () => ({ user: null as unknown as User, token: '' }),
+    logout: async () => { },
+    refreshUser: async () => { },
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [session, setSession] = useState<Session | null>(null);
     const [loading, setLoading] = useState(true);
 
+    // Restore session on mount — validate token with backend
     useEffect(() => {
-        const existing = getSession();
-        if (existing) {
-            setSession(existing);
+        const token = getStoredToken();
+        if (!token) {
+            setLoading(false);
+            return;
         }
-        setLoading(false);
+        fetchCurrentUser(token).then((user) => {
+            if (user) {
+                setSession({ user, token });
+            }
+            setLoading(false);
+        });
     }, []);
 
-    const login = useCallback(async (email?: string, name?: string) => {
-        const newSession = await authLogin(email, name);
+    const handleLoginWithGoogle = useCallback(async () => {
+        await loginWithGoogle();
+        // Navigation happens inside loginWithGoogle (browser redirect)
+    }, []);
+
+    const handleLoginWithMock = useCallback(async (email: string, name: string) => {
+        const newSession = await loginWithMock(email, name);
         setSession(newSession);
     }, []);
 
-    const logout = useCallback(() => {
-        authLogout();
+    const handleLoginWithCode = useCallback(async (code: string): Promise<Session> => {
+        const newSession = await loginWithCode(code);
+        setSession(newSession);
+        return newSession;
+    }, []);
+
+    const handleLogout = useCallback(async () => {
+        await authLogout();
         setSession(null);
     }, []);
+
+    const refreshUser = useCallback(async () => {
+        const token = session?.token ?? getStoredToken();
+        if (!token) return;
+        const user = await fetchCurrentUser(token);
+        if (user && session) {
+            setSession({ ...session, user });
+        }
+    }, [session]);
 
     return (
         <AuthContext.Provider
@@ -47,8 +89,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 user: session?.user ?? null,
                 session,
                 loading,
-                login,
-                logout,
+                loginWithGoogle: handleLoginWithGoogle,
+                loginWithMock: handleLoginWithMock,
+                loginWithCode: handleLoginWithCode,
+                logout: handleLogout,
+                refreshUser,
             }}
         >
             {children}

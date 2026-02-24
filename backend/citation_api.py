@@ -3,6 +3,7 @@ Citation API: REST endpoints for citation formatting and management.
 """
 import logging
 from fastapi import APIRouter, Depends, HTTPException
+from auth_dependencies import require_auth
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
@@ -12,7 +13,7 @@ from citation_service import CitationService
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/citations", tags=["citations"])
+router = APIRouter(prefix="/citations", tags=["citations"], dependencies=[Depends(require_auth)])
 
 
 # ============== Pydantic Models ==============
