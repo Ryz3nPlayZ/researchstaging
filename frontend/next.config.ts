@@ -36,6 +36,4 @@ export default withSentryConfig(nextConfig, {
     disable: !process.env.NEXT_PUBLIC_SENTRY_DSN,
   },
 
-  // Automatically tree-shake Sentry logger statements in production
-  hideSourceMaps: true,
 });
