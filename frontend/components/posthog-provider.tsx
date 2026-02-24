@@ -7,12 +7,14 @@ import { useAuth } from '@/lib/auth-context';
 
 const POSTHOG_KEY = process.env.NEXT_PUBLIC_POSTHOG_KEY ?? '';
 const POSTHOG_HOST = process.env.NEXT_PUBLIC_POSTHOG_HOST ?? 'https://us.i.posthog.com';
+// Only init if the key looks like a real PostHog key (starts with 'phc_')
+const POSTHOG_ENABLED = POSTHOG_KEY.startsWith('phc_');
 
 function PostHogIdentify() {
     const { user } = useAuth();
 
     useEffect(() => {
-        if (!POSTHOG_KEY) return;
+        if (!POSTHOG_ENABLED) return;
         if (user) {
             posthog.identify(user.id, {
                 email: user.email,
@@ -30,7 +32,7 @@ function PostHogIdentify() {
 
 export function PostHogProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
-        if (!POSTHOG_KEY) return;
+        if (!POSTHOG_ENABLED) return;
         posthog.init(POSTHOG_KEY, {
             api_host: POSTHOG_HOST,
             person_profiles: 'identified_only',
@@ -39,7 +41,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
         });
     }, []);
 
-    if (!POSTHOG_KEY) return <>{children}</>;
+    if (!POSTHOG_ENABLED) return <>{children}</>;
 
     return (
         <PHProvider client={posthog}>
@@ -54,6 +56,6 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
  * Safe to call even when PostHog is not configured (no-ops).
  */
 export function trackEvent(event: string, properties?: Record<string, unknown>) {
-    if (!POSTHOG_KEY) return;
+    if (!POSTHOG_ENABLED) return;
     posthog.capture(event, properties);
 }
