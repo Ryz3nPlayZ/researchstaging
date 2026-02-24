@@ -33,10 +33,17 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 # Override the URL from the environment (always preferred over alembic.ini placeholder)
-_db_url = os.environ.get(
+def _normalize_db_url(url: str) -> str:
+    if url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql+asyncpg://", 1)
+    if url.startswith("postgresql://") and "+asyncpg" not in url:
+        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    return url
+
+_db_url = _normalize_db_url(os.environ.get(
     "DATABASE_URL",
     "postgresql+asyncpg://research_user:research_pass@localhost:5432/research_pilot",
-)
+))
 config.set_main_option("sqlalchemy.url", _db_url)
 
 

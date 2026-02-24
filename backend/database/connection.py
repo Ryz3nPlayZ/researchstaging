@@ -10,7 +10,18 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql+asyncpg://research_user:research_pass@localhost:5432/research_pilot")
+_raw_url = os.environ.get("DATABASE_URL", "postgresql+asyncpg://research_user:research_pass@localhost:5432/research_pilot")
+
+# Railway (and many PaaS providers) supply postgres:// or postgresql:// URLs.
+# SQLAlchemy asyncpg requires the postgresql+asyncpg:// scheme.
+def _normalize_db_url(url: str) -> str:
+    if url.startswith("postgres://"):
+        return url.replace("postgres://", "postgresql+asyncpg://", 1)
+    if url.startswith("postgresql://") and "+asyncpg" not in url:
+        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    return url
+
+DATABASE_URL = _normalize_db_url(_raw_url)
 
 # Create async engine
 engine = create_async_engine(
