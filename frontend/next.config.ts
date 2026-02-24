@@ -2,8 +2,13 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
 // In production, NEXT_PUBLIC_API_URL is the Railway backend URL (e.g. https://api.yourapp.up.railway.app)
-// In development it defaults to localhost:8000
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+// In development it defaults to localhost:8000.
+// Validate the value — if it doesn't start with http/https we ignore it so the build never fails.
+const rawApiUrl = process.env.NEXT_PUBLIC_API_URL ?? '';
+const API_URL =
+  rawApiUrl.startsWith('http://') || rawApiUrl.startsWith('https://')
+    ? rawApiUrl
+    : 'http://localhost:8000';
 
 const nextConfig: NextConfig = {
   output: 'standalone',
