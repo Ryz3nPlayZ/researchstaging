@@ -93,11 +93,11 @@ async def init_db():
     from database.models import Base
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-            # Backward-compatible schema patching for existing dev deployments.
-            await conn.execute(
-                text("ALTER TABLE IF EXISTS documents ADD COLUMN IF NOT EXISTS content_latex TEXT")
-            )
-    # production: Alembic migrations handle schema (railway.toml: alembic upgrade head)
+        # Backward-compatible schema patching for existing deployments.
+        await conn.execute(
+            text("ALTER TABLE IF EXISTS documents ADD COLUMN IF NOT EXISTS content_latex TEXT")
+        )
+    # production: create_all handles schema on first run
 
 
 async def close_db():
