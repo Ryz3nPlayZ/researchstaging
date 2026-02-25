@@ -84,16 +84,15 @@ async def get_db():
 
 
 async def init_db():
-    """Initialize database tables.
+    """Initialize database tables using SQLAlchemy create_all.
 
-    In development: create all tables via SQLAlchemy metadata (fast iteration).
-    In production:  rely on `alembic upgrade head` (run before server start).
+    This is idempotent — safe to run on every startup.
+    It creates tables that don't exist and leaves existing ones untouched.
+    Future schema changes should use Alembic migrations.
     """
-    environment = os.environ.get("ENVIRONMENT", "development")
-    if environment == "development":
-        from database.models import Base
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+    from database.models import Base
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
             # Backward-compatible schema patching for existing dev deployments.
             await conn.execute(
                 text("ALTER TABLE IF EXISTS documents ADD COLUMN IF NOT EXISTS content_latex TEXT")
