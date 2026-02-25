@@ -6,6 +6,7 @@ const COOKIE_NAME = 'research_token';
 const PUBLIC_PATHS = [
     '/login',
     '/signup',
+    '/callback',
     '/auth/callback',
     '/terms',
     '/privacy',
@@ -37,7 +38,7 @@ export function middleware(request: NextRequest) {
     }
 
     // Redirect authenticated users away from auth pages
-    if (isPublic && token && !pathname.startsWith('/auth/callback')) {
+    if (isPublic && token && !pathname.startsWith('/callback') && !pathname.startsWith('/auth/callback')) {
         return NextResponse.redirect(new URL('/dashboard', request.url));
     }
 
