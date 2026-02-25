@@ -57,17 +57,14 @@ class ExportService:
                 version = result.stdout.split('\n')[0]
                 logger.info(f"Pandoc detected: {version}")
             else:
-                raise PandocNotFoundError(
-                    "Pandoc not found. Install from https://pandoc.org/installing.html"
-                )
+                self.pandoc_available = False
+                logger.warning("Pandoc not found. Export features will be unavailable.")
         except FileNotFoundError:
             self.pandoc_available = False
-            raise PandocNotFoundError(
-                "Pandoc not found in PATH. Install from https://pandoc.org/installing.html"
-            )
+            logger.warning("Pandoc not found in PATH. Export features will be unavailable.")
         except subprocess.TimeoutExpired:
             self.pandoc_available = False
-            raise PandocNotFoundError("Pandoc check timed out")
+            logger.warning("Pandoc check timed out. Export features may be unavailable.")
 
         # Detect available PDF engines
         self.pdf_engine = self._detect_pdf_engine()
