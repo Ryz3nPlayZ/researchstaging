@@ -35,9 +35,13 @@ target_metadata = Base.metadata
 # Override the URL from the environment (always preferred over alembic.ini placeholder)
 def _normalize_db_url(url: str) -> str:
     if url.startswith("postgres://"):
-        return url.replace("postgres://", "postgresql+asyncpg://", 1)
-    if url.startswith("postgresql://") and "+asyncpg" not in url:
-        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        url = url.replace("postgres://", "postgresql+asyncpg://", 1)
+    elif url.startswith("postgresql://") and "+asyncpg" not in url:
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+    is_local = "localhost" in url or "127.0.0.1" in url
+    if "+asyncpg" in url and "ssl=" not in url and "sslmode=" not in url and not is_local:
+        separator = "&" if "?" in url else "?"
+        url = f"{url}{separator}ssl=require"
     return url
 
 _db_url = _normalize_db_url(os.environ.get(
