@@ -70,6 +70,7 @@ export async function loginWithCode(code: string): Promise<Session> {
     const data = await res.json();
     const session = buildSession(data);
     await setSessionCookie(session.token);
+    storeToken(session.token);   // also persist to localStorage so AuthContext can restore session
     return session;
 }
 
@@ -90,6 +91,7 @@ export async function loginWithMock(email: string, name: string): Promise<Sessio
     const data = await res.json();
     const session = buildSession(data);
     await setSessionCookie(session.token);
+    storeToken(session.token);
     return session;
 }
 

@@ -27,6 +27,7 @@ function CallbackInner() {
 
         loginWithCode(code)
             .then((session) => {
+                console.log('[callback] loginWithCode success, session:', session);
                 // New users → onboarding; returning users → dashboard
                 const isNew = (session as { user: { is_new_user?: boolean } })?.user?.is_new_user;
                 if (isNew) {
@@ -38,6 +39,7 @@ function CallbackInner() {
                 }
             })
             .catch((e: Error) => {
+                console.error('[callback] loginWithCode error:', e);
                 setError(e.message || 'Authentication failed. Please try again.');
             });
         // eslint-disable-next-line react-hooks/exhaustive-deps
