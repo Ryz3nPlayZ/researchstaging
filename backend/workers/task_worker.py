@@ -6,6 +6,7 @@ terminated at any time without loss of correctness.
 """
 import asyncio
 import logging
+import os
 import time
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timezone
@@ -526,4 +527,4 @@ class TaskWorker:
 
 
 # Singleton instance
-task_worker = TaskWorker()
+task_worker = TaskWorker(redis_url=os.environ.get("REDIS_URL", "redis://localhost:6379/0"))
