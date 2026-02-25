@@ -27,6 +27,11 @@ export function middleware(request: NextRequest) {
         return NextResponse.next();
     }
 
+    // Always allow OAuth callback — never gate it behind auth
+    if (pathname === '/callback' || pathname.startsWith('/callback/') || pathname === '/auth/callback') {
+        return NextResponse.next();
+    }
+
     const token = request.cookies.get(COOKIE_NAME)?.value;
     const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 
@@ -37,8 +42,8 @@ export function middleware(request: NextRequest) {
         return NextResponse.redirect(loginUrl);
     }
 
-    // Redirect authenticated users away from auth pages
-    if (isPublic && token && !pathname.startsWith('/callback') && !pathname.startsWith('/auth/callback')) {
+    // Redirect authenticated users away from auth pages (but NOT the callback)
+    if (isPublic && token) {
         return NextResponse.redirect(new URL('/dashboard', request.url));
     }
 
