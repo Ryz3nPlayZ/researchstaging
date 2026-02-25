@@ -92,6 +92,8 @@ async def init_db():
     """
     from database.models import Base
     async with engine.begin() as conn:
+        # pg_trgm is required for gin_trgm_ops indexes (full-text search)
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
         await conn.run_sync(Base.metadata.create_all)
         # Backward-compatible schema patching for existing deployments.
         await conn.execute(
