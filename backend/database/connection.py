@@ -23,9 +23,24 @@ def _normalize_db_url(url: str) -> str:
 
 DATABASE_URL = _normalize_db_url(_raw_url)
 
+# Validate URL is parseable before creating engine — bad URLs on import crash everything.
+# If invalid, we use a dummy URL so imports succeed; the server will fail at runtime
+# connection attempts which gives a much clearer error message.
+_DUMMY_URL = "postgresql+asyncpg://localhost/placeholder"
+try:
+    from sqlalchemy.engine.url import make_url as _make_url
+    _make_url(DATABASE_URL)
+    _engine_url = DATABASE_URL
+except Exception:
+    import sys
+    print(f"WARNING: DATABASE_URL could not be parsed: {DATABASE_URL!r}. "
+          "Using placeholder — DB connections will fail until a valid URL is set.",
+          file=sys.stderr)
+    _engine_url = _DUMMY_URL
+
 # Create async engine
 engine = create_async_engine(
-    DATABASE_URL,
+    _engine_url,
     echo=False,  # Set to True for SQL debugging
     pool_size=10,
     max_overflow=20,
