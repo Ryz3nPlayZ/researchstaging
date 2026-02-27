@@ -13,16 +13,25 @@ const API_URL =
 const nextConfig: NextConfig = {
   output: 'standalone',
   async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: `${API_URL}/api/:path*`,
-      },
-      {
-        source: '/ws/:path*',
-        destination: `${API_URL}/ws/:path*`,
-      },
-    ];
+    return {
+      // beforeFiles: empty — Next.js Route Handlers (app/api/**/route.ts) must win
+      beforeFiles: [],
+
+      // afterFiles: only applied when NO filesystem route matched.
+      // This proxies unrecognised /api/* paths to the Railway backend.
+      afterFiles: [
+        {
+          source: '/api/:path*',
+          destination: `${API_URL}/api/:path*`,
+        },
+        {
+          source: '/ws/:path*',
+          destination: `${API_URL}/ws/:path*`,
+        },
+      ],
+
+      fallback: [],
+    };
   },
 };
 
