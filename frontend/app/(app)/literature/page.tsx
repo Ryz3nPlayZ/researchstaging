@@ -374,7 +374,7 @@ export default function LiteratureSearchPage() {
             }
         } catch (err) {
             // Enhanced error handling with specific messages
-            const errorMessage = err?.response?.data?.detail || err?.message || '';
+            const errorMessage = (err as any)?.response?.data?.detail || (err as any)?.message || '';
             if (errorMessage.includes('rate limit') || errorMessage.includes('too many requests')) {
                 setError('Rate limit exceeded. Please wait a moment and try again.');
             } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
@@ -397,7 +397,7 @@ export default function LiteratureSearchPage() {
             if (res.data) { setTrace(res.data); setResults(res.data.papers || []); }
         } catch (err) {
             // Enhanced error handling for refine
-            const errorMessage = err?.response?.data?.detail || err?.message || '';
+            const errorMessage = (err as any)?.response?.data?.detail || (err as any)?.message || '';
             if (errorMessage.includes('rate limit') || errorMessage.includes('too many requests')) {
                 setError('Rate limit exceeded. Please wait a moment and try again.');
             } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
