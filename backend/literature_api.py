@@ -15,6 +15,10 @@ from literature_service import LiteratureService
 from intent_service import parse_query
 from ranking_service import compute_ranking
 from openalex_client import openalex_client
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from database import get_db, Paper, Reference
 
 logger = logging.getLogger(__name__)
 
@@ -325,19 +329,63 @@ async def search_literature_v2_refine(
 
 
 @router.get("/papers/{paper_id}", response_model=PaperDetail)
-async def get_paper_details(paper_id: str):
+async def get_paper_details(
+    paper_id: str,
+    db: AsyncSession = Depends(get_db)
+):
     """
     Get detailed information about a specific paper.
 
     Returns full metadata including abstract, all authors, references,
-    and citation count.
+    and citation count. First checks if paper exists in database (added to a project),
+    then could be extended to fetch from external sources if needed.
     """
     try:
-        # For now, we'll return a 404 since we don't have persistent paper storage
-        # This will be implemented in Phase 5-02 when we add paper management
-        raise HTTPException(
-            status_code=404,
-            detail=f"Paper details not yet implemented. Use search results for available information."
+        # Query database for paper by either internal ID or external ID
+        result = await db.execute(
+            select(Paper).where(
+                (Paper.id == paper_id) | (Paper.external_id == paper_id)
+            )
+        )
+        paper = result.scalar_one_or_none()
+
+        if not paper:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Paper '{paper_id}' not found. It may not have been added to any project yet."
+            )
+
+        # Fetch references for this paper
+        refs_result = await db.execute(
+            select(Reference).where(Reference.paper_id == paper.id)
+        )
+        references = refs_result.scalars().all()
+
+        # Build references list
+        references_list = [
+            {
+                "id": ref.id,
+                "raw_text": ref.raw_text,
+                "parsed_metadata": ref.parsed_metadata,
+                "confidence_score": ref.confidence_score,
+            }
+            for ref in references
+        ]
+
+        return PaperDetail(
+            external_id=paper.external_id,
+            source=paper.source,
+            title=paper.title,
+            authors=paper.authors or [],
+            abstract=paper.abstract,
+            year=paper.year,
+            citation_count=paper.citation_count,
+            url=paper.url,
+            pdf_url=paper.pdf_url,
+            open_access_pdf_url=None,  # Not stored in DB yet, can be added
+            doi=None,  # Not stored in DB yet, can be added
+            reference_ids=[],  # Can be populated from references if needed
+            references=references_list,
         )
 
     except HTTPException:

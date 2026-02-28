@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { literatureApi, type LiteratureV2Response } from '@/lib/api';
-import type { Paper } from '@/lib/types';
+import { literatureApi, papersApi, projectApi, type LiteratureV2Response } from '@/lib/api';
+import type { Paper, Project } from '@/lib/types';
 import {
     BookOpen, ChevronDown, ChevronRight, Clock, Cpu,
     ExternalLink, FileDown, FileText, Filter, History,
-    Loader2, Plus, Search, Sparkles, TrendingUp,
-    X, Zap, ArrowUpDown,
+    Loader2, Plus, RefreshCw, Search, Sparkles, TrendingUp,
+    X, Zap, ArrowUpDown, AlertCircle,
 } from 'lucide-react';
 
 // ── History helpers ────────────────────────────────────────────────────────── //
@@ -74,8 +74,15 @@ function SourceBadge({ source }: { source: string }) {
 }
 
 // ── Paper row ──────────────────────────────────────────────────────────────── //
-function PaperRow({ paper, rank, compareActive, onToggleCompare }: {
-    paper: Paper; rank: number; compareActive: boolean; onToggleCompare: () => void;
+function PaperRow({ paper, rank, compareActive, onToggleCompare, onAddToProject, isAdding, isAdded, addDisabled }: {
+    paper: Paper;
+    rank: number;
+    compareActive: boolean;
+    onToggleCompare: () => void;
+    onAddToProject: () => void;
+    isAdding: boolean;
+    isAdded: boolean;
+    addDisabled: boolean;
 }) {
     const [expanded, setExpanded] = useState(false);
     const rb = paper.relevance_breakdown;
@@ -139,15 +146,27 @@ function PaperRow({ paper, rank, compareActive, onToggleCompare }: {
                         </div>
                     )}
                 </div>
-                {/* compare toggle */}
-                <button onClick={onToggleCompare}
-                    className={`shrink-0 self-start mt-0.5 px-2 py-1 rounded text-[10px] font-medium border transition-colors ${
-                        compareActive
-                            ? 'bg-gray-900 text-white border-gray-900'
-                            : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400 hover:text-gray-800'
-                    }`}>
-                    {compareActive ? '✓' : <Plus size={10} />}
-                </button>
+                <div className="shrink-0 self-start mt-0.5 flex flex-col gap-1.5">
+                    <button onClick={onToggleCompare}
+                        className={`px-2 py-1 rounded text-[10px] font-medium border transition-colors ${
+                            compareActive
+                                ? 'bg-gray-900 text-white border-gray-900'
+                                : 'bg-white text-gray-500 border-gray-200 hover:border-gray-400 hover:text-gray-800'
+                        }`}>
+                        {compareActive ? '✓' : <Plus size={10} />}
+                    </button>
+                    <button
+                        onClick={onAddToProject}
+                        disabled={addDisabled || isAdding || isAdded}
+                        className={`px-2 py-1 rounded text-[10px] font-medium border transition-colors ${
+                            isAdded
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400 hover:text-gray-900 disabled:opacity-40'
+                        }`}
+                    >
+                        {isAdding ? 'Adding...' : isAdded ? 'Added' : 'Add'}
+                    </button>
+                </div>
             </div>
         </div>
     );
@@ -272,14 +291,56 @@ export default function LiteratureSearchPage() {
     const [sortKey, setSortKey] = useState<SortKey>('relevance');
     const [compareIds, setCompareIds] = useState<Set<string>>(() => new Set());
     const [history, setHistory] = useState<HistoryEntry[]>([]);
-    const [showHistory, setShowHistory] = useState(false);
+    const [projects, setProjects] = useState<Project[]>([]);
+    const [targetProjectId, setTargetProjectId] = useState('');
+    const [addingPaperIds, setAddingPaperIds] = useState<Set<string>>(() => new Set());
+    const [addedPaperIds, setAddedPaperIds] = useState<Set<string>>(() => new Set());
+
+    // Filter state
+    const [showFilters, setShowFilters] = useState(false);
+    const [yearMin, setYearMin] = useState<number>(2018);
+    const [yearMax, setYearMax] = useState<number>(2024);
+    const [minCitations, setMinCitations] = useState<number>(0);
+    const [selectedSources, setSelectedSources] = useState<Set<string>>(() => new Set(['semantic_scholar', 'arxiv']));
+    const [openAccessOnly, setOpenAccessOnly] = useState(false);
 
     useEffect(() => { setHistory(loadHistory()); }, []);
+    useEffect(() => {
+        projectApi.list().then((res) => {
+            if (!res.data) return;
+            setProjects(res.data);
+            if (!targetProjectId && res.data.length > 0) {
+                setTargetProjectId(res.data[0].id);
+            }
+        });
+    }, [targetProjectId]);
 
     const getPaperId = (p: Paper, i: number) => p.id || p.external_id || `${p.source}-${i}`;
 
     const sorted = useMemo(() => {
-        const copy = [...results];
+        // Apply filters first
+        let filtered = results.filter(paper => {
+            // Year filter
+            if (paper.year && (paper.year < yearMin || paper.year > yearMax)) {
+                return false;
+            }
+            // Citation count filter
+            if (minCitations > 0 && (paper.citation_count ?? 0) < minCitations) {
+                return false;
+            }
+            // Source filter
+            if (selectedSources.size > 0 && !selectedSources.has(paper.source)) {
+                return false;
+            }
+            // Open access filter
+            if (openAccessOnly && !paper.open_access_pdf_url && !paper.pdf_url) {
+                return false;
+            }
+            return true;
+        });
+
+        // Then sort
+        const copy = [...filtered];
         switch (sortKey) {
             case 'citations': return copy.sort((a, b) => (b.citation_count ?? 0) - (a.citation_count ?? 0));
             case 'year':      return copy.sort((a, b) => (b.year ?? 0) - (a.year ?? 0));
@@ -288,7 +349,7 @@ export default function LiteratureSearchPage() {
                 ((a.relevance_breakdown?.recency_score ?? 0) as number));
             default:          return copy;
         }
-    }, [results, sortKey]);
+    }, [results, sortKey, yearMin, yearMax, minCitations, selectedSources, openAccessOnly]);
 
     const comparePapers = useMemo(() =>
         sorted.filter((p, i) => compareIds.has(getPaperId(p, i))),
@@ -298,18 +359,33 @@ export default function LiteratureSearchPage() {
     const handleSearch = useCallback(async (q?: string) => {
         const query_ = (q ?? query).trim();
         if (!query_ || searching) return;
-        if (q) { setQuery(q); setShowHistory(false); }
+        if (q) { setQuery(q); }
         setSearching(true); setError(null); setCompareIds(new Set()); setTrace(null);
         try {
             const res = await literatureApi.searchV2(query_);
             if (res.data) {
                 setTrace(res.data);
                 setResults(res.data.papers || []);
+                // Save to history and update state immediately
                 pushHistory(query_, res.data.returned_count);
-                setHistory(loadHistory());
+                const updated = loadHistory();
+                setHistory(updated);
+                console.log('History saved:', updated); // Debug log
             }
-        } catch { setError('Search failed. Please try again.'); setResults([]); }
-        finally { setSearching(false); }
+        } catch (err) {
+            // Enhanced error handling with specific messages
+            const errorMessage = err?.response?.data?.detail || err?.message || '';
+            if (errorMessage.includes('rate limit') || errorMessage.includes('too many requests')) {
+                setError('Rate limit exceeded. Please wait a moment and try again.');
+            } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+                setError('Network error. Please check your connection and retry.');
+            } else if (errorMessage.includes('timeout')) {
+                setError('Request timed out. The search is taking longer than expected. Try again.');
+            } else {
+                setError('Search failed. Please try again.');
+            }
+            setResults([]);
+        } finally { setSearching(false); }
     }, [query, searching]);
 
     const handleRefine = useCallback(async () => {
@@ -319,8 +395,19 @@ export default function LiteratureSearchPage() {
         try {
             const res = await literatureApi.refineV2(q);
             if (res.data) { setTrace(res.data); setResults(res.data.papers || []); }
-        } catch { setError('Refine failed. Please try again.'); }
-        finally { setSearching(false); }
+        } catch (err) {
+            // Enhanced error handling for refine
+            const errorMessage = err?.response?.data?.detail || err?.message || '';
+            if (errorMessage.includes('rate limit') || errorMessage.includes('too many requests')) {
+                setError('Rate limit exceeded. Please wait a moment and try again.');
+            } else if (errorMessage.includes('network') || errorMessage.includes('fetch')) {
+                setError('Network error. Please check your connection and retry.');
+            } else if (errorMessage.includes('timeout')) {
+                setError('Request timed out. The refine search is taking longer than expected. Try again.');
+            } else {
+                setError('Refine failed. Please try again.');
+            }
+        } finally { setSearching(false); }
     }, [query, searching]);
 
     const toggleCompare = (id: string) =>
@@ -330,6 +417,28 @@ export default function LiteratureSearchPage() {
             else if (next.size < 3) next.add(id);
             return next;
         });
+
+    const addPaperToProject = async (paper: Paper, id: string) => {
+        if (!targetProjectId) {
+            setError('Select a project first.');
+            return;
+        }
+        setAddingPaperIds((prev) => new Set(prev).add(id));
+        try {
+            const res = await papersApi.add(targetProjectId, paper);
+            if (res.data) {
+                setAddedPaperIds((prev) => new Set(prev).add(id));
+            }
+        } catch {
+            setError('Failed to add paper to project.');
+        } finally {
+            setAddingPaperIds((prev) => {
+                const next = new Set(prev);
+                next.delete(id);
+                return next;
+            });
+        }
+    };
 
     return (
         <div className="w-full min-h-[calc(100vh-80px)] px-4 pb-12 bg-gray-50">
@@ -345,7 +454,22 @@ export default function LiteratureSearchPage() {
                         </Link>
                     </div>
 
-                    <div className="px-4 py-3 space-y-2">
+                    <div className="px-4 py-3 space-y-3">
+                        <div className="flex items-center gap-2">
+                            <label className="text-[11px] text-gray-500 font-medium">Add papers to</label>
+                            <select
+                                value={targetProjectId}
+                                onChange={(e) => setTargetProjectId(e.target.value)}
+                                className="text-[12px] border border-gray-200 rounded-md px-2 py-1 bg-white min-w-[220px]"
+                            >
+                                {projects.length === 0 && <option value="">No projects</option>}
+                                {projects.map((p) => (
+                                    <option key={p.id} value={p.id}>
+                                        {p.research_goal}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                         <div className="flex items-center gap-2">
                             <div className="flex-1 flex items-center gap-2 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2 focus-within:border-blue-200 focus-within:bg-white transition-colors">
                                 <Search size={13} className="text-gray-400 shrink-0" />
@@ -363,13 +487,11 @@ export default function LiteratureSearchPage() {
                                     </button>
                                 )}
                             </div>
-                            {history.length > 0 && (
-                                <button onClick={() => setShowHistory(!showHistory)}
-                                    className={`p-2 rounded-lg border transition-colors ${showHistory ? 'border-blue-200 bg-blue-50 text-blue-600' : 'border-gray-100 bg-gray-50 text-gray-400 hover:text-gray-700'}`}
-                                    title="Search history">
-                                    <History size={13} />
-                                </button>
-                            )}
+                            <button onClick={() => setShowFilters(!showFilters)}
+                                className={`p-2 rounded-lg border transition-colors ${showFilters ? 'border-violet-200 bg-violet-50 text-violet-600' : 'border-gray-100 bg-gray-50 text-gray-400 hover:text-gray-700'}`}
+                                title="Filters">
+                                <Filter size={13} />
+                            </button>
                             <button onClick={() => handleSearch()} disabled={searching || !query.trim()}
                                 className="inline-flex items-center gap-1.5 bg-gray-900 hover:bg-gray-700 disabled:opacity-40 text-white px-4 py-2 rounded-lg text-[12px] font-medium transition-colors shrink-0">
                                 {searching ? <Loader2 size={12} className="animate-spin" /> : <Search size={12} />}
@@ -382,24 +504,118 @@ export default function LiteratureSearchPage() {
                             </button>
                         </div>
 
-                        {/* History dropdown */}
-                        {showHistory && history.length > 0 && (
+                        {/* Recent searches - always visible when available */}
+                        {history.length > 0 && (
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+                                        <Clock size={9} />
+                                        Recent searches ({history.length})
+                                    </span>
+                                    <button onClick={() => { saveHistory([]); setHistory([]); }}
+                                        className="text-[10px] text-gray-400 hover:text-red-500 transition-colors">Clear all</button>
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {history.map((h, i) => (
+                                        <button
+                                            key={i}
+                                            onClick={() => handleSearch(h.query)}
+                                            className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-white hover:bg-blue-50 border border-gray-200 hover:border-blue-200 rounded-lg text-[11px] text-gray-600 hover:text-blue-700 transition-all group"
+                                        >
+                                            <span className="max-w-[200px] truncate font-medium">{h.query}</span>
+                                            <span className="text-[9px] text-gray-400 bg-gray-100 px-1.5 rounded-full group-hover:bg-blue-100 group-hover:text-blue-600">{h.count}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Filters panel */}
+                        {showFilters && (
                             <div className="rounded-lg border border-gray-100 bg-white shadow-md overflow-hidden">
                                 <div className="flex items-center justify-between px-3 py-1.5 border-b border-gray-50 bg-gray-50/60">
-                                    <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Recent searches</span>
-                                    <button onClick={() => { saveHistory([]); setHistory([]); setShowHistory(false); }}
-                                        className="text-[10px] text-gray-400 hover:text-red-500 transition-colors">Clear</button>
+                                    <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Filters</span>
+                                    <button onClick={() => {
+                                        setShowFilters(false);
+                                        setYearMin(2018);
+                                        setYearMax(2024);
+                                        setMinCitations(0);
+                                        setSelectedSources(new Set(['semantic_scholar', 'arxiv']));
+                                        setOpenAccessOnly(false);
+                                    }}
+                                        className="text-[10px] text-gray-400 hover:text-red-500 transition-colors">Reset all</button>
                                 </div>
-                                {history.map((h, i) => (
-                                    <button key={i} onClick={() => handleSearch(h.query)}
-                                        className="w-full flex items-center justify-between gap-3 px-3 py-2 hover:bg-gray-50 transition-colors text-left border-b border-gray-50 last:border-0">
-                                        <div className="flex items-center gap-2 min-w-0">
-                                            <Clock size={10} className="text-gray-300 shrink-0" />
-                                            <span className="text-[12px] text-gray-700 truncate">{h.query}</span>
+                                <div className="p-3 space-y-3">
+                                    {/* Year range */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-[11px] font-medium text-gray-600">Publication year</label>
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                type="number"
+                                                value={yearMin}
+                                                onChange={e => setYearMin(parseInt(e.target.value) || 2000)}
+                                                className="w-20 text-[11px] border border-gray-200 rounded px-2 py-1"
+                                                min="1900"
+                                                max={yearMax}
+                                            />
+                                            <span className="text-[11px] text-gray-400">to</span>
+                                            <input
+                                                type="number"
+                                                value={yearMax}
+                                                onChange={e => setYearMax(parseInt(e.target.value) || 2024)}
+                                                className="w-20 text-[11px] border border-gray-200 rounded px-2 py-1"
+                                                min={yearMin}
+                                                max="2030"
+                                            />
                                         </div>
-                                        <span className="text-[10px] text-gray-400 shrink-0">{h.count} results</span>
-                                    </button>
-                                ))}
+                                    </div>
+
+                                    {/* Citations */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-[11px] font-medium text-gray-600">Minimum citations</label>
+                                        <input
+                                            type="number"
+                                            value={minCitations}
+                                            onChange={e => setMinCitations(parseInt(e.target.value) || 0)}
+                                            className="w-full text-[11px] border border-gray-200 rounded px-2 py-1"
+                                            min="0"
+                                        />
+                                    </div>
+
+                                    {/* Sources */}
+                                    <div className="space-y-1.5">
+                                        <label className="text-[11px] font-medium text-gray-600">Sources</label>
+                                        <div className="flex flex-wrap gap-2">
+                                            {['semantic_scholar', 'arxiv', 'core', 'springer', 'openalex'].map(source => (
+                                                <label key={source} className="inline-flex items-center gap-1.5 text-[11px] cursor-pointer">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={selectedSources.has(source)}
+                                                        onChange={e => {
+                                                            const next = new Set(selectedSources);
+                                                            if (e.target.checked) next.add(source);
+                                                            else next.delete(source);
+                                                            setSelectedSources(next);
+                                                        }}
+                                                        className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
+                                                    />
+                                                    <span className="capitalize">{source.replace('_', ' ')}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Open access toggle */}
+                                    <label className="inline-flex items-center gap-2 text-[11px] cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={openAccessOnly}
+                                            onChange={e => setOpenAccessOnly(e.target.checked)}
+                                            className="rounded border-gray-300 text-violet-600 focus:ring-violet-500"
+                                        />
+                                        <span className="font-medium text-gray-600">Open access only</span>
+                                    </label>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -407,7 +623,20 @@ export default function LiteratureSearchPage() {
 
                 {/* ── Error ── */}
                 {error && (
-                    <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-[12px] text-rose-700">{error}</div>
+                    <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
+                        <div className="flex items-start gap-3">
+                            <AlertCircle size={14} className="text-rose-500 shrink-0 mt-px" />
+                            <div className="flex-1 min-w-0">
+                                <p className="text-[12px] text-rose-700">{error}</p>
+                                <button
+                                    onClick={() => void handleSearch()}
+                                    className="inline-flex items-center gap-1.5 mt-2 text-[11px] font-medium text-rose-600 hover:text-rose-800 transition-colors"
+                                >
+                                    <RefreshCw size={10} /> Retry search
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 )}
 
                 {/* ── Compare panel ── */}
@@ -473,6 +702,10 @@ export default function LiteratureSearchPage() {
                                             rank={idx + 1}
                                             compareActive={compareIds.has(id)}
                                             onToggleCompare={() => toggleCompare(id)}
+                                            onAddToProject={() => void addPaperToProject(paper, id)}
+                                            isAdding={addingPaperIds.has(id)}
+                                            isAdded={addedPaperIds.has(id)}
+                                            addDisabled={!targetProjectId}
                                         />
                                     );
                                 })}
