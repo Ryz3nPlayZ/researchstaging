@@ -365,7 +365,12 @@ class LiteratureV2Service:
         started = time.perf_counter()
 
         # Check cache
-        cache_key = self._cache_key(query, limit, include_scholar, include_crossref)
+        cache_key = self._cache_key(
+            query,
+            limit=limit,
+            include_scholar=include_scholar,
+            include_crossref=include_crossref,
+        )
         if use_cache:
             cached = self._get_cached(cache_key)
             if cached:
