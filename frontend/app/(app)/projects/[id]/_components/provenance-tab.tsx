@@ -1,18 +1,15 @@
+'use client';
+
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { memoryApi } from '@/lib/api';
-import type { Claim, ClaimCitationUsage, ClaimRelationship, ProjectProvenance, ProvenanceClaim } from '@/lib/types';
+import { useProject } from '../_context/project-context';
+import type { Claim, ClaimCitationUsage, ClaimRelationship, ProvenanceClaim } from '@/lib/types';
 import { relativeTime, truncate } from '@/lib/types';
 import { ExternalLink, Link2, Network, RefreshCw, ChevronRight, FileText } from 'lucide-react';
 
-interface ProvenanceTabProps {
-    projectId: string;
-    provenance: ProjectProvenance | null;
-    loading: boolean;
-    onRefresh: () => Promise<void>;
-}
-
-export function ProvenanceTab({ projectId, provenance, loading, onRefresh }: ProvenanceTabProps) {
+export function ProvenanceTab() {
+    const { projectId, provenance, provenanceLoading: loading, loadProvenance } = useProject();
     const [search, setSearch] = useState('');
     const [sourceFilter, setSourceFilter] = useState('all');
     const [selectedClaim, setSelectedClaim] = useState<ProvenanceClaim | null>(null);
@@ -20,6 +17,13 @@ export function ProvenanceTab({ projectId, provenance, loading, onRefresh }: Pro
     const [relationships, setRelationships] = useState<ClaimRelationship[]>([]);
     const [claimCitations, setClaimCitations] = useState<ClaimCitationUsage[]>([]);
     const [claimDetailsLoading, setClaimDetailsLoading] = useState(false);
+
+    // Load on first mount if not already loaded
+    useEffect(() => {
+        if (!provenance && !loading) {
+            void loadProvenance();
+        }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
     const sourceTypes = useMemo(() => {
         if (!provenance) return [];
@@ -105,7 +109,7 @@ export function ProvenanceTab({ projectId, provenance, loading, onRefresh }: Pro
                 <div className="flex items-center justify-between px-4 py-3 border-b border-black/5 bg-gray-50/50">
                     <h3 className="text-[12px] font-semibold text-gray-700 uppercase tracking-wider">Provenance Graph</h3>
                     <button
-                        onClick={onRefresh}
+                        onClick={loadProvenance}
                         className="inline-flex items-center gap-1.5 text-[11px] font-medium text-gray-500 hover:text-gray-900 transition-colors"
                     >
                         <RefreshCw size={12} /> Refresh Sync

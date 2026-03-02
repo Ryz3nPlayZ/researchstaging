@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Paper } from '@/lib/types';
+import { literatureApi, papersApi } from '@/lib/api';
 import type { LiteratureV2Response } from '@/lib/api';
+import { useProject } from '../_context/project-context';
 import {
     Search, Loader2, Plus, CheckCircle, ExternalLink, FileText,
     Sparkles, BookOpen, ChevronDown, ChevronRight,
@@ -235,31 +237,49 @@ function SortControl({ value, onChange }: { value: SortKey; onChange: (k: SortKe
 }
 
 // ── Main component ─────────────────────────────────────────────────────────── //
-interface LiteratureTabProps {
-    litQuery: string;
-    setLitQuery: (query: string) => void;
-    litSearching: boolean;
-    handleLitSearch: () => void;
-    litResults: Paper[];
-    litV2Response: LiteratureV2Response | null;
-    projectPapers: Paper[];
-    onAddPaper: (paper: Paper) => void;
-    synthesisOpen: boolean;
-    setSynthesisOpen: (open: boolean) => void;
-    projectId: string;
-}
 
 type TabId = 'results' | 'library';
 
-export function LiteratureTab({
-    litQuery, setLitQuery, litSearching, handleLitSearch,
-    litResults, litV2Response,
-    projectPapers, onAddPaper, synthesisOpen, setSynthesisOpen, projectId,
-}: LiteratureTabProps) {
+export function LiteratureTab() {
+    const { papers: projectPapers, projectId, refreshPapers } = useProject();
+
+    // Internalized search state (was lifted to page.tsx before)
+    const [litQuery, setLitQuery] = useState('');
+    const [litSearching, setLitSearching] = useState(false);
+    const [litResults, setLitResults] = useState<Paper[]>([]);
+    const [litV2Response, setLitV2Response] = useState<LiteratureV2Response | null>(null);
+    const [synthesisOpen, setSynthesisOpen] = useState(false);
+
     const [history, setHistory] = useState<HistoryEntry[]>([]);
     const [activeTab, setActiveTab] = useState<TabId>('results');
     const [showHistory, setShowHistory] = useState(false);
     const [sortKey, setSortKey] = useState<SortKey>('rank');
+
+    useEffect(() => { setHistory(loadHistory()); }, []);
+
+    const handleLitSearch = useCallback(async () => {
+        if (!litQuery.trim()) return;
+        setLitSearching(true);
+        setLitResults([]);
+        setLitV2Response(null);
+        const res = await literatureApi.searchV2(litQuery);
+        if (res.data) {
+            setLitV2Response(res.data);
+            setLitResults(res.data.papers);
+        }
+        setLitSearching(false);
+    }, [litQuery]);
+
+    const handleAddPaper = useCallback(async (paper: Paper) => {
+        try {
+            const res = await papersApi.add(projectId, paper);
+            if (res.data) {
+                await refreshPapers();
+            }
+        } catch (err) {
+            console.error('Failed to add paper:', err);
+        }
+    }, [projectId, refreshPapers]);
 
     useEffect(() => { setHistory(loadHistory()); }, []);
 
@@ -356,8 +376,8 @@ export function LiteratureTab({
                 {tabs.map(tab => (
                     <button key={tab.id} onClick={() => setActiveTab(tab.id)}
                         className={`flex items-center gap-1.5 px-3 py-2.5 text-[12px] font-medium border-b-2 transition-colors ${activeTab === tab.id
-                                ? 'border-gray-900 text-gray-900'
-                                : 'border-transparent text-gray-400 hover:text-gray-700'
+                            ? 'border-gray-900 text-gray-900'
+                            : 'border-transparent text-gray-400 hover:text-gray-700'
                             }`}>
                         {tab.label}
                         {tab.count != null && (
@@ -408,7 +428,7 @@ export function LiteratureTab({
                                             paper={paper}
                                             rank={idx + 1}
                                             isAdded={projectPapers.some(p => p.title === paper.title)}
-                                            onAdd={() => onAddPaper(paper)}
+                                            onAdd={() => handleAddPaper(paper)}
                                         />
                                     ))}
                                 </div>

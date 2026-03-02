@@ -109,6 +109,20 @@ export interface ChatResponse {
     sources?: string[];
 }
 
+export interface OnboardingAction {
+    type: string;
+    research_goal: string;
+    output_type: string;
+    audience: string;
+    additional_context?: string | null;
+}
+
+export interface OnboardingChatResponse {
+    response: string;
+    action: OnboardingAction | null;
+    session_id: string;
+}
+
 export interface ChatMessage {
     id: string;
     role: 'user' | 'assistant';

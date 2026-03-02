@@ -147,6 +147,11 @@ from export_api import router as export_router
 
 logger.info(f"Loaded export router with {len(export_router.routes)} routes")
 
+# Claims Graph API imports
+from claims_graph_api import router as claims_graph_router
+
+logger.info(f"Loaded claims graph router with {len(claims_graph_router.routes)} routes")
+
 
 # ============== Pydantic Models ==============
 
@@ -1906,6 +1911,8 @@ api_router.include_router(analysis_router)
 logger.info("Included analysis router in api_router")
 api_router.include_router(export_router)
 logger.info("Included export router in api_router")
+api_router.include_router(claims_graph_router)
+logger.info("Included claims graph router in api_router")
 app.include_router(api_router)
 logger.info("Included api_router in app")
 

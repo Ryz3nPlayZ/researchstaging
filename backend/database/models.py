@@ -105,6 +105,7 @@ class Project(Base):
     research_goal = Column(Text, nullable=False)
     output_type = Column(SQLEnum(OutputType), nullable=False)
     audience = Column(String(255), nullable=True)
+    additional_context = Column(Text, nullable=True)
     
     # Lifecycle state
     status = Column(SQLEnum(ProjectStatus), default=ProjectStatus.CREATED, nullable=False)

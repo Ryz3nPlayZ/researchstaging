@@ -1,38 +1,44 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { ArtifactResponse, relativeTime } from '@/lib/types';
 import { Loader2, Play, Wand2, Bug, HelpCircle, ChevronDown } from 'lucide-react';
-import { chatApi } from '@/lib/api';
-import { useParams } from 'next/navigation';
+import { chatApi, analysisApi, artifactApi } from '@/lib/api';
+import { useProject } from '../_context/project-context';
 
-interface AnalysisTabProps {
-    language: 'python' | 'r';
-    setLanguage: (lang: 'python' | 'r') => void;
-    code: string;
-    setCode: (code: string) => void;
-    analysisRunning: boolean;
-    handleRunAnalysis: () => void;
-    analysisOutput: string | null;
-    analysisError: string | null;
-    artifacts: ArtifactResponse[];
-}
+export function AnalysisTab() {
+    const { projectId, artifacts } = useProject();
 
-export function AnalysisTab({
-    language,
-    setLanguage,
-    code,
-    setCode,
-    analysisRunning,
-    handleRunAnalysis,
-    analysisOutput,
-    analysisError,
-    artifacts
-}: AnalysisTabProps) {
-    const params = useParams();
-    const projectId = params?.id as string;
+    // Internalized state (was lifted to page.tsx before)
+    const [language, setLanguage] = useState<'python' | 'r'>('python');
+    const [code, setCode] = useState('');
+    const [analysisRunning, setAnalysisRunning] = useState(false);
+    const [analysisOutput, setAnalysisOutput] = useState<string | null>(null);
+    const [analysisError, setAnalysisError] = useState<string | null>(null);
+    const [localArtifacts, setLocalArtifacts] = useState<ArtifactResponse[]>([]);
+
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const lineNumberRef = useRef<HTMLDivElement>(null);
     const [aiLoading, setAiLoading] = useState(false);
     const [terminalHeight, setTerminalHeight] = useState(200);
+
+    // Merge context artifacts with locally fetched ones
+    const allArtifacts = localArtifacts.length > 0 ? localArtifacts : artifacts;
+
+    const handleRunAnalysis = useCallback(async () => {
+        if (!code.trim()) return;
+        setAnalysisRunning(true);
+        setAnalysisOutput(null);
+        setAnalysisError(null);
+        const res = await analysisApi.execute(code, language, projectId);
+        if (res.data) {
+            setAnalysisOutput(res.data.output || '(no output)');
+            if (res.data.error) setAnalysisError(res.data.error);
+        } else if (res.error) {
+            setAnalysisError(res.error);
+        }
+        setAnalysisRunning(false);
+        const artRes = await artifactApi.list(projectId);
+        if (artRes.data) setLocalArtifacts(artRes.data);
+    }, [code, language, projectId]);
 
     // Sync line number scroll with textarea
     const handleScroll = useCallback(() => {
@@ -83,8 +89,8 @@ export function AnalysisTab({
                     <button
                         onClick={() => setLanguage('python')}
                         className={`px-3 py-1 rounded-md text-[12px] font-medium transition-all ${language === 'python'
-                                ? 'bg-white/10 text-white'
-                                : 'text-gray-500 hover:text-gray-300'
+                            ? 'bg-white/10 text-white'
+                            : 'text-gray-500 hover:text-gray-300'
                             }`}
                     >
                         Python
@@ -92,8 +98,8 @@ export function AnalysisTab({
                     <button
                         onClick={() => setLanguage('r')}
                         className={`px-3 py-1 rounded-md text-[12px] font-medium transition-all ${language === 'r'
-                                ? 'bg-white/10 text-white'
-                                : 'text-gray-500 hover:text-gray-300'
+                            ? 'bg-white/10 text-white'
+                            : 'text-gray-500 hover:text-gray-300'
                             }`}
                     >
                         R
@@ -217,11 +223,11 @@ export function AnalysisTab({
             )}
 
             {/* Artifacts */}
-            {artifacts.length > 0 && (
+            {allArtifacts.length > 0 && (
                 <div className="border-t border-white/[0.06] p-3 bg-[#181825]">
-                    <h3 className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Artifacts ({artifacts.length})</h3>
+                    <h3 className="text-[10px] font-semibold text-gray-500 uppercase tracking-wider mb-2">Artifacts ({allArtifacts.length})</h3>
                     <div className="space-y-1">
-                        {artifacts.map((art) => (
+                        {allArtifacts.map((art) => (
                             <div key={art.id} className="flex items-center justify-between py-1.5 px-2 rounded-md hover:bg-white/[0.03] transition-colors">
                                 <div>
                                     <span className="text-[12px] font-medium text-gray-300">{art.title}</span>

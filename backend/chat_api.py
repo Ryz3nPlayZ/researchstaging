@@ -692,6 +692,40 @@ async def simple_chat(request: SimpleChatRequest):
         )
 
 
+# ============== Onboarding Chat Endpoint ==============
+
+from onboarding_service import (
+    OnboardingChatRequest,
+    OnboardingChatResponse as OnboardingResponse,
+    handle_onboarding_message,
+)
+
+
+@router.post("/onboarding", response_model=OnboardingResponse)
+async def onboarding_chat(request: OnboardingChatRequest):
+    """
+    Dedicated onboarding endpoint for project creation conversations.
+
+    Uses a comprehensive system prompt that gives the LLM full awareness of
+    what Research Pilot is, what it can do, and what data to collect.
+    Maintains per-session conversation history server-side.
+
+    Returns clean display text + optional structured action (create_project).
+    """
+    try:
+        result = await handle_onboarding_message(
+            session_id=request.session_id,
+            user_message=request.message,
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Onboarding chat failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Onboarding failed: {str(e)}"
+        )
+
+
 async def _route_to_agent(
     agent_router: AgentRouter,
     agent_type: str,

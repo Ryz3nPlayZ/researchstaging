@@ -1,14 +1,21 @@
+'use client';
+
+import { useState } from 'react';
+import { useProject } from '../_context/project-context';
 import { FileItem, relativeTime } from '@/lib/types';
 import { Upload, FileText, Download, Eye } from 'lucide-react';
 import { fileApi } from '@/lib/api';
+import { FilePreviewModal } from '@/components/file-preview-modal';
 
-interface FilesTabProps {
-    files: FileItem[];
-    onUploadFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    onPreviewFile: (file: FileItem) => void;
-}
+export function FilesTab() {
+    const { files, projectId, uploadFile } = useProject();
+    const [previewFile, setPreviewFile] = useState<FileItem | null>(null);
 
-export function FilesTab({ files, onUploadFile, onPreviewFile }: FilesTabProps) {
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        await uploadFile(file);
+    };
     return (
         <div className="flex flex-col h-full bg-white rounded-xl border border-black/5 shadow-sm overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-black/5 bg-gray-50/50">
@@ -21,7 +28,7 @@ export function FilesTab({ files, onUploadFile, onPreviewFile }: FilesTabProps) 
                 <label className="inline-flex items-center justify-center gap-1.5 bg-gray-900 hover:bg-gray-800 text-white px-3 py-1.5 rounded-lg text-[11px] font-medium transition-colors shadow-sm cursor-pointer hover:-translate-y-[1px]">
                     <Upload size={12} />
                     Upload File
-                    <input type="file" className="hidden" onChange={onUploadFile} />
+                    <input type="file" className="hidden" onChange={handleFileUpload} />
                 </label>
             </div>
 
@@ -31,7 +38,7 @@ export function FilesTab({ files, onUploadFile, onPreviewFile }: FilesTabProps) 
                         {files.map((file) => (
                             <div key={file.id}
                                 className="p-3 rounded-lg hover:bg-gray-50 border border-transparent hover:border-black/5 transition-colors flex items-center justify-between group cursor-pointer"
-                                onClick={() => onPreviewFile(file)}
+                                onClick={() => setPreviewFile(file)}
                             >
                                 <div className="flex items-center gap-3 flex-1 min-w-0">
                                     <div className="w-8 h-8 rounded-md bg-gray-100 flex items-center justify-center group-hover:bg-gray-200 transition-colors shrink-0">
@@ -52,7 +59,7 @@ export function FilesTab({ files, onUploadFile, onPreviewFile }: FilesTabProps) 
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            onPreviewFile(file);
+                                            setPreviewFile(file);
                                         }}
                                         className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-white rounded border border-transparent hover:border-black/5 hover:shadow-sm transition-all"
                                         title="Preview"
@@ -81,11 +88,23 @@ export function FilesTab({ files, onUploadFile, onPreviewFile }: FilesTabProps) 
                         <label className="inline-flex items-center justify-center gap-1.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-colors shadow-sm cursor-pointer hover:-translate-y-[1px]">
                             <Upload size={12} />
                             Upload File
-                            <input type="file" className="hidden" onChange={onUploadFile} />
+                            <input type="file" className="hidden" onChange={handleFileUpload} />
                         </label>
                     </div>
                 )}
             </div>
+
+            {/* File Preview Modal */}
+            {previewFile && (
+                <FilePreviewModal
+                    isOpen={!!previewFile}
+                    onClose={() => setPreviewFile(null)}
+                    fileId={previewFile.id}
+                    projectId={projectId}
+                    fileName={previewFile.name}
+                    fileType={previewFile.mime_type || previewFile.file_type}
+                />
+            )}
         </div>
     );
 }

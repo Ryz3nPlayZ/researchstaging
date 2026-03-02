@@ -1,15 +1,23 @@
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
-import { DocumentListItem, relativeTime } from '@/lib/types';
+import { useRouter } from 'next/navigation';
+import { useProject } from '../_context/project-context';
+import { relativeTime } from '@/lib/types';
 import { Plus, FileText, ChevronRight } from 'lucide-react';
 
-interface DocumentsTabProps {
-    documents: DocumentListItem[];
-    projectId: string;
-    creatingDoc: boolean;
-    onCreateDocument: () => void;
-}
+export function DocumentsTab() {
+    const router = useRouter();
+    const { documents, projectId, createDocument } = useProject();
+    const [creatingDoc, setCreatingDoc] = useState(false);
 
-export function DocumentsTab({ documents, projectId, creatingDoc, onCreateDocument }: DocumentsTabProps) {
+    const handleCreateDocument = async () => {
+        setCreatingDoc(true);
+        const docId = await createDocument();
+        if (docId) router.push(`/projects/${projectId}/doc/${docId}`);
+        setCreatingDoc(false);
+    };
     return (
         <div className="flex flex-col h-full bg-white rounded-xl border border-black/5 shadow-sm overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-black/5 bg-gray-50/50">
@@ -20,7 +28,7 @@ export function DocumentsTab({ documents, projectId, creatingDoc, onCreateDocume
                     </span>
                 </div>
                 <button
-                    onClick={onCreateDocument}
+                    onClick={handleCreateDocument}
                     disabled={creatingDoc}
                     className="inline-flex items-center justify-center gap-1.5 bg-gray-900 hover:bg-gray-800 disabled:opacity-50 text-white px-3 py-1.5 rounded-lg text-[11px] font-medium transition-colors shadow-sm"
                 >
@@ -61,7 +69,7 @@ export function DocumentsTab({ documents, projectId, creatingDoc, onCreateDocume
                         <h3 className="text-[13px] font-medium text-gray-900 mb-1">No documents yet</h3>
                         <p className="text-[12px] text-gray-500 max-w-sm mb-4">Create your first document to start drafting your research paper or literature review.</p>
                         <button
-                            onClick={onCreateDocument}
+                            onClick={handleCreateDocument}
                             disabled={creatingDoc}
                             className="inline-flex items-center justify-center gap-1.5 bg-white hover:bg-gray-50 border border-gray-200 text-gray-700 px-3 py-1.5 rounded-lg text-[11px] font-medium transition-colors shadow-sm"
                         >

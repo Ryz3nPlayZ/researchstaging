@@ -1,0 +1,13 @@
+{"ts":"2026-02-25T17:39:17.941075342-05:00","cmd":"init","session":"ses_440c10","ok":true,"dur_ms":2254}
+{"ts":"2026-02-25T17:39:22.621960358-05:00","cmd":"version","flags":{"short":"true"},"session":"ses_440c10","ok":true,"dur_ms":0}
+{"ts":"2026-02-26T12:22:17.685404678-05:00","cmd":"version","flags":{"short":"true"},"session":"ses_440c10","ok":true,"dur_ms":0}
+{"ts":"2026-02-27T16:13:57.244206085-05:00","cmd":"usage","flags":{"new-session":"true"},"session":"ses_57babf","ok":true,"dur_ms":179}
+{"ts":"2026-02-27T16:13:57.699641237-05:00","cmd":"usage","flags":{"quiet":"true"},"session":"ses_57babf","ok":true,"dur_ms":175}
+{"ts":"2026-02-27T16:46:49.097177616-05:00","cmd":"version","flags":{"short":"true"},"session":"ses_57babf","ok":true,"dur_ms":0}
+{"ts":"2026-02-27T17:40:50.412062542-05:00","cmd":"","ok":true,"dur_ms":1}
+{"ts":"2026-02-27T17:40:53.315802291-05:00","cmd":"init","session":"ses_57babf","ok":true,"dur_ms":0}
+{"ts":"2026-02-27T17:40:59.762038641-05:00","cmd":"version","flags":{"short":"true"},"session":"ses_57babf","ok":true,"dur_ms":0}
+{"ts":"2026-02-28T23:14:52.841308157-05:00","cmd":"version","flags":{"short":"true"},"session":"ses_57babf","ok":true,"dur_ms":0}
+{"ts":"2026-02-28T23:14:59.218157398-05:00","cmd":"search","flags":{"json":"true","limit":"50","status":"[open,in_progress,blocked,in_review]"},"session":"ses_57babf","ok":true,"dur_ms":41}
+{"ts":"2026-02-28T23:14:59.301722842-05:00","cmd":"search","flags":{"json":"true","limit":"50","status":"[open,in_progress,blocked,in_review]"},"session":"ses_57babf","ok":true,"dur_ms":5}
+{"ts":"2026-02-28T23:14:59.366183641-05:00","cmd":"search","flags":{"json":"true","limit":"50","status":"[open,in_progress,blocked,in_review]"},"session":"ses_57babf","ok":true,"dur_ms":2}

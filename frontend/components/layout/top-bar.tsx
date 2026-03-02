@@ -27,6 +27,7 @@ export function TopBar() {
     { label: "Projects", href: "/projects" },
     { label: "Literature", href: "/literature" },
     { label: "Literature V2", href: "/literature-v2" },
+    { label: "Claims", href: "/claims" },
   ];
 
   const initials = getUserInitials(user?.name) || "U";

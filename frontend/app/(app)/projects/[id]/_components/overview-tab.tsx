@@ -1,19 +1,33 @@
-import { Project, calcProjectProgress, relativeTime } from '@/lib/types';
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useProject } from '../_context/project-context';
+import { calcProjectProgress, relativeTime } from '@/lib/types';
 import { Plus, Upload, CheckCircle, AlertCircle, Loader2, Workflow, Activity, TerminalSquare } from 'lucide-react';
-import { TaskResponse, ExecutionLogEntry } from '@/lib/types';
 
-interface OverviewTabProps {
-    project: Project;
-    tasks: TaskResponse[];
-    executionLogs: ExecutionLogEntry[];
-    onCreateDocument: () => void;
-    onUploadFile: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    creatingDoc: boolean;
-}
+export function OverviewTab() {
+    const router = useRouter();
+    const { project, tasks, executionLogs, projectId, createDocument, uploadFile } = useProject();
+    const [creatingDoc, setCreatingDoc] = useState(false);
 
-export function OverviewTab({ project, tasks, executionLogs, onCreateDocument, onUploadFile, creatingDoc }: OverviewTabProps) {
+    if (!project) return null;
+
     const uiStatus = project.status;
     const progress = calcProjectProgress(project.task_counts);
+
+    const handleCreateDocument = async () => {
+        setCreatingDoc(true);
+        const docId = await createDocument();
+        if (docId) router.push(`/projects/${projectId}/doc/${docId}`);
+        setCreatingDoc(false);
+    };
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        await uploadFile(file);
+    };
 
     return (
         <div className="space-y-6">
@@ -69,7 +83,7 @@ export function OverviewTab({ project, tasks, executionLogs, onCreateDocument, o
                     <h3 className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider mb-3">Quick Actions</h3>
                     <div className="space-y-2">
                         <button
-                            onClick={onCreateDocument}
+                            onClick={handleCreateDocument}
                             disabled={creatingDoc}
                             className="w-full text-left px-3 py-2 rounded-lg text-[12px] font-medium text-gray-700 hover:bg-gray-50 transition-colors border border-black/5 flex items-center gap-2.5 bg-white"
                         >
@@ -79,7 +93,7 @@ export function OverviewTab({ project, tasks, executionLogs, onCreateDocument, o
                         <label className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] font-medium text-gray-700 hover:bg-gray-50 transition-colors border border-black/5 cursor-pointer bg-white">
                             <Upload size={14} className="text-gray-400" />
                             Upload File
-                            <input type="file" className="hidden" onChange={onUploadFile} />
+                            <input type="file" className="hidden" onChange={handleFileUpload} />
                         </label>
                     </div>
                 </div>
