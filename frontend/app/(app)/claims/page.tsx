@@ -85,8 +85,9 @@ export default function ClaimsPage() {
   }, [loadUploads]);
 
   // Handle file upload
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement> | FileList) => {
+    const files = e instanceof FileList ? e : e.target.files;
+    const file = files?.[0];
     if (!file || !selectedProject) return;
 
     // Validate file type
@@ -158,10 +159,22 @@ export default function ClaimsPage() {
             </select>
           </div>
 
-          <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-indigo-500 transition-colors">
+          <div 
+            className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-indigo-500 transition-colors relative"
+            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (!selectedProject || uploading) return;
+              const files = e.dataTransfer.files;
+              if (files.length > 0) {
+                handleUpload(files);
+              }
+            }}
+          >
             <input
               type="file"
-              accept=".pdf"
+              accept=".pdf,application/pdf"
               onChange={handleUpload}
               disabled={!selectedProject || uploading}
               className="hidden"
@@ -169,7 +182,7 @@ export default function ClaimsPage() {
             />
             <label
               htmlFor="pdf-upload"
-              className={`cursor-pointer flex flex-col items-center ${(!selectedProject || uploading) ? 'opacity-50' : ''}`}
+              className={`cursor-pointer flex flex-col items-center ${(!selectedProject || uploading) ? 'opacity-50 pointer-events-none' : ''}`}
             >
               {uploading ? (
                 <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-3" />
