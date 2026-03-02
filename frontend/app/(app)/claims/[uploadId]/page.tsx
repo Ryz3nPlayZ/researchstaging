@@ -7,6 +7,7 @@ import {
   ArrowLeft, AlertTriangle, GitGraph, Loader2,
   Filter, Download, MessageSquare
 } from 'lucide-react';
+import { getToken } from '@/lib/auth';
 
 // Types
 interface Claim {
@@ -62,7 +63,10 @@ export default function ClaimsGraphDetailPage() {
 
   const loadGraphData = async () => {
     try {
-      const res = await fetch(`/api/claims-graph/uploads/${uploadId}/graph`);
+      const token = getToken();
+      const res = await fetch(`/api/claims-graph/uploads/${uploadId}/graph`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
       if (res.ok) {
         const result = await res.json();
         setData(result.data);
@@ -467,13 +471,16 @@ function ClaimInspector({ claim, uploadId }: { claim: Claim; uploadId: string })
   const [annotations, setAnnotations] = useState<any[]>([]);
 
   useEffect(() => {
+    const token = getToken();
+    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    
     // Load evidence chain
-    fetch(`/api/claims-graph/claims/${claim.id}/chain?direction=both`)
+    fetch(`/api/claims-graph/claims/${claim.id}/chain?direction=both`, { headers })
       .then(r => r.json())
       .then(data => setChain(data.data));
 
     // Load annotations
-    fetch(`/api/claims-graph/annotations?upload_id=${uploadId}&claim_id=${claim.id}`)
+    fetch(`/api/claims-graph/annotations?upload_id=${uploadId}&claim_id=${claim.id}`, { headers })
       .then(r => r.json())
       .then(data => setAnnotations(data.data || []));
   }, [claim.id, uploadId]);

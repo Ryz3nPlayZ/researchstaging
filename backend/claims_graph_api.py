@@ -39,9 +39,10 @@ router = APIRouter(
     prefix="/claims-graph", tags=["claims-graph"], dependencies=[Depends(require_auth)]
 )
 
-# Storage directory
-STORAGE_DIR = Path(__file__).parent.parent / "storage" / "papers"
+# Storage directory - use /tmp in production (Railway), local storage in dev
+STORAGE_DIR = Path(os.environ.get("STORAGE_PATH", "/tmp/claims-papers"))
 STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+logger.info(f"Claims graph storage directory: {STORAGE_DIR}")
 
 
 # ============== Pydantic Models ==============

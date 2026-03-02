@@ -19,7 +19,7 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.dialects.postgresql import ARRAY, UUID
+from sqlalchemy.dialects.postgresql import ARRAY
 
 from database.models import Base
 
@@ -70,7 +70,7 @@ class PaperClaim(Base):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     paper_upload_id = Column(
-        UUID(as_uuid=True),
+        String(36),
         ForeignKey("paper_uploads.id", ondelete="CASCADE"),
         nullable=False,
     )
@@ -122,18 +122,18 @@ class PaperClaimRelationship(Base):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     paper_upload_id = Column(
-        UUID(as_uuid=True),
+        String(36),
         ForeignKey("paper_uploads.id", ondelete="CASCADE"),
         nullable=False,
     )
 
     source_claim_id = Column(
-        UUID(as_uuid=True),
+        String(36),
         ForeignKey("paper_claims.id", ondelete="CASCADE"),
         nullable=False,
     )
     target_claim_id = Column(
-        UUID(as_uuid=True),
+        String(36),
         ForeignKey("paper_claims.id", ondelete="CASCADE"),
         nullable=False,
     )
@@ -169,18 +169,18 @@ class Contradiction(Base):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     paper_upload_id = Column(
-        UUID(as_uuid=True),
+        String(36),
         ForeignKey("paper_uploads.id", ondelete="CASCADE"),
         nullable=False,
     )
 
     claim_1_id = Column(
-        UUID(as_uuid=True),
+        String(36),
         ForeignKey("paper_claims.id", ondelete="CASCADE"),
         nullable=False,
     )
     claim_2_id = Column(
-        UUID(as_uuid=True),
+        String(36),
         ForeignKey("paper_claims.id", ondelete="CASCADE"),
         nullable=False,
     )
@@ -213,22 +213,22 @@ class ClaimAnnotation(Base):
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     paper_upload_id = Column(
-        UUID(as_uuid=True),
+        String(36),
         ForeignKey("paper_uploads.id", ondelete="CASCADE"),
         nullable=False,
     )
 
     claim_id = Column(
-        UUID(as_uuid=True),
+        String(36),
         ForeignKey("paper_claims.id", ondelete="CASCADE"),
         nullable=True,
     )
     relationship_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("claim_relationships.id", ondelete="CASCADE"),
+        String(36),
+        ForeignKey("paper_claim_relationships.id", ondelete="CASCADE"),
         nullable=True,
     )
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    user_id = Column(String(36), ForeignKey("users.id"), nullable=False)
 
     annotation_type = Column(
         String(20), nullable=False
@@ -237,7 +237,7 @@ class ClaimAnnotation(Base):
 
     # Threading
     parent_annotation_id = Column(
-        UUID(as_uuid=True), ForeignKey("claim_annotations.id"), nullable=True
+        String(36), ForeignKey("claim_annotations.id"), nullable=True
     )
 
     created_at = Column(DateTime, default=datetime.utcnow)

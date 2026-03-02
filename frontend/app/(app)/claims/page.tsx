@@ -7,6 +7,7 @@ import {
   Upload, FileText, AlertCircle, CheckCircle, Loader2,
   GitGraph, AlertTriangle, MessageSquare, Filter, Download
 } from 'lucide-react';
+import { getToken } from '@/lib/auth';
 
 // Types
 interface PaperUpload {
@@ -50,7 +51,10 @@ export default function ClaimsPage() {
   // Load uploads
   const loadUploads = useCallback(async () => {
     try {
-      const res = await fetch('/api/claims-graph/uploads');
+      const token = getToken();
+      const res = await fetch('/api/claims-graph/uploads', {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
       if (res.ok) {
         const data = await res.json();
         setUploads(data.data || []);
@@ -85,13 +89,27 @@ export default function ClaimsPage() {
     const file = e.target.files?.[0];
     if (!file || !selectedProject) return;
 
+    // Validate file type
+    if (!file.type.includes('pdf') && !file.name.endsWith('.pdf')) {
+      alert('Please select a PDF file');
+      return;
+    }
+
+    // Validate file size (max 50MB)
+    if (file.size > 50 * 1024 * 1024) {
+      alert('File size must be less than 50MB');
+      return;
+    }
+
     setUploading(true);
     const formData = new FormData();
     formData.append('file', file);
 
     try {
+      const token = getToken();
       const res = await fetch(`/api/claims-graph/upload?project_id=${selectedProject}`, {
         method: 'POST',
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
         body: formData,
       });
 
@@ -100,11 +118,13 @@ export default function ClaimsPage() {
         // Add to list
         setUploads(prev => [data.data, ...prev]);
       } else {
-        alert('Upload failed');
+        const errorData = await res.json().catch(() => ({ detail: 'Unknown error' }));
+        console.error('Upload failed:', res.status, errorData);
+        alert(`Upload failed: ${errorData.detail || res.statusText}`);
       }
     } catch (e) {
       console.error('Upload error:', e);
-      alert('Upload failed');
+      alert(`Upload error: ${e instanceof Error ? e.message : 'Unknown error'}`);
     } finally {
       setUploading(false);
     }
@@ -208,7 +228,10 @@ function UploadCard({ upload, onRefresh }: { upload: PaperUpload; onRefresh: () 
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/claims-graph/uploads/${upload.id}/status`);
+        const token = getToken();
+        const res = await fetch(`/api/claims-graph/uploads/${upload.id}/status`, {
+          headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+        });
         if (res.ok) {
           const data = await res.json();
           if (data.data.status === 'completed' || data.data.status === 'failed') {
