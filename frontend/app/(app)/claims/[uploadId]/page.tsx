@@ -472,7 +472,7 @@ function ClaimInspector({ claim, uploadId }: { claim: Claim; uploadId: string })
 
   useEffect(() => {
     const token = getToken();
-    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+    const headers: Record<string, string> = token ? { 'Authorization': `Bearer ${token}` } : {};
     
     // Load evidence chain
     fetch(`/api/claims-graph/claims/${claim.id}/chain?direction=both`, { headers })
