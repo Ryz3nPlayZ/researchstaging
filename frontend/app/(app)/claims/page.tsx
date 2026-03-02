@@ -57,7 +57,7 @@ export default function ClaimsPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setUploads(data.data || []);
+        setUploads(Array.isArray(data) ? data : (data.data || []));
       }
     } catch (e) {
       console.error('Failed to load uploads:', e);
@@ -71,8 +71,9 @@ export default function ClaimsPage() {
     fetch('/api/projects')
       .then(r => r.json())
       .then(data => {
-        if (data.data) {
-          setProjects(data.data.map((p: any) => ({
+        const projectList = Array.isArray(data) ? data : data.data;
+        if (projectList) {
+          setProjects(projectList.map((p: any) => ({
             id: p.id,
             name: p.research_goal?.slice(0, 50) || 'Untitled'
           })));
@@ -116,8 +117,9 @@ export default function ClaimsPage() {
 
       if (res.ok) {
         const data = await res.json();
+        const upload = data?.data ?? data;
         // Add to list
-        setUploads(prev => [data.data, ...prev]);
+        setUploads(prev => [upload, ...prev]);
       } else {
         const errorData = await res.json().catch(() => ({ detail: 'Unknown error' }));
         console.error('Upload failed:', res.status, errorData);
@@ -247,7 +249,8 @@ function UploadCard({ upload, onRefresh }: { upload: PaperUpload; onRefresh: () 
         });
         if (res.ok) {
           const data = await res.json();
-          if (data.data.status === 'completed' || data.data.status === 'failed') {
+          const upload = data?.data ?? data;
+          if (upload.status === 'completed' || upload.status === 'failed') {
             setPolling(false);
             onRefresh();
           }
