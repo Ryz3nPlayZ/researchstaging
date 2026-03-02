@@ -7,7 +7,7 @@ import os
 import shutil
 from pathlib import Path
 from typing import List, Optional
-from uuid import UUID
+from uuid import uuid4
 
 from auth_dependencies import require_auth
 from claim_extraction_service import claim_extraction_service
@@ -228,7 +228,7 @@ async def upload_paper(
         raise HTTPException(400, "Only PDF files are supported")
 
     # Save file
-    upload_id = str(UUID())
+    upload_id = str(uuid4())
     file_path = STORAGE_DIR / f"{upload_id}.pdf"
 
     try:
