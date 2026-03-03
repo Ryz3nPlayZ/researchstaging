@@ -583,10 +583,20 @@ async def create_project(
     try:
         logger.info(f"Creating project: {project_input.research_goal}")
 
+        # Validate output_type against enum; fall back to literature_review
+        try:
+            resolved_output_type = OutputType(project_input.output_type)
+        except ValueError:
+            logger.warning(
+                f"Unknown output_type '{project_input.output_type}', "
+                f"falling back to literature_review"
+            )
+            resolved_output_type = OutputType.LITERATURE_REVIEW
+
         project = Project(
             user_id=current_user.id,
             research_goal=project_input.research_goal,
-            output_type=OutputType(project_input.output_type),
+            output_type=resolved_output_type,
             audience=project_input.audience,
             additional_context=project_input.additional_context,
             status=ProjectStatus.CREATED,

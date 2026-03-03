@@ -85,6 +85,7 @@ class OutputType(str, enum.Enum):
     ANALYSIS_REPORT = "analysis_report"
     THESIS_CHAPTER = "thesis_chapter"
     META_ANALYSIS = "meta_analysis"
+    SYSTEMATIC_REVIEW = "systematic_review"
 
 
 # ============== Core Models ==============
