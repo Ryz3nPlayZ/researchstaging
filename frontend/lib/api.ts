@@ -76,6 +76,76 @@ async function apiRequest<T>(
   }
 }
 
+async function onboardingRequest<T>(
+  endpoint: string,
+  payload: { session_id: string; message: string },
+  options?: { timeoutMs?: number; retries?: number },
+): Promise<ApiResponse<T>> {
+  const timeoutMs = options?.timeoutMs ?? 45000;
+  const retries = options?.retries ?? 1;
+  let attempt = 0;
+
+  while (attempt <= retries) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const token = getToken();
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${API_BASE}${endpoint}`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        const result = {
+          error: body.detail || `HTTP ${response.status}: ${response.statusText}`,
+          status: response.status,
+        };
+
+        const retryable = response.status >= 500 || response.status === 429;
+        if (retryable && attempt < retries) {
+          attempt += 1;
+          continue;
+        }
+
+        return result;
+      }
+
+      const data = await response.json();
+      return { data, status: response.status };
+    } catch (error) {
+      clearTimeout(timeout);
+      const isAbort = error instanceof Error && error.name === "AbortError";
+      const errorMessage = isAbort
+        ? "Request timed out"
+        : error instanceof Error
+          ? error.message
+          : "Unknown error";
+
+      if (attempt < retries) {
+        attempt += 1;
+        continue;
+      }
+
+      return { error: errorMessage, status: 0 };
+    }
+  }
+
+  return { error: "Onboarding request failed", status: 0 };
+}
+
 // ============== Project APIs ==============
 
 export const projectApi = {
@@ -272,11 +342,16 @@ export const chatApi = {
       body: JSON.stringify({ message, agent_type: agentType, context }),
     }),
 
-  onboarding: (sessionId: string, message: string) =>
-    apiRequest<OnboardingChatResponse>("/chat/onboarding", {
-      method: "POST",
-      body: JSON.stringify({ session_id: sessionId, message }),
-    }),
+  onboarding: (
+    sessionId: string,
+    message: string,
+    options?: { timeoutMs?: number; retries?: number },
+  ) =>
+    onboardingRequest<OnboardingChatResponse>(
+      "/chat/onboarding",
+      { session_id: sessionId, message },
+      options,
+    ),
 
   sendProject: (
     projectId: string,

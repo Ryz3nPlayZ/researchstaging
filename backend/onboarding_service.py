@@ -11,10 +11,7 @@ field from the frontend. This module owns:
 
 import json
 import logging
-import re
-import uuid
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -46,7 +43,7 @@ class OnboardingChatRequest(BaseModel):
 
 
 class OnboardingAction(BaseModel):
-    type: str = Field(..., description="Action type: create_project")
+    type: Literal["create_project"] = Field(..., description="Action type: create_project")
     research_goal: str
     output_type: str = "literature_review"
     audience: str = "academic"
@@ -68,6 +65,17 @@ ONBOARDING_SYSTEM_PROMPT = """You are the Project Onboarding Agent for Research 
 Research Pilot is an AI-native research execution system. It transforms a research goal into a structured, defensible output through an automated pipeline: literature discovery across academic databases, PDF acquisition, claim extraction with provenance, thematic synthesis, and document drafting — all with full auditability.
 
 The user works in a project workspace with tabs for: Overview (task pipeline), Documents (write/edit with AI), Literature (search, score, compare papers), Files (uploads), Analysis (Python/R code), and Provenance (claim graph).
+
+## WHAT HAPPENS AFTER CREATION
+
+When you create a project, Research Pilot automatically:
+- Creates a multi-phase plan (Discovery -> Acquisition -> Synthesis -> Output)
+- Expands that plan into executable tasks with dependencies
+- Runs literature discovery across Semantic Scholar, arXiv, OpenAlex, CORE, and Springer Nature
+- Acquires and parses available PDFs, then extracts structured claims with provenance
+- Builds synthesis artifacts and drafts output documents in the selected format
+
+This means onboarding should focus on scoping the project correctly, not collecting implementation details.
 
 ## YOUR JOB
 
@@ -115,6 +123,9 @@ If the user mentions additional constraints (time range, geographic focus, subdi
 - **Treat the first message as a research goal** if it reads like a topic or question. Acknowledge it and ask about output type + audience.
 - **Don't lecture.** You are scoping a project, not answering the research question.
 - **Don't over-ask.** 2-3 questions total max before creating.
+- **Stay in onboarding scope.** Do not answer domain questions in depth. Keep the user moving toward project creation.
+- **Prefer decisive recommendations with confirmation.** You may suggest a likely output type/audience, but always ask for confirmation if the user did not explicitly choose.
+- **Keep responses compact and professional.** No decorative language, emojis, or hype phrasing.
 
 ## WHAT YOU MUST NOT ASK
 
@@ -177,6 +188,23 @@ You: "Sure — what topic are you researching? And are you starting from scratch
 # ============== Action Parser ==============
 
 _ACTION_MARKER = "|||CREATE_PROJECT|||"
+_MAX_SESSION_MESSAGES = 24
+_ALLOWED_OUTPUT_TYPES = {
+    "literature_review",
+    "research_paper",
+    "systematic_review",
+    "meta_analysis",
+    "thesis_chapter",
+    "research_brief",
+    "analysis_report",
+}
+_ALLOWED_AUDIENCES = {
+    "academic",
+    "industry",
+    "general_public",
+    "policymakers",
+    "students",
+}
 
 
 def _parse_action(text: str) -> tuple[str, Optional[OnboardingAction]]:
@@ -191,27 +219,55 @@ def _parse_action(text: str) -> tuple[str, Optional[OnboardingAction]]:
     display_text = parts[0].strip()
     json_part = parts[1].strip()
 
-    # Try to parse the JSON line
     try:
-        # Take the first line that looks like JSON
-        for line in json_part.split("\n"):
-            line = line.strip()
-            if line.startswith("{"):
-                data = json.loads(line)
-                action = OnboardingAction(
-                    type="create_project",
-                    research_goal=data.get("research_goal", ""),
-                    output_type=data.get("output_type", "literature_review"),
-                    audience=data.get("audience", "academic"),
-                    additional_context=data.get("additional_context"),
-                )
-                if action.research_goal:
-                    return display_text, action
-                break
-    except (json.JSONDecodeError, Exception) as e:
+        data = _extract_first_json_object(json_part)
+        if data:
+            action = _normalize_action_payload(data)
+            if action and action.research_goal:
+                return display_text, action
+    except Exception as e:
         logger.warning(f"Failed to parse onboarding action JSON: {e}")
 
     return display_text, None
+
+
+def _extract_first_json_object(raw: str) -> Optional[Dict[str, object]]:
+    decoder = json.JSONDecoder()
+    for idx, char in enumerate(raw):
+        if char != "{":
+            continue
+        try:
+            obj, _ = decoder.raw_decode(raw[idx:])
+            if isinstance(obj, dict):
+                return obj
+        except json.JSONDecodeError:
+            continue
+    return None
+
+
+def _normalize_action_payload(data: Dict[str, object]) -> Optional[OnboardingAction]:
+    raw_goal = str(data.get("research_goal", "")).strip()
+    if not raw_goal:
+        return None
+
+    raw_output = str(data.get("output_type", "literature_review")).strip().lower()
+    raw_audience = str(data.get("audience", "academic")).strip().lower()
+    raw_context = data.get("additional_context")
+
+    output_type = raw_output if raw_output in _ALLOWED_OUTPUT_TYPES else "literature_review"
+    audience = raw_audience if raw_audience in _ALLOWED_AUDIENCES else "academic"
+
+    additional_context = None
+    if isinstance(raw_context, str) and raw_context.strip():
+        additional_context = raw_context.strip()
+
+    return OnboardingAction(
+        type="create_project",
+        research_goal=raw_goal,
+        output_type=output_type,
+        audience=audience,
+        additional_context=additional_context,
+    )
 
 
 # ============== Core Handler ==============
@@ -229,6 +285,8 @@ async def handle_onboarding_message(
 
     # Append user message
     history.append({"role": "user", "content": user_message})
+    if len(history) > _MAX_SESSION_MESSAGES:
+        history[:] = history[-_MAX_SESSION_MESSAGES:]
 
     # Build the prompt with full conversation context
     # The LLM service only supports (system_message, prompt) — not a messages array.
@@ -243,17 +301,24 @@ async def handle_onboarding_message(
 
 Respond as the Project Onboarding Agent. Follow your system instructions exactly."""
 
-    try:
-        raw_response = await llm_service.generate(
-            prompt=prompt,
-            system_message=ONBOARDING_SYSTEM_PROMPT,
-        )
-    except Exception as e:
-        logger.error(f"Onboarding LLM call failed: {e}", exc_info=True)
-        # Don't show a dead-end — give a useful fallback
+    raw_response: Optional[str] = None
+    last_error: Optional[Exception] = None
+    for _ in range(2):
+        try:
+            raw_response = await llm_service.generate(
+                prompt=prompt,
+                system_message=ONBOARDING_SYSTEM_PROMPT,
+            )
+            break
+        except Exception as e:
+            last_error = e
+            logger.warning(f"Onboarding LLM call attempt failed: {e}")
+
+    if not raw_response:
+        logger.error(f"Onboarding LLM call failed after retries: {last_error}", exc_info=True)
         raw_response = (
-            "Let's get your project set up. "
-            "Tell me what you'd like to research, and I'll handle the rest."
+            "Let’s get this set up. Are you starting a brand-new project, "
+            "or continuing with existing papers, notes, or drafts?"
         )
 
     # Parse out the action (if any) and clean display text

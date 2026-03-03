@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { TopBar } from '@/components/layout/top-bar';
 import { AIChatbar } from '@/components/ai-chatbar';
 import { useAuth } from '@/lib/auth-context';
+import { cn } from '@/lib/utils';
 
 export default function AppLayout({
     children,
@@ -13,6 +14,8 @@ export default function AppLayout({
 }) {
     const { user, loading } = useAuth();
     const router = useRouter();
+    const pathname = usePathname();
+    const isOnboardingRoute = pathname === '/new';
 
     useEffect(() => {
         if (!loading && !user) {
@@ -34,12 +37,17 @@ export default function AppLayout({
     }
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="h-dvh bg-background flex flex-col overflow-hidden">
             <TopBar />
-            <main className="pt-20 pb-24">
+            <main
+                className={cn(
+                    'flex-1 min-h-0 pt-20 pb-24 overflow-y-auto',
+                    isOnboardingRoute && 'pb-0 overflow-hidden'
+                )}
+            >
                 {children}
             </main>
-            <AIChatbar />
+            {!isOnboardingRoute && <AIChatbar />}
         </div>
     );
 }

@@ -8,10 +8,10 @@ import {
     ArrowUp,
     BookOpen,
     FileText,
-    FlaskConical,
     Loader2,
+    Paperclip,
+    RotateCcw,
     SearchIcon,
-    Sparkles,
     Upload,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -72,6 +72,7 @@ export function OnboardingChat({ fullPage = false }: { fullPage?: boolean }) {
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [creating, setCreating] = useState(false);
+    const [lastFailedInput, setLastFailedInput] = useState<string | null>(null);
     const [sessionId] = useState(() => crypto.randomUUID());
     const [historyLoaded, setHistoryLoaded] = useState(false);
 
@@ -116,6 +117,10 @@ export function OnboardingChat({ fullPage = false }: { fullPage?: boolean }) {
         setMessages(prev => [...prev, { id: genId(), role: 'assistant' as const, content }]);
     };
 
+    const sendWithRetry = async (session: string, message: string) => {
+        return chatApi.onboarding(session, message, { timeoutMs: 45000, retries: 1 });
+    };
+
     const handleSend = async (overrideText?: string) => {
         const text = (overrideText || input).trim();
         if (!text || loading || creating) return;
@@ -123,13 +128,15 @@ export function OnboardingChat({ fullPage = false }: { fullPage?: boolean }) {
         const userMsg: ChatMsg = { id: genId(), role: 'user', content: text };
         setMessages(prev => [...prev, userMsg]);
         if (!overrideText) setInput('');
+        setLastFailedInput(null);
         setLoading(true);
 
         try {
-            const res = await chatApi.onboarding(sessionId, text);
+            const res = await sendWithRetry(sessionId, text);
 
             if (!res.data) {
                 addAssistantMessage('Something went wrong \u2014 try sending that again.');
+                setLastFailedInput(text);
                 return;
             }
 
@@ -141,7 +148,8 @@ export function OnboardingChat({ fullPage = false }: { fullPage?: boolean }) {
             }
         } catch (err) {
             console.error('Onboarding chat error:', err);
-            addAssistantMessage('I hit an error connecting to the server. Please try again in a moment.');
+            addAssistantMessage('Something went wrong \u2014 try sending that again.');
+            setLastFailedInput(text);
         } finally {
             setLoading(false);
         }
@@ -193,26 +201,26 @@ export function OnboardingChat({ fullPage = false }: { fullPage?: boolean }) {
     // --------------- Render ---------------
 
     return (
-        <div className={`flex flex-col bg-background ${fullPage
-            ? 'w-full h-full'
+        <div className={`flex flex-col bg-background min-h-0 ${fullPage
+            ? 'w-full h-full overflow-hidden'
             : 'h-[600px] w-full max-w-2xl rounded-2xl border border-border shadow-lg overflow-hidden'
         }`}>
 
             {/* Messages area */}
             {hasMessages && (
-                <div className="flex-1 min-h-0 overflow-y-auto">
+                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
                     <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
                         {messages.map((msg) => (
                             <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                 {msg.role === 'assistant' && (
-                                    <div className="w-7 h-7 rounded-full bg-accent-500 flex items-center justify-center mr-3 mt-0.5 shrink-0">
-                                        <Sparkles size={13} className="text-white" />
+                                    <div className="w-7 h-7 rounded-lg border border-border bg-muted flex items-center justify-center mr-3 mt-0.5 shrink-0">
+                                        <span className="text-[10px] font-semibold text-foreground">RP</span>
                                     </div>
                                 )}
                                 <div className={`max-w-[80%] ${
                                     msg.role === 'user'
-                                        ? 'bg-accent-500 text-white px-4 py-2.5 rounded-2xl rounded-br-md'
-                                        : 'text-foreground'
+                                        ? 'bg-foreground text-background px-4 py-2.5 rounded-2xl rounded-br-md'
+                                        : 'text-foreground px-4 py-2.5 rounded-2xl rounded-bl-md border border-border bg-card'
                                 }`}>
                                     {msg.role === 'assistant' ? (
                                         <div className="prose prose-sm max-w-none prose-p:my-1 prose-p:leading-relaxed text-foreground">
@@ -227,8 +235,8 @@ export function OnboardingChat({ fullPage = false }: { fullPage?: boolean }) {
 
                         {loading && (
                             <div className="flex justify-start">
-                                <div className="w-7 h-7 rounded-full bg-accent-500 flex items-center justify-center mr-3 shrink-0">
-                                    <Sparkles size={13} className="text-white" />
+                                <div className="w-7 h-7 rounded-lg border border-border bg-muted flex items-center justify-center mr-3 shrink-0">
+                                    <span className="text-[10px] font-semibold text-foreground">RP</span>
                                 </div>
                                 <div className="flex gap-1.5 items-center pt-2">
                                     <div className="w-1.5 h-1.5 rounded-full bg-base-400 animate-bounce" />
@@ -240,10 +248,10 @@ export function OnboardingChat({ fullPage = false }: { fullPage?: boolean }) {
 
                         {creating && (
                             <div className="flex justify-start">
-                                <div className="w-7 h-7 rounded-full bg-success flex items-center justify-center mr-3 shrink-0">
-                                    <Sparkles size={13} className="text-white" />
+                                <div className="w-7 h-7 rounded-lg border border-border bg-muted flex items-center justify-center mr-3 shrink-0">
+                                    <span className="text-[10px] font-semibold text-foreground">RP</span>
                                 </div>
-                                <div className="flex items-center gap-2 text-sm text-success font-medium">
+                                <div className="flex items-center gap-2 text-sm text-foreground font-medium">
                                     <Loader2 size={14} className="animate-spin" />
                                     Setting up your project&hellip;
                                 </div>
@@ -259,8 +267,8 @@ export function OnboardingChat({ fullPage = false }: { fullPage?: boolean }) {
             {!hasMessages && (
                 <div className="flex-1 flex flex-col items-center justify-center px-4">
                     <div className="mb-8 flex flex-col items-center">
-                        <div className="w-12 h-12 rounded-2xl bg-accent-500 flex items-center justify-center mb-5 shadow-md">
-                            <FlaskConical size={24} className="text-white" />
+                        <div className="w-12 h-12 rounded-2xl border border-border bg-card flex items-center justify-center mb-5 shadow-sm">
+                            <span className="text-sm font-semibold text-foreground">RP</span>
                         </div>
                         <h1 className="text-2xl font-semibold tracking-tight text-foreground mb-2">
                             What do you want to research?
@@ -278,10 +286,10 @@ export function OnboardingChat({ fullPage = false }: { fullPage?: boolean }) {
                                 <button
                                     key={s.label}
                                     onClick={() => handleSuggestionClick(s.prompt)}
-                                    className="group flex items-start gap-3 rounded-xl border border-border bg-card p-3.5 text-left transition-all hover:border-accent-500/30 hover:bg-accent-50 hover:shadow-sm"
+                                    className="group flex items-start gap-3 rounded-xl border border-border bg-card p-3.5 text-left transition-all hover:bg-muted hover:shadow-sm"
                                 >
-                                    <div className="w-8 h-8 rounded-lg bg-base-100 group-hover:bg-accent-500/10 flex items-center justify-center shrink-0 transition-colors">
-                                        <Icon size={15} className="text-base-500 group-hover:text-accent-500 transition-colors" />
+                                    <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center shrink-0 transition-colors border border-border">
+                                        <Icon size={15} className="text-muted-foreground transition-colors" />
                                     </div>
                                     <div className="min-w-0">
                                         <p className="text-sm font-medium text-foreground">{s.label}</p>
@@ -301,7 +309,7 @@ export function OnboardingChat({ fullPage = false }: { fullPage?: boolean }) {
                                     setInput(topic);
                                     void handleSendRef.current?.(topic);
                                 }}
-                                className="text-xs px-3 py-1.5 rounded-full border border-border bg-card hover:bg-accent-50 hover:border-accent-500/30 text-muted-foreground hover:text-foreground transition-all"
+                                className="text-xs px-3 py-1.5 rounded-full border border-border bg-card hover:bg-muted text-muted-foreground hover:text-foreground transition-all"
                             >
                                 {topic}
                             </button>
@@ -311,12 +319,19 @@ export function OnboardingChat({ fullPage = false }: { fullPage?: boolean }) {
             )}
 
             {/* Input area — always at bottom */}
-            <div className={`shrink-0 px-4 pb-5 ${hasMessages ? 'pt-3 border-t border-border' : 'pt-6'}`}>
-                <div className="max-w-2xl mx-auto">
+            <div className={`shrink-0 sticky bottom-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 px-4 pb-5 ${hasMessages ? 'pt-3 border-t border-border' : 'pt-6'}`}>
+                <div className="max-w-2xl mx-auto space-y-2">
                     <form
                         onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-                        className="relative flex items-end gap-2 bg-card rounded-2xl border border-border shadow-sm px-4 py-3 focus-within:border-accent-500/40 focus-within:shadow-md transition-all"
+                        className="relative flex items-end gap-2 bg-card rounded-2xl border border-border shadow-sm px-3 py-2.5 focus-within:shadow-md transition-all"
                     >
+                        <button
+                            type="button"
+                            className="w-8 h-8 rounded-xl border border-border bg-background text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+                            aria-label="Attach files"
+                        >
+                            <Paperclip size={14} className="mx-auto" />
+                        </button>
                         <textarea
                             ref={inputRef}
                             value={input}
@@ -337,7 +352,7 @@ export function OnboardingChat({ fullPage = false }: { fullPage?: boolean }) {
                         <button
                             type="submit"
                             disabled={!input.trim() || creating || loading}
-                            className="w-8 h-8 rounded-xl bg-accent-500 hover:bg-accent-600 text-white flex items-center justify-center transition-colors disabled:opacity-25 disabled:hover:bg-accent-500 shrink-0"
+                            className="w-8 h-8 rounded-xl bg-foreground hover:bg-foreground/90 text-background flex items-center justify-center transition-colors disabled:opacity-25 disabled:hover:bg-foreground shrink-0"
                         >
                             {creating ? (
                                 <Loader2 size={14} className="animate-spin" />
@@ -346,6 +361,17 @@ export function OnboardingChat({ fullPage = false }: { fullPage?: boolean }) {
                             )}
                         </button>
                     </form>
+
+                    {lastFailedInput && !loading && !creating && (
+                        <button
+                            type="button"
+                            onClick={() => { void handleSend(lastFailedInput); }}
+                            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                            <RotateCcw size={12} />
+                            Retry last message
+                        </button>
+                    )}
 
                     {!hasMessages && (
                         <p className="text-center text-xs text-muted-foreground mt-3">
