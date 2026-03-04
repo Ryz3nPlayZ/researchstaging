@@ -115,7 +115,7 @@ If the user mentions additional constraints (time range, geographic focus, subdi
 
 ## CONVERSATION RULES
 
-- **Avoid hardcoded defaults.** Do not silently force literature_review/academic. If you infer them, present them as a recommendation and let the user correct.
+- **Avoid hardcoded defaults.** Do not silently force literature_review/academic. Infer from context; if uncertain, use a recommendation the user can override in one short reply.
 - **You CAN bundle questions.** Ask both output type and audience in one message. Just don't assume the answers.
 - **Be conversational and brief.** 2-3 sentences max. No bullet lists, no markdown headers, no numbered steps. Speak like a senior colleague in a quick chat.
 - **Be fast once you have enough.** If the user gives you all 3 pieces in one message, create the project immediately. Don't ask for confirmation of things they already stated.
@@ -126,6 +126,9 @@ If the user mentions additional constraints (time range, geographic focus, subdi
 - **Stay in onboarding scope.** Do not answer domain questions in depth. Keep the user moving toward project creation.
 - **Prefer decisive recommendations with confirmation.** You may suggest a likely output type/audience, but always ask for confirmation if the user did not explicitly choose.
 - **Keep responses compact and professional.** No decorative language, emojis, or hype phrasing.
+- **Do not use empty acknowledgements.** Never start with phrases like "Thanks for sharing your topic" or similar filler.
+- **Do not ask obvious onboarding questions every turn.** If the user already gave a research goal, do not re-ask whether they have a topic. Move forward.
+- **Wizard mode behavior:** Assume "starting fresh" unless the user explicitly mentions existing artifacts (papers, notes, drafts, data). Do not ask "starting fresh vs importing" unless there is clear ambiguity.
 
 ## WHAT YOU MUST NOT ASK
 
@@ -310,6 +313,11 @@ def _infer_from_text(user_text: str) -> tuple[Optional[str], Optional[str], Opti
     if "post-" in text or "since " in text or "only" in text or "focus on" in text or "exclude" in text:
         inferred_context = user_text.strip()
 
+    if not inferred_output:
+        inferred_output = "literature_review"
+    if not inferred_audience:
+        inferred_audience = "academic"
+
     return inferred_output, inferred_audience, inferred_context
 
 
@@ -335,6 +343,28 @@ def _build_missing_info_prompt(missing_output: bool, missing_audience: bool) -> 
             "meta-analysis, thesis chapter, research brief, or analysis report?"
         )
     return "Who is this for: academic, industry, students, policymakers, or general public?"
+
+
+def _sanitize_assistant_copy(text: str) -> str:
+    cleaned = text.strip()
+    if cleaned.lower().startswith("thanks for sharing your topic"):
+        cleaned = "Got it. " + cleaned.split(".", 1)[-1].strip()
+    if cleaned.lower().startswith("thanks for sharing"):
+        cleaned = "Got it. " + cleaned.split(".", 1)[-1].strip()
+    return cleaned
+
+
+def _is_probable_research_goal(text: str) -> bool:
+    stripped = text.strip()
+    if len(stripped) < 12:
+        return False
+    lowered = stripped.lower()
+    non_goal_prefixes = (
+        "help", "hi", "hello", "what can", "how do", "can you", "hey",
+    )
+    if any(lowered.startswith(prefix) for prefix in non_goal_prefixes):
+        return False
+    return True
 
 
 # ============== Core Handler ==============
@@ -412,6 +442,22 @@ Respond as the Project Onboarding Agent. Follow your system instructions exactly
             action = None
             display_text = _build_missing_info_prompt(missing_output, missing_audience)
 
+    # Wizard mode: if model did not emit action but user gave a concrete goal,
+    # create immediately with inferred recommendation defaults.
+    if not action and _is_probable_research_goal(user_message) and not _looks_like_affirmation(user_message):
+        inferred_output, inferred_audience, inferred_context = _infer_from_text(user_message)
+        action = OnboardingAction(
+            type="create_project",
+            research_goal=user_message.strip(),
+            output_type=inferred_output,
+            audience=inferred_audience,
+            additional_context=inferred_context,
+        )
+        display_text = (
+            f"Got it — I’ll set this up as a {inferred_output.replace('_', ' ')} "
+            f"for an {inferred_audience.replace('_', ' ')} audience. Creating it now."
+        )
+
     # If user affirmed a previous recommendation, reuse inferred slots from history.
     if not action and _looks_like_affirmation(user_message):
         user_text = _collect_user_text(history)
@@ -430,6 +476,8 @@ Respond as the Project Onboarding Agent. Follow your system instructions exactly
                 )
                 if not display_text:
                     display_text = "Great — creating your project now."
+
+    display_text = _sanitize_assistant_copy(display_text)
 
     # Store assistant response in session (clean text only)
     history.append({"role": "assistant", "content": display_text})
