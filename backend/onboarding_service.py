@@ -345,6 +345,14 @@ def _build_missing_info_prompt(missing_output: bool, missing_audience: bool) -> 
     return "Who is this for: academic, industry, students, policymakers, or general public?"
 
 
+def _build_recommendation_prompt(output_type: str, audience: str) -> str:
+    return (
+        f"Got it. I recommend a {output_type.replace('_', ' ')} for a "
+        f"{audience.replace('_', ' ')} audience. Say 'create it' to proceed, "
+        f"or tell me what to change."
+    )
+
+
 def _sanitize_assistant_copy(text: str) -> str:
     cleaned = text.strip()
     if cleaned.lower().startswith("thanks for sharing your topic"):
@@ -443,20 +451,10 @@ Respond as the Project Onboarding Agent. Follow your system instructions exactly
             display_text = _build_missing_info_prompt(missing_output, missing_audience)
 
     # Wizard mode: if model did not emit action but user gave a concrete goal,
-    # create immediately with inferred recommendation defaults.
+    # recommend inferred defaults and ask for one-line confirmation.
     if not action and _is_probable_research_goal(user_message) and not _looks_like_affirmation(user_message):
         inferred_output, inferred_audience, inferred_context = _infer_from_text(user_message)
-        action = OnboardingAction(
-            type="create_project",
-            research_goal=user_message.strip(),
-            output_type=inferred_output,
-            audience=inferred_audience,
-            additional_context=inferred_context,
-        )
-        display_text = (
-            f"Got it — I’ll set this up as a {inferred_output.replace('_', ' ')} "
-            f"for an {inferred_audience.replace('_', ' ')} audience. Creating it now."
-        )
+        display_text = _build_recommendation_prompt(inferred_output, inferred_audience)
 
     # If user affirmed a previous recommendation, reuse inferred slots from history.
     if not action and _looks_like_affirmation(user_message):

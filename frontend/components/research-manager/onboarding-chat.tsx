@@ -168,11 +168,13 @@ export function OnboardingChat({ fullPage = false }: { fullPage?: boolean }) {
                 addAssistantMessage('Project created. Redirecting you to the workspace\u2026');
                 setTimeout(() => router.push(`/projects/${createRes.data!.id}`), 900);
             } else {
-                addAssistantMessage('Something went wrong creating the project. Please try again.');
+                const reason = createRes.error || 'Unknown error';
+                addAssistantMessage(`Couldn’t create the project: ${reason}`);
             }
         } catch (err) {
             console.error('Failed to create project:', err);
-            addAssistantMessage('Failed to create project. Please try once more.');
+            const reason = err instanceof Error ? err.message : 'Unknown error';
+            addAssistantMessage(`Couldn’t create the project: ${reason}`);
         } finally {
             setCreating(false);
         }
@@ -204,7 +206,7 @@ export function OnboardingChat({ fullPage = false }: { fullPage?: boolean }) {
         <div className={`flex flex-col bg-background min-h-0 ${fullPage
             ? 'w-full h-full overflow-hidden'
             : 'h-[600px] w-full max-w-2xl rounded-2xl border border-border shadow-lg overflow-hidden'
-        }`}>
+            }`}>
 
             {/* Messages area */}
             {hasMessages && (
@@ -217,11 +219,10 @@ export function OnboardingChat({ fullPage = false }: { fullPage?: boolean }) {
                                         <span className="text-[10px] font-semibold text-foreground">RP</span>
                                     </div>
                                 )}
-                                <div className={`max-w-[80%] ${
-                                    msg.role === 'user'
+                                <div className={`max-w-[80%] ${msg.role === 'user'
                                         ? 'bg-foreground text-background px-4 py-2.5 rounded-2xl rounded-br-md'
                                         : 'text-foreground px-4 py-2.5 rounded-2xl rounded-bl-md border border-border bg-card'
-                                }`}>
+                                    }`}>
                                     {msg.role === 'assistant' ? (
                                         <div className="prose prose-sm max-w-none prose-p:my-1 prose-p:leading-relaxed text-foreground">
                                             <ReactMarkdown>{msg.content}</ReactMarkdown>
