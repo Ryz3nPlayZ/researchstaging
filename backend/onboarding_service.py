@@ -45,8 +45,8 @@ class OnboardingChatRequest(BaseModel):
 class OnboardingAction(BaseModel):
     type: Literal["create_project"] = Field(..., description="Action type: create_project")
     research_goal: str
-    output_type: str = "literature_review"
-    audience: str = "academic"
+    output_type: Optional[str] = None
+    audience: Optional[str] = None
     additional_context: Optional[str] = None
 
 
@@ -89,13 +89,13 @@ The user may be:
 
 If it's not clear from their first message, ask a brief question to clarify.
 
-### Step 2: Collect the essentials
+### Step 2: Collect or infer the essentials
 
-You need 3 things before creating a project:
+You need 3 things before creating a project. Infer them when confidence is high; ask only for what is missing:
 
 1. **Research goal** — What they want to research. A clear topic, question, or objective. Can be informal.
 
-2. **Output type** — What kind of document to produce. ASK them or suggest based on clear context cues — never silently default.
+2. **Output type** — What kind of document to produce. Infer when explicit, otherwise suggest and confirm quickly.
    - `literature_review` — Thematic synthesis, 4,000–8,000 words. Best for surveying a field.
    - `research_paper` — IMRaD structure, 6,000–10,000 words. Best with a hypothesis or data.
    - `systematic_review` — PRISMA-P/Cochrane style, 8,000–15,000 words. Rigorous evidence synthesis.
@@ -104,7 +104,7 @@ You need 3 things before creating a project:
    - `research_brief` — Executive summary, 1,500–3,000 words. Quick overview for decision-makers.
    - `analysis_report` — Data-focused analytical report.
 
-3. **Audience** — Who the output is for. ASK them if not obvious.
+3. **Audience** — Who the output is for. Infer when obvious, otherwise ask in one short phrase.
    - `academic` — Researchers, scholars, peer reviewers
    - `industry` — Practitioners, R&D teams, professionals
    - `general_public` — Non-specialists, educated general readers
@@ -115,12 +115,12 @@ If the user mentions additional constraints (time range, geographic focus, subdi
 
 ## CONVERSATION RULES
 
-- **Never assume output type or audience.** Do not say "I'll set this up as a literature review for academic readers" unless the user explicitly told you that's what they want. Instead ask: "What kind of output are you looking for — a literature review, research paper, something shorter like a research brief?" and "Who's the audience?"
+- **Avoid hardcoded defaults.** Do not silently force literature_review/academic. If you infer them, present them as a recommendation and let the user correct.
 - **You CAN bundle questions.** Ask both output type and audience in one message. Just don't assume the answers.
 - **Be conversational and brief.** 2-3 sentences max. No bullet lists, no markdown headers, no numbered steps. Speak like a senior colleague in a quick chat.
 - **Be fast once you have enough.** If the user gives you all 3 pieces in one message, create the project immediately. Don't ask for confirmation of things they already stated.
 - **Understand informal language.** "yeah", "sure", "yep", "ok", "sounds good", "go for it" all mean YES. "nah", "no", "actually", "change that" mean the user wants to adjust.
-- **Treat the first message as a research goal** if it reads like a topic or question. Acknowledge it and ask about output type + audience.
+- **Treat the first message as a research goal** if it reads like a topic or question. Infer what you can, ask only for missing pieces.
 - **Don't lecture.** You are scoping a project, not answering the research question.
 - **Don't over-ask.** 2-3 questions total max before creating.
 - **Stay in onboarding scope.** Do not answer domain questions in depth. Keep the user moving toward project creation.
@@ -205,6 +205,27 @@ _ALLOWED_AUDIENCES = {
     "policymakers",
     "students",
 }
+_AFFIRM_WORDS = {
+    "yes", "yeah", "yep", "sure", "ok", "okay", "sounds good", "go for it", "do it", "works", "that works"
+}
+
+_OUTPUT_HINTS = {
+    "systematic_review": ["systematic review", "prisma", "cochrane"],
+    "meta_analysis": ["meta analysis", "meta-analysis", "pooled effect", "effect size"],
+    "research_paper": ["research paper", "imrad", "paper"],
+    "thesis_chapter": ["thesis", "dissertation", "chapter"],
+    "research_brief": ["brief", "executive summary", "one pager", "one-pager"],
+    "analysis_report": ["analysis report", "report", "dashboard report"],
+    "literature_review": ["literature review", "lit review", "review"],
+}
+
+_AUDIENCE_HINTS = {
+    "academic": ["academic", "journal", "peer review", "peer-reviewed", "conference"],
+    "industry": ["industry", "practitioner", "business", "team", "r&d"],
+    "general_public": ["general public", "non-technical", "layperson", "everyone"],
+    "policymakers": ["policy", "policymaker", "government", "regulator"],
+    "students": ["students", "class", "course", "undergrad", "graduate"],
+}
 
 
 def _parse_action(text: str) -> tuple[str, Optional[OnboardingAction]]:
@@ -250,12 +271,12 @@ def _normalize_action_payload(data: Dict[str, object]) -> Optional[OnboardingAct
     if not raw_goal:
         return None
 
-    raw_output = str(data.get("output_type", "literature_review")).strip().lower()
-    raw_audience = str(data.get("audience", "academic")).strip().lower()
+    raw_output = str(data.get("output_type", "")).strip().lower()
+    raw_audience = str(data.get("audience", "")).strip().lower()
     raw_context = data.get("additional_context")
 
-    output_type = raw_output if raw_output in _ALLOWED_OUTPUT_TYPES else "literature_review"
-    audience = raw_audience if raw_audience in _ALLOWED_AUDIENCES else "academic"
+    output_type = raw_output if raw_output in _ALLOWED_OUTPUT_TYPES else None
+    audience = raw_audience if raw_audience in _ALLOWED_AUDIENCES else None
 
     additional_context = None
     if isinstance(raw_context, str) and raw_context.strip():
@@ -268,6 +289,52 @@ def _normalize_action_payload(data: Dict[str, object]) -> Optional[OnboardingAct
         audience=audience,
         additional_context=additional_context,
     )
+
+
+def _infer_from_text(user_text: str) -> tuple[Optional[str], Optional[str], Optional[str]]:
+    text = user_text.lower()
+    inferred_output = None
+    inferred_audience = None
+    inferred_context = None
+
+    for output_type, hints in _OUTPUT_HINTS.items():
+        if any(hint in text for hint in hints):
+            inferred_output = output_type
+            break
+
+    for audience, hints in _AUDIENCE_HINTS.items():
+        if any(hint in text for hint in hints):
+            inferred_audience = audience
+            break
+
+    if "post-" in text or "since " in text or "only" in text or "focus on" in text or "exclude" in text:
+        inferred_context = user_text.strip()
+
+    return inferred_output, inferred_audience, inferred_context
+
+
+def _collect_user_text(history: List[Dict[str, str]]) -> str:
+    return "\n".join(msg["content"] for msg in history if msg["role"] == "user")
+
+
+def _looks_like_affirmation(text: str) -> bool:
+    lowered = text.lower().strip()
+    return any(phrase in lowered for phrase in _AFFIRM_WORDS)
+
+
+def _build_missing_info_prompt(missing_output: bool, missing_audience: bool) -> str:
+    if missing_output and missing_audience:
+        return (
+            "Great — I can set this up right away. What output format do you want "
+            "(literature review, research paper, systematic review, meta-analysis, thesis chapter, research brief, or analysis report), "
+            "and who is the audience?"
+        )
+    if missing_output:
+        return (
+            "Perfect. What output format should I generate: literature review, research paper, systematic review, "
+            "meta-analysis, thesis chapter, research brief, or analysis report?"
+        )
+    return "Who is this for: academic, industry, students, policymakers, or general public?"
 
 
 # ============== Core Handler ==============
@@ -323,6 +390,46 @@ Respond as the Project Onboarding Agent. Follow your system instructions exactly
 
     # Parse out the action (if any) and clean display text
     display_text, action = _parse_action(raw_response)
+
+    # Make onboarding feel adaptive: infer missing slots before creating.
+    if action:
+        user_text = _collect_user_text(history)
+        inferred_output, inferred_audience, inferred_context = _infer_from_text(user_text)
+
+        if not action.output_type:
+            action.output_type = inferred_output
+        if not action.audience:
+            action.audience = inferred_audience
+
+        if not action.additional_context and inferred_context:
+            action.additional_context = inferred_context
+
+        missing_output = not action.output_type
+        missing_audience = not action.audience
+
+        # If the model tried to create too early, ask only for missing fields.
+        if missing_output or missing_audience:
+            action = None
+            display_text = _build_missing_info_prompt(missing_output, missing_audience)
+
+    # If user affirmed a previous recommendation, reuse inferred slots from history.
+    if not action and _looks_like_affirmation(user_message):
+        user_text = _collect_user_text(history)
+        inferred_output, inferred_audience, inferred_context = _infer_from_text(user_text)
+
+        # Only auto-create on affirmation if we can infer all required fields.
+        if inferred_output and inferred_audience:
+            goal_text = next((msg["content"] for msg in history if msg["role"] == "user" and len(msg["content"].strip()) > 12), "")
+            if goal_text:
+                action = OnboardingAction(
+                    type="create_project",
+                    research_goal=goal_text.strip(),
+                    output_type=inferred_output,
+                    audience=inferred_audience,
+                    additional_context=inferred_context,
+                )
+                if not display_text:
+                    display_text = "Great — creating your project now."
 
     # Store assistant response in session (clean text only)
     history.append({"role": "assistant", "content": display_text})
