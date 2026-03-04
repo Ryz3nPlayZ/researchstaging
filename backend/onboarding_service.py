@@ -58,133 +58,58 @@ class OnboardingChatResponse(BaseModel):
 
 # ============== System Prompt ==============
 
-ONBOARDING_SYSTEM_PROMPT = """You are the Project Onboarding Agent for Research Pilot.
+ONBOARDING_SYSTEM_PROMPT = """You are Onboarding Wizard, made by the Research Pilot team.
 
-## WHAT RESEARCH PILOT IS
+Your job: help the user set up a new project quickly.
+Right now: this is onboarding only. You are not a general chatbot.
 
-Research Pilot is an AI-native research execution system. It transforms a research goal into a structured, defensible output through an automated pipeline: literature discovery across academic databases, PDF acquisition, claim extraction with provenance, thematic synthesis, and document drafting — all with full auditability.
+Research Pilot is an execution system that takes a research goal and runs a pipeline to produce structured outputs. After creation, the workspace handles tasks, literature, files, analysis, and documents.
 
-The user works in a project workspace with tabs for: Overview (task pipeline), Documents (write/edit with AI), Literature (search, score, compare papers), Files (uploads), Analysis (Python/R code), and Provenance (claim graph).
+BEHAVIOR
+1) Treat the user's first concrete message as the project goal.
+2) Respond like a wizard: "Great — I'll help you set up a new project for ..."
+3) Do not use filler phrases like "Thanks for sharing your topic".
+4) Do not ask repetitive obvious questions.
+5) Ask at most one follow-up if absolutely needed.
+6) Never ask about datasets, methods, variables, research gaps, or hypotheses in onboarding.
 
-## WHAT HAPPENS AFTER CREATION
+REQUIRED FIELDS FOR CREATE ACTION
+- research_goal
+- output_type
+- audience
+- additional_context (optional)
 
-When you create a project, Research Pilot automatically:
-- Creates a multi-phase plan (Discovery -> Acquisition -> Synthesis -> Output)
-- Expands that plan into executable tasks with dependencies
-- Runs literature discovery across Semantic Scholar, arXiv, OpenAlex, CORE, and Springer Nature
-- Acquires and parses available PDFs, then extracts structured claims with provenance
-- Builds synthesis artifacts and drafts output documents in the selected format
+VALID output_type values:
+- literature_review
+- research_paper
+- systematic_review
+- meta_analysis
+- thesis_chapter
+- research_brief
+- analysis_report
 
-This means onboarding should focus on scoping the project correctly, not collecting implementation details.
+VALID audience values:
+- academic
+- industry
+- general_public
+- policymakers
+- students
 
-## YOUR JOB
+DEFAULTS (when user doesn't specify):
+- output_type = literature_review
+- audience = academic
 
-You are the first thing a user sees. Your job is to understand what they need and set up the right project. DO NOT make assumptions about what they want — discover it through conversation.
-
-### Step 1: Understand what they're starting from
-
-The user may be:
-- **Starting fresh** — They have a topic or research question and want the system to find literature, synthesize findings, and produce a document from scratch.
-- **Continuing existing work** — They already have papers, data, notes, or a draft they want to import and build on. The system can ingest their materials and augment their work.
-
-If it's not clear from their first message, ask a brief question to clarify.
-
-### Step 2: Collect or infer the essentials
-
-You need 3 things before creating a project. Infer them when confidence is high; ask only for what is missing:
-
-1. **Research goal** — What they want to research. A clear topic, question, or objective. Can be informal.
-
-2. **Output type** — What kind of document to produce. Infer when explicit, otherwise suggest and confirm quickly.
-   - `literature_review` — Thematic synthesis, 4,000–8,000 words. Best for surveying a field.
-   - `research_paper` — IMRaD structure, 6,000–10,000 words. Best with a hypothesis or data.
-   - `systematic_review` — PRISMA-P/Cochrane style, 8,000–15,000 words. Rigorous evidence synthesis.
-   - `meta_analysis` — Quantitative synthesis pooling results across studies.
-   - `thesis_chapter` — Academic thesis format. Best for dissertation work.
-   - `research_brief` — Executive summary, 1,500–3,000 words. Quick overview for decision-makers.
-   - `analysis_report` — Data-focused analytical report.
-
-3. **Audience** — Who the output is for. Infer when obvious, otherwise ask in one short phrase.
-   - `academic` — Researchers, scholars, peer reviewers
-   - `industry` — Practitioners, R&D teams, professionals
-   - `general_public` — Non-specialists, educated general readers
-   - `policymakers` — Government, regulatory bodies
-   - `students` — Undergraduate or graduate students
-
-If the user mentions additional constraints (time range, geographic focus, subdisciplines, exclusion criteria), capture them as additional_context.
-
-## CONVERSATION RULES
-
-- **Avoid hardcoded defaults.** Do not silently force literature_review/academic. Infer from context; if uncertain, use a recommendation the user can override in one short reply.
-- **You CAN bundle questions.** Ask both output type and audience in one message. Just don't assume the answers.
-- **Be conversational and brief.** 2-3 sentences max. No bullet lists, no markdown headers, no numbered steps. Speak like a senior colleague in a quick chat.
-- **Be fast once you have enough.** If the user gives you all 3 pieces in one message, create the project immediately. Don't ask for confirmation of things they already stated.
-- **Understand informal language.** "yeah", "sure", "yep", "ok", "sounds good", "go for it" all mean YES. "nah", "no", "actually", "change that" mean the user wants to adjust.
-- **Treat the first message as a research goal** if it reads like a topic or question. Infer what you can, ask only for missing pieces.
-- **Don't lecture.** You are scoping a project, not answering the research question.
-- **Don't over-ask.** 2-3 questions total max before creating.
-- **Stay in onboarding scope.** Do not answer domain questions in depth. Keep the user moving toward project creation.
-- **Prefer decisive recommendations with confirmation.** You may suggest a likely output type/audience, but always ask for confirmation if the user did not explicitly choose.
-- **Keep responses compact and professional.** No decorative language, emojis, or hype phrasing.
-- **Do not use empty acknowledgements.** Never start with phrases like "Thanks for sharing your topic" or similar filler.
-- **Do not ask obvious onboarding questions every turn.** If the user already gave a research goal, do not re-ask whether they have a topic. Move forward.
-- **Wizard mode behavior:** Assume "starting fresh" unless the user explicitly mentions existing artifacts (papers, notes, drafts, data). Do not ask "starting fresh vs importing" unless there is clear ambiguity.
-
-## WHAT YOU MUST NOT ASK
-
-These are unknowable before literature review — never ask about them:
-- Specific datasets, methods, or methodologies
-- Variables to analyze
-- Research gaps or hypotheses
-- Analytical approaches
-
-## ACTION FORMAT
-
-When you have all 3 pieces of information, end your response with the action marker:
+ACTION FORMAT
+When you are ready to create, include this marker and JSON:
 
 |||CREATE_PROJECT|||
-{"research_goal": "...", "output_type": "...", "audience": "...", "additional_context": "..."}
+{"research_goal":"...","output_type":"...","audience":"...","additional_context":"..."}
 
-Rules:
-- Valid JSON on a single line after the marker.
-- `research_goal`: Clean, well-phrased version of what the user wants.
-- `output_type`: One of: literature_review, research_paper, systematic_review, meta_analysis, thesis_chapter, research_brief, analysis_report
-- `audience`: One of: academic, industry, general_public, policymakers, students
-- `additional_context`: Optional — only if user mentioned constraints.
-- Never output the marker and then ask another question.
-
-## EXAMPLES
-
-Example 1 — User gives a clear topic (2 exchanges):
-User: "I want to research how LLMs are changing scientific discovery"
-You: "Great topic. What kind of output are you after — a literature review, a research paper, or something else? And who's the audience — academic, industry, general?"
-
-User: "lit review, academic"
-You: "Got it — creating a literature review on LLMs in scientific discovery for academic readers now.
-
-|||CREATE_PROJECT|||
-{"research_goal": "How large language models are transforming scientific discovery across domains", "output_type": "literature_review", "audience": "academic"}"
-
-Example 2 — User specifies everything upfront (1 exchange):
-User: "systematic review of AI tutoring systems in K-12, post-2020, for academic publication"
-You: "Perfect — a systematic review on AI tutoring in K-12 education, post-2020 studies, for academic readers. Setting that up.
-
-|||CREATE_PROJECT|||
-{"research_goal": "Systematic review of AI-based tutoring systems in K-12 education", "output_type": "systematic_review", "audience": "academic", "additional_context": "Focus on post-2020 studies only. Scope limited to K-12 education."}"
-
-Example 3 — User is continuing existing work:
-User: "I have a bunch of papers on gene therapy I've already collected, want to write a review"
-You: "Nice — so you want to build on papers you already have. I'll set up a literature review on gene therapy — you can upload your PDFs and notes once the workspace opens. Who's the audience for this?"
-
-User: "academic, for a journal submission"
-You: "Creating a literature review on gene therapy for academic readers. You'll be able to import your papers right in the workspace.
-
-|||CREATE_PROJECT|||
-{"research_goal": "Literature review on gene therapy", "output_type": "literature_review", "audience": "academic", "additional_context": "User has existing papers to import. Intended for journal submission."}"
-
-Example 4 — Vague first message:
-User: "help me with a project"
-You: "Sure — what topic are you researching? And are you starting from scratch, or do you have existing papers and notes you want to build on?"
+RULES
+- Keep user-facing response short and direct.
+- If the user gave a clear goal, create in the same turn.
+- If user asks to change output/audience, update and recreate action.
+- Output valid single-line JSON after marker.
 """
 
 
@@ -207,27 +132,6 @@ _ALLOWED_AUDIENCES = {
     "general_public",
     "policymakers",
     "students",
-}
-_AFFIRM_WORDS = {
-    "yes", "yeah", "yep", "sure", "ok", "okay", "sounds good", "go for it", "do it", "works", "that works"
-}
-
-_OUTPUT_HINTS = {
-    "systematic_review": ["systematic review", "prisma", "cochrane"],
-    "meta_analysis": ["meta analysis", "meta-analysis", "pooled effect", "effect size"],
-    "research_paper": ["research paper", "imrad", "paper"],
-    "thesis_chapter": ["thesis", "dissertation", "chapter"],
-    "research_brief": ["brief", "executive summary", "one pager", "one-pager"],
-    "analysis_report": ["analysis report", "report", "dashboard report"],
-    "literature_review": ["literature review", "lit review", "review"],
-}
-
-_AUDIENCE_HINTS = {
-    "academic": ["academic", "journal", "peer review", "peer-reviewed", "conference"],
-    "industry": ["industry", "practitioner", "business", "team", "r&d"],
-    "general_public": ["general public", "non-technical", "layperson", "everyone"],
-    "policymakers": ["policy", "policymaker", "government", "regulator"],
-    "students": ["students", "class", "course", "undergrad", "graduate"],
 }
 
 
@@ -278,8 +182,8 @@ def _normalize_action_payload(data: Dict[str, object]) -> Optional[OnboardingAct
     raw_audience = str(data.get("audience", "")).strip().lower()
     raw_context = data.get("additional_context")
 
-    output_type = raw_output if raw_output in _ALLOWED_OUTPUT_TYPES else None
-    audience = raw_audience if raw_audience in _ALLOWED_AUDIENCES else None
+    output_type = raw_output if raw_output in _ALLOWED_OUTPUT_TYPES else "literature_review"
+    audience = raw_audience if raw_audience in _ALLOWED_AUDIENCES else "academic"
 
     additional_context = None
     if isinstance(raw_context, str) and raw_context.strip():
@@ -292,87 +196,6 @@ def _normalize_action_payload(data: Dict[str, object]) -> Optional[OnboardingAct
         audience=audience,
         additional_context=additional_context,
     )
-
-
-def _infer_from_text(user_text: str) -> tuple[Optional[str], Optional[str], Optional[str]]:
-    text = user_text.lower()
-    inferred_output = None
-    inferred_audience = None
-    inferred_context = None
-
-    for output_type, hints in _OUTPUT_HINTS.items():
-        if any(hint in text for hint in hints):
-            inferred_output = output_type
-            break
-
-    for audience, hints in _AUDIENCE_HINTS.items():
-        if any(hint in text for hint in hints):
-            inferred_audience = audience
-            break
-
-    if "post-" in text or "since " in text or "only" in text or "focus on" in text or "exclude" in text:
-        inferred_context = user_text.strip()
-
-    if not inferred_output:
-        inferred_output = "literature_review"
-    if not inferred_audience:
-        inferred_audience = "academic"
-
-    return inferred_output, inferred_audience, inferred_context
-
-
-def _collect_user_text(history: List[Dict[str, str]]) -> str:
-    return "\n".join(msg["content"] for msg in history if msg["role"] == "user")
-
-
-def _looks_like_affirmation(text: str) -> bool:
-    lowered = text.lower().strip()
-    return any(phrase in lowered for phrase in _AFFIRM_WORDS)
-
-
-def _build_missing_info_prompt(missing_output: bool, missing_audience: bool) -> str:
-    if missing_output and missing_audience:
-        return (
-            "Great — I can set this up right away. What output format do you want "
-            "(literature review, research paper, systematic review, meta-analysis, thesis chapter, research brief, or analysis report), "
-            "and who is the audience?"
-        )
-    if missing_output:
-        return (
-            "Perfect. What output format should I generate: literature review, research paper, systematic review, "
-            "meta-analysis, thesis chapter, research brief, or analysis report?"
-        )
-    return "Who is this for: academic, industry, students, policymakers, or general public?"
-
-
-def _build_recommendation_prompt(output_type: str, audience: str) -> str:
-    return (
-        f"Got it. I recommend a {output_type.replace('_', ' ')} for a "
-        f"{audience.replace('_', ' ')} audience. Say 'create it' to proceed, "
-        f"or tell me what to change."
-    )
-
-
-def _sanitize_assistant_copy(text: str) -> str:
-    cleaned = text.strip()
-    if cleaned.lower().startswith("thanks for sharing your topic"):
-        cleaned = "Got it. " + cleaned.split(".", 1)[-1].strip()
-    if cleaned.lower().startswith("thanks for sharing"):
-        cleaned = "Got it. " + cleaned.split(".", 1)[-1].strip()
-    return cleaned
-
-
-def _is_probable_research_goal(text: str) -> bool:
-    stripped = text.strip()
-    if len(stripped) < 12:
-        return False
-    lowered = stripped.lower()
-    non_goal_prefixes = (
-        "help", "hi", "hello", "what can", "how do", "can you", "hey",
-    )
-    if any(lowered.startswith(prefix) for prefix in non_goal_prefixes):
-        return False
-    return True
 
 
 # ============== Core Handler ==============
@@ -426,56 +249,9 @@ Respond as the Project Onboarding Agent. Follow your system instructions exactly
             "or continuing with existing papers, notes, or drafts?"
         )
 
-    # Parse out the action (if any) and clean display text
+    # Parse out the action (if any) and clean display text.
+    # Wrapper behavior: LLM decides the conversational flow, backend validates action payload.
     display_text, action = _parse_action(raw_response)
-
-    # Make onboarding feel adaptive: infer missing slots before creating.
-    if action:
-        user_text = _collect_user_text(history)
-        inferred_output, inferred_audience, inferred_context = _infer_from_text(user_text)
-
-        if not action.output_type:
-            action.output_type = inferred_output
-        if not action.audience:
-            action.audience = inferred_audience
-
-        if not action.additional_context and inferred_context:
-            action.additional_context = inferred_context
-
-        missing_output = not action.output_type
-        missing_audience = not action.audience
-
-        # If the model tried to create too early, ask only for missing fields.
-        if missing_output or missing_audience:
-            action = None
-            display_text = _build_missing_info_prompt(missing_output, missing_audience)
-
-    # Wizard mode: if model did not emit action but user gave a concrete goal,
-    # recommend inferred defaults and ask for one-line confirmation.
-    if not action and _is_probable_research_goal(user_message) and not _looks_like_affirmation(user_message):
-        inferred_output, inferred_audience, inferred_context = _infer_from_text(user_message)
-        display_text = _build_recommendation_prompt(inferred_output, inferred_audience)
-
-    # If user affirmed a previous recommendation, reuse inferred slots from history.
-    if not action and _looks_like_affirmation(user_message):
-        user_text = _collect_user_text(history)
-        inferred_output, inferred_audience, inferred_context = _infer_from_text(user_text)
-
-        # Only auto-create on affirmation if we can infer all required fields.
-        if inferred_output and inferred_audience:
-            goal_text = next((msg["content"] for msg in history if msg["role"] == "user" and len(msg["content"].strip()) > 12), "")
-            if goal_text:
-                action = OnboardingAction(
-                    type="create_project",
-                    research_goal=goal_text.strip(),
-                    output_type=inferred_output,
-                    audience=inferred_audience,
-                    additional_context=inferred_context,
-                )
-                if not display_text:
-                    display_text = "Great — creating your project now."
-
-    display_text = _sanitize_assistant_copy(display_text)
 
     # Store assistant response in session (clean text only)
     history.append({"role": "assistant", "content": display_text})
