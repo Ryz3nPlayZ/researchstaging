@@ -220,8 +220,8 @@ export function OnboardingChat({ fullPage = false }: { fullPage?: boolean }) {
                                     </div>
                                 )}
                                 <div className={`max-w-[80%] ${msg.role === 'user'
-                                        ? 'bg-foreground text-background px-4 py-2.5 rounded-2xl rounded-br-md'
-                                        : 'text-foreground px-4 py-2.5 rounded-2xl rounded-bl-md border border-border bg-card'
+                                    ? 'bg-foreground text-background px-4 py-2.5 rounded-2xl rounded-br-md'
+                                    : 'text-foreground px-4 py-2.5 rounded-2xl rounded-bl-md border border-border bg-card'
                                     }`}>
                                     {msg.role === 'assistant' ? (
                                         <div className="prose prose-sm max-w-none prose-p:my-1 prose-p:leading-relaxed text-foreground">
