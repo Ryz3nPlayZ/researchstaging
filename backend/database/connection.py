@@ -97,6 +97,9 @@ async def init_db():
         await conn.run_sync(Base.metadata.create_all)
         # Backward-compatible schema patching for existing deployments.
         await conn.execute(
+            text("ALTER TABLE IF EXISTS projects ADD COLUMN IF NOT EXISTS additional_context TEXT")
+        )
+        await conn.execute(
             text("ALTER TABLE IF EXISTS documents ADD COLUMN IF NOT EXISTS content_latex TEXT")
         )
     # production: create_all handles schema on first run
