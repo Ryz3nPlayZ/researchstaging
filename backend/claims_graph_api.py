@@ -2,6 +2,7 @@
 API endpoints for the Claims Graph feature.
 """
 
+import asyncio
 import logging
 import os
 import shutil
@@ -19,6 +20,7 @@ from database import (
     PaperUpload,
     get_db,
 )
+from database.connection import async_session_factory
 from database.credit_models import User
 from fastapi import (
     APIRouter,
@@ -43,6 +45,7 @@ router = APIRouter(
 STORAGE_DIR = Path(os.environ.get("STORAGE_PATH", "/tmp/claims-papers"))
 STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 logger.info(f"Claims graph storage directory: {STORAGE_DIR}")
+PROCESSING_TIMEOUT_SECONDS = int(os.environ.get("CLAIMS_PROCESSING_TIMEOUT_SECONDS", "900"))
 
 
 # ============== Pydantic Models ==============
@@ -123,9 +126,7 @@ class AnnotationResponse(BaseModel):
 
 async def process_paper_background(upload_id: str, file_path: str):
     """Background task to process uploaded paper."""
-    from database import AsyncSessionLocal
-
-    async with AsyncSessionLocal() as db:
+    async with async_session_factory() as db:
         try:
             # Update status
             upload = await db.get(PaperUpload, upload_id)
@@ -137,7 +138,10 @@ async def process_paper_background(upload_id: str, file_path: str):
             await db.commit()
 
             # Process paper
-            result = await claim_extraction_service.extract_claims_from_pdf(file_path)
+            result = await asyncio.wait_for(
+                claim_extraction_service.extract_claims_from_pdf(file_path),
+                timeout=PROCESSING_TIMEOUT_SECONDS,
+            )
 
             # Create claims
             claim_id_map = {}  # index -> UUID
@@ -202,6 +206,15 @@ async def process_paper_background(upload_id: str, file_path: str):
             await db.commit()
             logger.info(f"Paper {upload_id} processed successfully")
 
+        except asyncio.TimeoutError:
+            logger.exception(f"Paper processing timed out for {upload_id}")
+            upload = await db.get(PaperUpload, upload_id)
+            if upload:
+                upload.status = "failed"
+                upload.status_message = (
+                    f"Processing timed out after {PROCESSING_TIMEOUT_SECONDS} seconds"
+                )
+                await db.commit()
         except Exception as e:
             logger.exception(f"Failed to process paper {upload_id}")
             upload = await db.get(PaperUpload, upload_id)
@@ -224,7 +237,7 @@ async def upload_paper(
 ):
     """Upload a PDF paper and queue it for claim extraction."""
     # Validate file
-    if not file.filename.endswith(".pdf"):
+    if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(400, "Only PDF files are supported")
 
     # Save file
