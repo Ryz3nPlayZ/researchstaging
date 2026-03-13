@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import {
@@ -42,6 +42,7 @@ interface Contradiction {
 
 export default function ClaimsPage() {
   const searchParams = useSearchParams();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploads, setUploads] = useState<PaperUpload[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -68,18 +69,30 @@ export default function ClaimsPage() {
 
   // Load projects
   useEffect(() => {
-    fetch('/api/projects')
+    const token = getToken();
+    fetch('/api/projects', {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    })
       .then(r => r.json())
       .then(data => {
         const projectList = Array.isArray(data) ? data : data.data;
         if (projectList) {
-          setProjects(projectList.map((p: any) => ({
+          const mappedProjects = projectList.map((p: any) => ({
             id: p.id,
             name: p.research_goal?.slice(0, 50) || 'Untitled'
-          })));
+          }));
+
+          setProjects(mappedProjects);
+
+          const queryProjectId = searchParams.get('project_id');
+          if (queryProjectId && mappedProjects.some((p: { id: string }) => p.id === queryProjectId)) {
+            setSelectedProject(queryProjectId);
+          } else if (mappedProjects.length === 1) {
+            setSelectedProject(mappedProjects[0].id);
+          }
         }
       });
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     loadUploads();
@@ -89,10 +102,15 @@ export default function ClaimsPage() {
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement> | FileList) => {
     const files = e instanceof FileList ? e : e.target.files;
     const file = files?.[0];
-    if (!file || !selectedProject) return;
+    if (!file) return;
+
+    if (!selectedProject) {
+      alert('Please select a project before uploading a PDF');
+      return;
+    }
 
     // Validate file type
-    if (!file.type.includes('pdf') && !file.name.endsWith('.pdf')) {
+    if (!file.type.toLowerCase().includes('pdf') && !file.name.toLowerCase().endsWith('.pdf')) {
       alert('Please select a PDF file');
       return;
     }
@@ -163,11 +181,16 @@ export default function ClaimsPage() {
 
           <div 
             className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-indigo-500 transition-colors relative"
+            onClick={() => {
+              if (!uploading) {
+                fileInputRef.current?.click();
+              }
+            }}
             onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
             onDrop={(e) => {
               e.preventDefault();
               e.stopPropagation();
-              if (!selectedProject || uploading) return;
+              if (uploading) return;
               const files = e.dataTransfer.files;
               if (files.length > 0) {
                 handleUpload(files);
@@ -175,16 +198,17 @@ export default function ClaimsPage() {
             }}
           >
             <input
+              ref={fileInputRef}
               type="file"
               accept=".pdf,application/pdf"
               onChange={handleUpload}
-              disabled={!selectedProject || uploading}
+              disabled={uploading}
               className="hidden"
               id="pdf-upload"
             />
             <label
               htmlFor="pdf-upload"
-              className={`cursor-pointer flex flex-col items-center ${(!selectedProject || uploading) ? 'opacity-50 pointer-events-none' : ''}`}
+              className={`cursor-pointer flex flex-col items-center ${uploading ? 'opacity-50 pointer-events-none' : ''}`}
             >
               {uploading ? (
                 <Loader2 className="w-10 h-10 text-indigo-500 animate-spin mb-3" />
